@@ -1,0 +1,43 @@
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build packages
+        run: |
+          bun run --filter @mygit/shared build
+          bun run --filter @mygit/app build
+
+      - name: Build Tauri MSI
+        working-directory: packages/app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: bun run tauri:build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            packages/app/src-tauri/target/release/bundle/msi/*.msi
+            packages/app/src-tauri/target/release/bundle/nsis/*-setup.exe
+            packages/app/src-tauri/target/release/bundle/msi/*.msi.sig
+            packages/app/src-tauri/target/release/bundle/nsis/*-setup.exe.sig

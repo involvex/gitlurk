@@ -1,0 +1,11 @@
+{
+  "id": "example.hello",
+  "name": "Hello Plugin",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "permissions": ["git.read", "ui.toast"],
+  "activationEvents": ["onRepoOpen"],
+  "contributes": {
+    "commands": [{ "id": "hello.say", "title": "Say Hello" }]
+  }
+}

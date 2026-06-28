@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "MyGit Desktop Bridge",
+  "version": "0.1.0",
+  "description": "Adds Open with MyGit Desktop to GitHub clone UI",
+  "permissions": ["activeTab"],
+  "host_permissions": ["https://github.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "48": "icons/icon48.png"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "mygit-desktop",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "packages/plugins/*"
+  ],
+  "scripts": {
+    "dev": "bun run --filter @mygit/app dev",
+    "build": "bun run --filter @mygit/shared build && bun run --filter @mygit/git build && bun run --filter @mygit/app build",
+    "tauri:dev": "bun run --filter @mygit/app tauri:dev",
+    "tauri:build": "bun run --filter @mygit/app tauri:build",
+    "test": "bun test",
+    "lint": "eslint .",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "typecheck": "bun run --filter '*' typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "@types/bun": "^1.2.14",
+    "eslint": "^9.28.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.2.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.33.1"
+  }
+}
