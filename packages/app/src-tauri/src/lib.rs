@@ -114,7 +114,7 @@ pub fn run() {
                 app.deep_link().register("mygit")?;
                 if let Ok(Some(urls)) = app.deep_link().get_current() {
                     for url in urls {
-                        protocol::handle_deep_link(app.handle(), &url.to_string());
+                        protocol::handle_deep_link(app.handle(), url.as_ref());
                     }
                 }
             }

@@ -109,10 +109,7 @@ impl GitService {
 
         let output = self.exec(&["clone", url, folder_name], parent)?;
         if !output.status.success() {
-            return Err(format!(
-                "{}",
-                String::from_utf8_lossy(&output.stderr).trim()
-            ));
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
         }
         Ok(())
     }
