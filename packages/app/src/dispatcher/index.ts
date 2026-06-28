@@ -1,5 +1,5 @@
 import { parseGitHubRemoteUrl } from '@mygit/shared';
-import { ipcInvoke, onEvent } from '../ipc/client';
+import { ipcInvoke, onEvent, runningInTauri } from '../ipc/client';
 import { useAppStore } from '../stores';
 
 function getStore() {
@@ -13,10 +13,18 @@ async function persistRepos() {
 
 export const dispatcher = {
   async initialize() {
-    const [{ repos }, { theme }, auth] = await Promise.all([
+    if (!runningInTauri()) {
+      getStore().setError(
+        'Running in browser only — start the desktop shell with: bun run tauri:dev',
+      );
+      return;
+    }
+
+    const [{ repos }, { theme }, auth, explorerMenu] = await Promise.all([
       ipcInvoke('app:get-repos', {}),
       ipcInvoke('app:get-theme', {}),
       ipcInvoke('auth:get-token', {}),
+      ipcInvoke('app:get-explorer-menu', {}),
     ]);
 
     getStore().setRepos(
@@ -26,7 +34,8 @@ export const dispatcher = {
       })),
     );
     getStore().setTheme(theme);
-    getStore().setAuth(auth.token, auth.username);
+    getStore().setAuth(auth.username);
+    getStore().setExplorerMenuEnabled(explorerMenu.enabled);
     await dispatcher.applyTheme(theme);
 
     await onEvent('url-action', (action) => {
@@ -252,16 +261,21 @@ export const dispatcher = {
       });
 
       const deadline = Date.now() + device.expiresIn * 1000;
+      let intervalMs = device.interval * 1000;
       while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, device.interval * 1000));
+        await new Promise((r) => setTimeout(r, intervalMs));
         const result = await ipcInvoke('auth:github-device-poll', {
           deviceCode: device.deviceCode,
         });
-        if (result.token) {
+        if (result.success) {
           const auth = await ipcInvoke('auth:get-token', {});
-          getStore().setAuth(auth.token, auth.username);
+          getStore().setAuth(auth.username);
           getStore().showToast(`Signed in as ${auth.username ?? 'user'}`);
+          await dispatcher.refreshPullRequests();
           return;
+        }
+        if (result.slowDown) {
+          intervalMs += 5000;
         }
         if (result.error) {
           throw new Error(result.error);
@@ -279,7 +293,74 @@ export const dispatcher = {
 
   async signOut() {
     await ipcInvoke('auth:logout', {});
-    getStore().setAuth(null, null);
+    getStore().setAuth(null);
+  },
+
+  async setExplorerMenu(enabled: boolean) {
+    try {
+      await ipcInvoke('app:set-explorer-menu', { enabled });
+      getStore().setExplorerMenuEnabled(enabled);
+      getStore().showToast(
+        enabled
+          ? 'Explorer context menu enabled'
+          : 'Explorer context menu disabled',
+      );
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to update Explorer menu (admin rights may be required)',
+      );
+    }
+  },
+
+  async loadFileDiff(file: string, kind: import('../stores/git-ops').DiffKind) {
+    const path = getStore().activeRepoPath;
+    if (!path) return;
+
+    getStore().setSelectedFile(file, kind);
+    getStore().setDiffLoading(true);
+    getStore().setFileDiff(null);
+    try {
+      const diff = await ipcInvoke('git:diff', { path, file, kind });
+      getStore().setFileDiff(diff);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Failed to load diff',
+      );
+    } finally {
+      getStore().setDiffLoading(false);
+    }
+  },
+
+  async installPlugin(id: string) {
+    getStore().setGitOpLoading(true);
+    try {
+      await ipcInvoke('plugins:install', { id });
+      getStore().showToast(`Installed plugin ${id}`);
+      getStore().setShowPlugins(true);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Plugin install failed',
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
+    }
+  },
+
+  async invokePlugin(id: string) {
+    try {
+      const { result } = await ipcInvoke('plugins:invoke', {
+        id,
+        method: 'hello.say',
+        params: {},
+      });
+      getStore().showToast(result || 'Plugin invoked');
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Plugin invoke failed',
+      );
+    }
   },
 
   async openTerminal() {

@@ -1,14 +1,22 @@
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
+import type { DiffKind } from '../stores/git-ops';
+import { DiffPanel } from './DiffPanel';
 
 function FileList({
   title,
   files,
   emptyText,
+  kind,
+  selectedFile,
+  onSelect,
 }: {
   title: string;
   files: string[];
   emptyText: string;
+  kind: DiffKind;
+  selectedFile: string | null;
+  onSelect: (file: string, kind: DiffKind) => void;
 }) {
   return (
     <section className="rounded-lg border border-border bg-surface-elevated">
@@ -20,8 +28,18 @@ function FileList({
       ) : (
         <ul className="divide-y divide-border">
           {files.map((file) => (
-            <li key={file} className="px-4 py-2 font-mono text-xs">
-              {file}
+            <li key={file}>
+              <button
+                type="button"
+                onClick={() => onSelect(file, kind)}
+                className={`w-full px-4 py-2 text-left font-mono text-xs ${
+                  selectedFile === file
+                    ? 'bg-primary/20 text-primary'
+                    : 'hover:bg-surface'
+                }`}
+              >
+                {file}
+              </button>
             </li>
           ))}
         </ul>
@@ -37,6 +55,7 @@ export function ChangesView() {
   const error = useAppStore((s) => s.error);
   const commitMessage = useAppStore((s) => s.commitMessage);
   const currentBranch = useAppStore((s) => s.currentBranch);
+  const selectedFile = useAppStore((s) => s.selectedFile);
 
   if (!activeRepoPath) {
     return (
@@ -52,7 +71,7 @@ export function ChangesView() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
       <header className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>
           <h2 className="text-lg font-semibold">Changes</h2>
@@ -107,22 +126,34 @@ export function ChangesView() {
         </div>
       ) : null}
 
-      <div className="grid flex-1 gap-4 overflow-y-auto p-6 lg:grid-cols-2">
-        <FileList
-          title="Staged changes"
-          files={status?.staged ?? []}
-          emptyText="No staged changes"
-        />
-        <FileList
-          title="Unstaged changes"
-          files={status?.unstaged ?? []}
-          emptyText="No unstaged changes"
-        />
-        <FileList
-          title="Untracked files"
-          files={status?.untracked ?? []}
-          emptyText="No untracked files"
-        />
+      <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr]">
+        <div className="space-y-4 overflow-y-auto border-r border-border p-4">
+          <FileList
+            title="Staged changes"
+            files={status?.staged ?? []}
+            emptyText="No staged changes"
+            kind="staged"
+            selectedFile={selectedFile}
+            onSelect={(file, kind) => void dispatcher.loadFileDiff(file, kind)}
+          />
+          <FileList
+            title="Unstaged changes"
+            files={status?.unstaged ?? []}
+            emptyText="No unstaged changes"
+            kind="unstaged"
+            selectedFile={selectedFile}
+            onSelect={(file, kind) => void dispatcher.loadFileDiff(file, kind)}
+          />
+          <FileList
+            title="Untracked files"
+            files={status?.untracked ?? []}
+            emptyText="No untracked files"
+            kind="untracked"
+            selectedFile={selectedFile}
+            onSelect={(file, kind) => void dispatcher.loadFileDiff(file, kind)}
+          />
+        </div>
+        <DiffPanel />
       </div>
 
       <footer className="border-t border-border p-6">

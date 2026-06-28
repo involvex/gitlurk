@@ -1,3 +1,4 @@
+use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
@@ -45,6 +46,11 @@ pub async fn start_mcp_server(app: AppHandle) -> Result<(), String> {
                     Ok(content) => (200, content),
                     Err(_) => (200, r#"{"repos":[]}"#.to_string()),
                 }
+            } else if request.contains("GET /api/plugins") {
+                match plugins_catalog_body(&app_guard) {
+                    Ok(body) => (200, body),
+                    Err(err) => (500, format!(r#"{{"error":"{err}"}}"#)),
+                }
             } else if request.contains("GET /health") {
                 (200, r#"{"status":"ok"}"#.to_string())
             } else {
@@ -60,4 +66,21 @@ pub async fn start_mcp_server(app: AppHandle) -> Result<(), String> {
     });
 
     Ok(())
+}
+
+fn plugins_catalog_body(app: &AppHandle) -> Result<String, String> {
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        let bundled = resource_dir.join("marketplace").join("catalog.json");
+        if bundled.exists() {
+            return fs::read_to_string(bundled).map_err(|e| e.to_string());
+        }
+    }
+
+    let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let dev_catalog = manifest_dir
+        .join("..")
+        .join("..")
+        .join("marketplace")
+        .join("catalog.json");
+    fs::read_to_string(dev_catalog).map_err(|e| e.to_string())
 }

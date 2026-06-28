@@ -4,6 +4,30 @@ use std::sync::Mutex;
 
 use serde::Serialize;
 
+#[derive(Debug, Clone, Copy)]
+pub enum DiffKind {
+    Staged,
+    Unstaged,
+    Untracked,
+}
+
+impl DiffKind {
+    pub fn from_str(value: &str) -> Result<Self, String> {
+        match value {
+            "staged" => Ok(Self::Staged),
+            "unstaged" => Ok(Self::Unstaged),
+            "untracked" => Ok(Self::Untracked),
+            _ => Err(format!("Unknown diff kind: {value}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DiffResult {
+    pub patch: String,
+    pub is_binary: bool,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct GitStatusResult {
     pub staged: Vec<String>,
@@ -14,12 +38,14 @@ pub struct GitStatusResult {
 
 pub struct GitService {
     git_path: Mutex<Option<PathBuf>>,
+    bundled_paths: Mutex<Vec<PathBuf>>,
 }
 
 impl GitService {
     pub fn new() -> Self {
         Self {
             git_path: Mutex::new(None),
+            bundled_paths: Mutex::new(Vec::new()),
         }
     }
 
@@ -33,7 +59,7 @@ impl GitService {
             return Ok(system);
         }
 
-        if let Some(bundled) = find_bundled_git() {
+        if let Some(bundled) = find_bundled_git(&self.bundled_paths.lock().unwrap()) {
             *self.git_path.lock().unwrap() = Some(bundled.clone());
             return Ok(bundled);
         }
@@ -198,6 +224,41 @@ impl GitService {
             String::from_utf8_lossy(&output.stdout).trim().to_string(),
         ))
     }
+
+    pub fn diff_file(&self, dir: &Path, file: &str, kind: DiffKind) -> Result<DiffResult, String> {
+        let output = match kind {
+            DiffKind::Unstaged => self.exec(&["diff", "--", file], dir)?,
+            DiffKind::Staged => self.exec(&["diff", "--cached", "--", file], dir)?,
+            DiffKind::Untracked => {
+                let file_path = dir.join(file);
+                let file_str = file_path
+                    .to_str()
+                    .ok_or_else(|| "Invalid file path".to_string())?;
+                #[cfg(windows)]
+                let null_dev = "NUL";
+                #[cfg(not(windows))]
+                let null_dev = "/dev/null";
+                self.exec(&["diff", "--no-index", null_dev, file_str], dir)?
+            }
+        };
+
+        let exit = output.status.code();
+        if !output.status.success() && exit != Some(1) {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let combined = stdout.to_string();
+        let is_binary = combined.contains("Binary files");
+        Ok(DiffResult {
+            patch: combined,
+            is_binary,
+        })
+    }
+
+    pub fn set_bundled_search_paths(&self, paths: Vec<PathBuf>) {
+        *self.bundled_paths.lock().unwrap() = paths;
+    }
 }
 
 fn find_system_git() -> Option<PathBuf> {
@@ -217,11 +278,23 @@ fn find_system_git() -> Option<PathBuf> {
     }
 }
 
-fn find_bundled_git() -> Option<PathBuf> {
-    let candidates = [
+fn find_bundled_git(extra_paths: &[PathBuf]) -> Option<PathBuf> {
+    let mut candidates = vec![
         PathBuf::from("resources/git/cmd/git.exe"),
         PathBuf::from("resources/git/bin/git.exe"),
     ];
+    candidates.extend(extra_paths.iter().cloned());
+
+    if let Ok(local) = std::env::var("LOCALAPPDATA") {
+        candidates.push(
+            PathBuf::from(local)
+                .join("MyGit")
+                .join("git")
+                .join("cmd")
+                .join("git.exe"),
+        );
+    }
+
     for path in candidates {
         if path.exists() {
             return Some(path);

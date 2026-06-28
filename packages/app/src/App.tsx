@@ -5,6 +5,7 @@ import { CloneDialog } from './components/CloneDialog';
 import { BranchPanel } from './components/BranchPanel';
 import { PullRequestPanel } from './components/PullRequestPanel';
 import { TerminalPane } from './components/TerminalPane';
+import { PluginsPanel } from './components/PluginsPanel';
 import { Toast } from './components/Toast';
 import { dispatcher } from './dispatcher';
 import { useAppStore } from './stores';
@@ -12,6 +13,7 @@ import { useAppStore } from './stores';
 export function App() {
   const loading = useAppStore((s) => s.loading);
   const resolvedTheme = useAppStore((s) => s.resolvedTheme);
+  const explorerMenuEnabled = useAppStore((s) => s.explorerMenuEnabled);
 
   useEffect(() => {
     void dispatcher.initialize();
@@ -28,7 +30,24 @@ export function App() {
             <span className="text-xs text-muted">
               {loading ? 'Working…' : 'Ready'}
             </span>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  checked={explorerMenuEnabled}
+                  onChange={(e) =>
+                    void dispatcher.setExplorerMenu(e.target.checked)
+                  }
+                />
+                Explorer context menu
+              </label>
+              <button
+                type="button"
+                onClick={() => useAppStore.getState().setShowPlugins(true)}
+                className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+              >
+                Plugins
+              </button>
               <button
                 type="button"
                 onClick={() => useAppStore.getState().setShowTerminal(true)}
@@ -53,6 +72,7 @@ export function App() {
             </div>
           </div>
           <TerminalPane />
+          <PluginsPanel />
         </main>
       </div>
       <CloneDialog />

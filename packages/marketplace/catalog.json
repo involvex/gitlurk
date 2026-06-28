@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    {
+      "id": "example.hello",
+      "name": "Hello Plugin",
+      "version": "1.0.0",
+      "downloadUrl": "repo://plugins/example-hello",
+      "sha256": "",
+      "permissions": ["git.read", "ui.toast"]
+    }
+  ]
+}

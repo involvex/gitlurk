@@ -39,7 +39,12 @@
       "webviewInstallMode": {
         "type": "embedBootstrapper"
       }
-    }
+    },
+    "resources": [
+      "resources/git/meta/placeholder.txt",
+      "resources/git/README.md",
+      "../../marketplace/catalog.json"
+    ]
   },
   "plugins": {
     "deep-link": {

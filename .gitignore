@@ -9,5 +9,6 @@ target/
 *.msi
 *.exe
 *.sig
+!packages/app/src-tauri/resources/git/**
 .tauri/
 packages/app/src-tauri/gen/

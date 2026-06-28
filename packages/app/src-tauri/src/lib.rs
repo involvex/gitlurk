@@ -10,6 +10,7 @@ mod git_service;
 mod mcp_server;
 mod plugin_host;
 mod protocol;
+mod pty_session;
 mod registry;
 mod terminal;
 mod tray;
@@ -20,6 +21,7 @@ pub struct AppState {
     pub auth_token: Mutex<Option<String>>,
     pub auth_username: Mutex<Option<String>>,
     pub mcp_token: String,
+    pub pty_sessions: pty_session::PtySessionManager,
 }
 
 impl AppState {
@@ -31,6 +33,7 @@ impl AppState {
             auth_token: Mutex::new(None),
             auth_username: Mutex::new(None),
             mcp_token,
+            pty_sessions: pty_session::PtySessionManager::new(),
         }
     }
 
@@ -95,6 +98,18 @@ pub fn run() {
             let state = app.state::<AppState>();
             commands::auth::init_auth(state);
 
+            let mut bundled_paths = Vec::new();
+            if let Ok(resource_dir) = app.path().resource_dir() {
+                bundled_paths.push(resource_dir.join("git").join("cmd").join("git.exe"));
+                bundled_paths.push(resource_dir.join("git").join("bin").join("git.exe"));
+            }
+            if let Ok(exe) = std::env::current_exe() {
+                if let Some(dir) = exe.parent() {
+                    bundled_paths.push(dir.join("resources").join("git").join("cmd").join("git.exe"));
+                }
+            }
+            app.state::<AppState>().git.set_bundled_search_paths(bundled_paths);
+
             tray::setup_tray(app.handle())?;
             registry::register_explorer_menu_if_enabled(app.handle())?;
 
@@ -132,12 +147,15 @@ pub fn run() {
             commands::git::git_branch_checkout,
             commands::git::git_is_repo,
             commands::git::git_get_remote_origin,
+            commands::git::git_diff,
             commands::dialog::dialog_open_directory,
             commands::dialog::dialog_save_directory,
             commands::app::app_get_repos,
             commands::app::app_save_repos,
             commands::app::app_get_theme,
             commands::app::app_set_theme,
+            commands::app::app_get_explorer_menu,
+            commands::app::app_set_explorer_menu,
             commands::auth::auth_github_device_start,
             commands::auth::auth_github_device_poll,
             commands::auth::auth_get_token,
@@ -145,6 +163,14 @@ pub fn run() {
             commands::github::github_list_prs,
             commands::shell::shell_open_external,
             commands::shell::shell_open_terminal,
+            commands::terminal::terminal_spawn,
+            commands::terminal::terminal_write,
+            commands::terminal::terminal_resize,
+            commands::terminal::terminal_kill,
+            commands::plugins::plugins_list_marketplace,
+            commands::plugins::plugins_list_installed,
+            commands::plugins::plugins_install,
+            commands::plugins::plugins_invoke,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

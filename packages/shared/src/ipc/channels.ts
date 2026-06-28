@@ -19,6 +19,25 @@ export interface IpcChannels {
   'app:save-repos': { repos: string[] };
   'app:get-theme': Record<string, never>;
   'app:set-theme': { theme: 'light' | 'dark' | 'system' };
+  'app:get-explorer-menu': Record<string, never>;
+  'app:set-explorer-menu': { enabled: boolean };
+  'git:diff': {
+    path: string;
+    file: string;
+    kind: 'staged' | 'unstaged' | 'untracked';
+  };
+  'terminal:spawn': { cwd: string; cols: number; rows: number };
+  'terminal:write': { sessionId: string; data: string };
+  'terminal:resize': { sessionId: string; cols: number; rows: number };
+  'terminal:kill': { sessionId: string };
+  'plugins:list-marketplace': Record<string, never>;
+  'plugins:list-installed': Record<string, never>;
+  'plugins:install': { id: string };
+  'plugins:invoke': {
+    id: string;
+    method: string;
+    params: Record<string, unknown>;
+  };
   'auth:github-device-start': Record<string, never>;
   'auth:github-device-poll': { deviceCode: string };
   'auth:get-token': Record<string, never>;
@@ -50,6 +69,28 @@ export interface IpcResponses {
   'app:save-repos': void;
   'app:get-theme': { theme: 'light' | 'dark' | 'system' };
   'app:set-theme': void;
+  'app:get-explorer-menu': { enabled: boolean };
+  'app:set-explorer-menu': void;
+  'git:diff': { patch: string; isBinary: boolean };
+  'terminal:spawn': { sessionId: string };
+  'terminal:write': void;
+  'terminal:resize': void;
+  'terminal:kill': void;
+  'plugins:list-marketplace': {
+    plugins: Array<{
+      id: string;
+      name: string;
+      version: string;
+      downloadUrl: string;
+      sha256: string;
+      permissions: string[];
+    }>;
+  };
+  'plugins:list-installed': {
+    plugins: Array<{ id: string; name: string; version: string }>;
+  };
+  'plugins:install': { id: string; path: string };
+  'plugins:invoke': { result: string };
   'auth:github-device-start': {
     deviceCode: string;
     userCode: string;
@@ -58,11 +99,12 @@ export interface IpcResponses {
     interval: number;
   };
   'auth:github-device-poll': {
-    token?: string;
+    success?: boolean;
     error?: string;
     pending?: boolean;
+    slowDown?: boolean;
   };
-  'auth:get-token': { token: string | null; username: string | null };
+  'auth:get-token': { username: string | null };
   'auth:logout': void;
   'github:list-prs': {
     pulls: Array<{
@@ -80,6 +122,7 @@ export type IpcEvents = {
   'git:progress': { op: string; percent: number; message: string };
   'tray-action': 'pull' | 'show';
   'cli-action': UrlAction;
+  'terminal-output': { sessionId: string; data: string };
 };
 
 export type IpcChannel = keyof IpcChannels;

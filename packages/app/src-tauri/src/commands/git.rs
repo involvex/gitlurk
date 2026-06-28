@@ -3,6 +3,7 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::git_service::GitStatusResult;
+use crate::git_service::DiffKind;
 use crate::{validate_repo_path, AppState};
 
 #[derive(Serialize)]
@@ -114,4 +115,20 @@ pub fn git_get_remote_origin(
     let dir = validate_repo_path(&path)?;
     let url = state.git.remote_origin(&dir)?;
     Ok(serde_json::json!({ "url": url }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_diff(
+    state: State<'_, AppState>,
+    path: String,
+    file: String,
+    kind: String,
+) -> Result<serde_json::Value, String> {
+    let dir = validate_repo_path(&path)?;
+    let diff_kind = DiffKind::from_str(&kind)?;
+    let result = state.git.diff_file(&dir, &file, diff_kind)?;
+    Ok(serde_json::json!({
+        "patch": result.patch,
+        "isBinary": result.is_binary,
+    }))
 }

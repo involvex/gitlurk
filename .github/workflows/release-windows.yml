@@ -25,6 +25,14 @@ jobs:
           bun run --filter @mygit/shared build
           bun run --filter @mygit/app build
 
+      - name: Download portable Git
+        shell: pwsh
+        run: ./scripts/download-portable-git.ps1
+
+      - name: Prepare Tauri resource manifest
+        shell: pwsh
+        run: ./scripts/prepare-tauri-resources.ps1
+
       - name: Build Tauri MSI
         working-directory: packages/app
         env:

@@ -1,8 +1,9 @@
 use std::fs;
 
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::{AppHandle, State};
 
+use crate::registry;
 use crate::{AppState, Settings};
 
 #[derive(Serialize, Deserialize, Default)]
@@ -46,4 +47,19 @@ pub fn app_set_theme(state: State<'_, AppState>, theme: String) -> Result<(), St
     let settings = Settings { theme };
     let content = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     fs::write(file, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn app_get_explorer_menu(app: AppHandle) -> Result<serde_json::Value, String> {
+    let enabled = registry::is_explorer_menu_enabled(&app)?;
+    Ok(serde_json::json!({ "enabled": enabled }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn app_set_explorer_menu(app: AppHandle, enabled: bool) -> Result<(), String> {
+    if enabled {
+        registry::enable_explorer_menu(&app)
+    } else {
+        registry::disable_explorer_menu(&app)
+    }
 }

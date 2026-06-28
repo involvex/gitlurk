@@ -2,14 +2,20 @@ import { useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
+import { ipcInvoke, onEvent } from '../ipc/client';
 import { useAppStore } from '../stores';
 
 export function TerminalPane() {
   const show = useAppStore((s) => s.showTerminal);
+  const activeRepoPath = useAppStore((s) => s.activeRepoPath);
   const containerRef = useRef<HTMLDivElement>(null);
+  const sessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!show || !containerRef.current) return;
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
 
     const term = new Terminal({
       theme: {
@@ -18,25 +24,74 @@ export function TerminalPane() {
       },
       fontSize: 13,
       fontFamily: 'Consolas, monospace',
+      cursorBlink: true,
     });
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(containerRef.current);
     fitAddon.fit();
-    term.writeln('MyGit integrated terminal');
-    term.writeln(
-      'Use the Terminal button to open Windows Terminal in repo folder.',
-    );
-    term.write('$ ');
 
-    const onResize = () => fitAddon.fit();
-    window.addEventListener('resize', onResize);
+    const cwd = activeRepoPath ?? '.';
+    const cols = term.cols;
+    const rows = term.rows;
+
+    const onResize = () => {
+      fitAddon.fit();
+      if (!sessionIdRef.current) return;
+      void ipcInvoke('terminal:resize', {
+        sessionId: sessionIdRef.current,
+        cols: term.cols,
+        rows: term.rows,
+      });
+    };
+
+    void (async () => {
+      try {
+        const { sessionId } = await ipcInvoke('terminal:spawn', {
+          cwd,
+          cols,
+          rows,
+        });
+        if (disposed) {
+          await ipcInvoke('terminal:kill', { sessionId });
+          return;
+        }
+        sessionIdRef.current = sessionId;
+
+        unlisten = await onEvent('terminal-output', (event) => {
+          if (event.sessionId === sessionIdRef.current) {
+            term.write(event.data);
+          }
+        });
+
+        term.onData((data) => {
+          if (!sessionIdRef.current) return;
+          void ipcInvoke('terminal:write', {
+            sessionId: sessionIdRef.current,
+            data,
+          });
+        });
+
+        window.addEventListener('resize', onResize);
+      } catch (error) {
+        term.writeln(
+          `Failed to start terminal: ${error instanceof Error ? error.message : 'unknown error'}`,
+        );
+      }
+    })();
 
     return () => {
+      disposed = true;
       window.removeEventListener('resize', onResize);
+      unlisten?.();
+      const sessionId = sessionIdRef.current;
+      sessionIdRef.current = null;
+      if (sessionId) {
+        void ipcInvoke('terminal:kill', { sessionId });
+      }
       term.dispose();
     };
-  }, [show]);
+  }, [show, activeRepoPath]);
 
   if (!show) return null;
 
