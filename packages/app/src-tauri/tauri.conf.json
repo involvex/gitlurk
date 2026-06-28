@@ -41,6 +41,7 @@
       }
     },
     "resources": [
+      "resources/oauth.env",
       "resources/git/meta/placeholder.txt",
       "resources/git/README.md",
       "../../marketplace/catalog.json"

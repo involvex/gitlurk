@@ -6,6 +6,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 mod commands;
+mod env_config;
 mod git_service;
 mod mcp_server;
 mod plugin_host;
@@ -52,6 +53,8 @@ pub struct Settings {
 }
 
 pub fn run() {
+    env_config::load_env_files(&[]);
+
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -86,6 +89,20 @@ pub fn run() {
 
     builder
         .setup(|app| {
+            let mut env_paths = Vec::new();
+            if let Ok(resource_dir) = app.path().resource_dir() {
+                env_paths.push(resource_dir.join("oauth.env"));
+            }
+            if let Ok(app_data) = app.path().app_data_dir() {
+                env_paths.push(app_data.join(".env"));
+            }
+            if let Ok(exe) = std::env::current_exe() {
+                if let Some(dir) = exe.parent() {
+                    env_paths.push(dir.join(".env"));
+                }
+            }
+            env_config::load_env_files(&env_paths);
+
             let data_dir = app
                 .path()
                 .app_data_dir()

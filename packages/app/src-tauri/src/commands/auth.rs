@@ -3,21 +3,10 @@ use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use crate::env_config;
 use crate::AppState;
 
 const SERVICE: &str = "mygit-desktop";
-
-fn github_client_id() -> String {
-    if let Ok(id) = std::env::var("MYGIT_GITHUB_CLIENT_ID") {
-        if !id.is_empty() {
-            return id;
-        }
-    }
-    option_env!("MYGIT_GITHUB_CLIENT_ID")
-        .filter(|id| !id.is_empty())
-        .unwrap_or("Ov23liPLACEHOLDER")
-        .to_string()
-}
 
 pub fn init_auth(state: State<'_, AppState>) {
     let _ = auth_get_token(state);
@@ -41,7 +30,7 @@ struct DevicePollResponse {
 #[tauri::command(rename_all = "camelCase")]
 pub fn auth_github_device_start() -> Result<serde_json::Value, String> {
     let client = Client::new();
-    let client_id = github_client_id();
+    let client_id = env_config::github_client_id();
     let response = client
         .post("https://github.com/login/device/code")
         .header("Accept", "application/json")
@@ -65,7 +54,7 @@ pub fn auth_github_device_poll(
     device_code: String,
 ) -> Result<serde_json::Value, String> {
     let client = Client::new();
-    let client_id = github_client_id();
+    let client_id = env_config::github_client_id();
     let response = client
         .post("https://github.com/login/oauth/access_token")
         .header("Accept", "application/json")

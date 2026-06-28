@@ -11,6 +11,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+dotenvy = "0.15"
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
@@ -28,6 +29,7 @@ uuid = { version = "1", features = ["v4"] }
 tiny_http = "0.12"
 portable-pty = "0.8"
 url = "2"
+dotenvy = "0.15"
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }

@@ -6,6 +6,7 @@ target/
 .env
 .env.*
 !.env.example
+packages/app/src-tauri/resources/oauth.env
 *.msi
 *.exe
 *.sig
