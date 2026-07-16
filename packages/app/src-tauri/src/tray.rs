@@ -1,12 +1,23 @@
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindow, Window};
 
-fn show_main(app: &AppHandle) {
+pub fn show_main(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.set_focus();
+        restore_from_tray(&window);
     }
+}
+
+pub fn hide_to_tray(window: &Window) {
+    let _ = window.hide();
+    let _ = window.set_skip_taskbar(true);
+}
+
+pub fn restore_from_tray(window: &WebviewWindow) {
+    let _ = window.set_skip_taskbar(false);
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
 }
 
 pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {

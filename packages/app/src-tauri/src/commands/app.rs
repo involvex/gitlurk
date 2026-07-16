@@ -68,6 +68,7 @@ pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value,
         "aiProvider": settings.ai_provider,
         "aiModel": settings.ai_model,
         "kiloBaseUrl": settings.kilo_base_url,
+        "minimizeToTray": settings.minimize_to_tray,
     }))
 }
 
@@ -82,6 +83,7 @@ pub fn app_set_settings(
     ai_provider: Option<String>,
     ai_model: Option<String>,
     kilo_base_url: Option<String>,
+    minimize_to_tray: Option<bool>,
 ) -> Result<(), String> {
     let mut settings = read_settings(&state);
     if let Some(theme) = theme {
@@ -107,6 +109,9 @@ pub fn app_set_settings(
     }
     if let Some(v) = kilo_base_url {
         settings.kilo_base_url = v;
+    }
+    if let Some(v) = minimize_to_tray {
+        settings.minimize_to_tray = v;
     }
     write_settings(&state, &settings)
 }

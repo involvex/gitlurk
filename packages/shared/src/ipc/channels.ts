@@ -31,6 +31,7 @@ export interface IpcChannels {
     aiProvider?: 'opencode' | 'kilo';
     aiModel?: string;
     kiloBaseUrl?: string;
+    minimizeToTray?: boolean;
   };
   'app:get-explorer-menu': Record<string, never>;
   'app:set-explorer-menu': { enabled: boolean };
@@ -128,7 +129,8 @@ export interface IpcResponses {
   'app:get-repos': { repos: string[] };
   'app:save-repos': void;
   'app:take-pending-action':
-    import('../protocol/parse-app-url.js').UrlAction | null;
+    | import('../protocol/parse-app-url.js').UrlAction
+    | null;
   'app:get-theme': { theme: 'light' | 'dark' | 'system' };
   'app:set-theme': void;
   'app:get-settings': {
@@ -140,6 +142,7 @@ export interface IpcResponses {
     aiProvider: 'opencode' | 'kilo';
     aiModel: string;
     kiloBaseUrl: string;
+    minimizeToTray: boolean;
   };
   'app:set-settings': void;
   'app:get-explorer-menu': { enabled: boolean };

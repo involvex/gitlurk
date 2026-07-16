@@ -81,6 +81,8 @@ pub struct Settings {
     pub ai_model: String,
     #[serde(default = "default_kilo_base_url")]
     pub kilo_base_url: String,
+    #[serde(default)]
+    pub minimize_to_tray: bool,
 }
 
 fn default_theme() -> String {
@@ -119,8 +121,24 @@ impl Default for Settings {
             ai_provider: default_ai_provider(),
             ai_model: default_ai_model(),
             kilo_base_url: default_kilo_base_url(),
+            minimize_to_tray: false,
         }
     }
+}
+
+fn minimize_to_tray_enabled(app: &AppHandle) -> bool {
+    let Some(state) = app.try_state::<AppState>() else {
+        return false;
+    };
+    let file = state.settings_file();
+    if !file.exists() {
+        return false;
+    }
+    std::fs::read_to_string(file)
+        .ok()
+        .and_then(|content| serde_json::from_str::<Settings>(&content).ok())
+        .map(|s| s.minimize_to_tray)
+        .unwrap_or(false)
 }
 
 pub fn run() {
@@ -131,16 +149,32 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
-        .plugin(tauri_plugin_updater::Builder::new().build());
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .on_window_event(|window, event| {
+            match event {
+                tauri::WindowEvent::CloseRequested { api, .. } => {
+                    if minimize_to_tray_enabled(window.app_handle()) {
+                        api.prevent_close();
+                        tray::hide_to_tray(window);
+                    }
+                }
+                tauri::WindowEvent::Resized(_) => {
+                    if minimize_to_tray_enabled(window.app_handle())
+                        && window.is_minimized().unwrap_or(false)
+                    {
+                        tray::hide_to_tray(window);
+                    }
+                }
+                _ => {}
+            }
+        });
 
     #[cfg(any(target_os = "windows", target_os = "linux"))]
     {
         builder = builder.plugin(tauri_plugin_single_instance::init(
             |app, argv, _cwd| {
                 if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.unminimize();
-                    let _ = window.show();
-                    let _ = window.set_focus();
+                    tray::restore_from_tray(&window);
                 }
                 let mut i = 0;
                 while i < argv.len() {

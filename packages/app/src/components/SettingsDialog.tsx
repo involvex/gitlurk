@@ -5,15 +5,16 @@ import { useAppStore } from '../stores';
 import type { AiProvider } from '../stores/ui';
 import { DeveloperPanel } from './DeveloperPanel';
 
-type SettingsTab = 'ai' | 'developer';
+type SettingsTab = 'general' | 'ai' | 'developer';
 
 export function SettingsDialog() {
   const show = useAppStore((s) => s.showSettings);
   const aiProvider = useAppStore((s) => s.aiProvider);
   const aiModel = useAppStore((s) => s.aiModel);
   const kiloBaseUrl = useAppStore((s) => s.kiloBaseUrl);
+  const minimizeToTray = useAppStore((s) => s.minimizeToTray);
 
-  const [tab, setTab] = useState<SettingsTab>('ai');
+  const [tab, setTab] = useState<SettingsTab>('general');
   const [provider, setProvider] = useState<AiProvider>(aiProvider);
   const [model, setModel] = useState(aiModel);
   const [kiloUrl, setKiloUrl] = useState(kiloBaseUrl);
@@ -25,7 +26,7 @@ export function SettingsDialog() {
 
   useEffect(() => {
     if (!show) return;
-    setTab('ai');
+    setTab('general');
     setProvider(aiProvider);
     setModel(aiModel);
     setKiloUrl(kiloBaseUrl);
@@ -119,6 +120,17 @@ export function SettingsDialog() {
         <div className="mb-4 flex gap-2 border-b border-border pb-2">
           <button
             type="button"
+            onClick={() => setTab('general')}
+            className={`rounded px-3 py-1 text-xs ${
+              tab === 'general'
+                ? 'bg-accent text-white'
+                : 'text-muted hover:bg-surface-elevated'
+            }`}
+          >
+            General
+          </button>
+          <button
+            type="button"
             onClick={() => setTab('ai')}
             className={`rounded px-3 py-1 text-xs ${
               tab === 'ai'
@@ -141,7 +153,29 @@ export function SettingsDialog() {
           </button>
         </div>
 
-        {tab === 'ai' ? (
+        {tab === 'general' ? (
+          <div className="space-y-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={minimizeToTray}
+                onChange={(e) => {
+                  void dispatcher.setMinimizeToTray(e.target.checked);
+                }}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block text-sm font-medium">
+                  Minimize to tray
+                </span>
+                <span className="mt-0.5 block text-xs text-muted">
+                  Hide from the taskbar when minimized or closed. Restore from
+                  the tray icon (Quit exits fully).
+                </span>
+              </span>
+            </label>
+          </div>
+        ) : tab === 'ai' ? (
           <div className="space-y-4">
             <label className="block text-xs font-medium text-muted">
               AI provider

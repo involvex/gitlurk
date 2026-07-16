@@ -34,6 +34,7 @@ export interface UiSlice {
   aiProvider: AiProvider;
   aiModel: string;
   kiloBaseUrl: string;
+  minimizeToTray: boolean;
   unreadNotifications: number;
   setTheme: (theme: ThemeMode) => void;
   setResolvedTheme: (theme: 'light' | 'dark') => void;
@@ -60,6 +61,7 @@ export interface UiSlice {
   setAiProvider: (provider: AiProvider) => void;
   setAiModel: (model: string) => void;
   setKiloBaseUrl: (url: string) => void;
+  setMinimizeToTray: (enabled: boolean) => void;
   setUnreadNotifications: (count: number) => void;
   applyPanelSettings: (settings: {
     sidebarWidth: number;
@@ -69,6 +71,7 @@ export interface UiSlice {
     aiProvider: AiProvider;
     aiModel: string;
     kiloBaseUrl: string;
+    minimizeToTray?: boolean;
   }) => void;
 }
 
@@ -98,6 +101,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   aiProvider: 'opencode',
   aiModel: 'deepseek-v4-flash-free',
   kiloBaseUrl: 'https://api.kilo.ai/v1',
+  minimizeToTray: false,
   unreadNotifications: 0,
   setTheme: (theme) => set({ theme }),
   setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
@@ -129,6 +133,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   setAiProvider: (aiProvider) => set({ aiProvider }),
   setAiModel: (aiModel) => set({ aiModel }),
   setKiloBaseUrl: (kiloBaseUrl) => set({ kiloBaseUrl }),
+  setMinimizeToTray: (minimizeToTray) => set({ minimizeToTray }),
   setUnreadNotifications: (unreadNotifications) => set({ unreadNotifications }),
   applyPanelSettings: (settings) =>
     set({
@@ -139,5 +144,8 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
       aiProvider: settings.aiProvider,
       aiModel: settings.aiModel,
       kiloBaseUrl: settings.kiloBaseUrl,
+      ...(typeof settings.minimizeToTray === 'boolean'
+        ? { minimizeToTray: settings.minimizeToTray }
+        : {}),
     }),
 });

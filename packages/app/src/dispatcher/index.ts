@@ -54,6 +54,7 @@ export const dispatcher = {
       aiProvider: settings.aiProvider,
       aiModel: settings.aiModel,
       kiloBaseUrl: settings.kiloBaseUrl,
+      minimizeToTray: settings.minimizeToTray,
     });
     getStore().setAuth(auth.username);
     getStore().setExplorerMenuEnabled(explorerMenu.enabled);
@@ -162,6 +163,11 @@ export const dispatcher = {
       aiModel: opts.aiModel,
       kiloBaseUrl: opts.kiloBaseUrl,
     });
+  },
+
+  async setMinimizeToTray(enabled: boolean) {
+    getStore().setMinimizeToTray(enabled);
+    await ipcInvoke('app:set-settings', { minimizeToTray: enabled });
   },
 
   async generateCommitMessage() {
