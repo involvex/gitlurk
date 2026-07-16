@@ -129,8 +129,7 @@ export interface IpcResponses {
   'app:get-repos': { repos: string[] };
   'app:save-repos': void;
   'app:take-pending-action':
-    | import('../protocol/parse-app-url.js').UrlAction
-    | null;
+    import('../protocol/parse-app-url.js').UrlAction | null;
   'app:get-theme': { theme: 'light' | 'dark' | 'system' };
   'app:set-theme': void;
   'app:get-settings': {
