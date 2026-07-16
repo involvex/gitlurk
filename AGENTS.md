@@ -32,6 +32,7 @@ packages/
 ## Technology Stack
 
 ### Frontend
+
 - **React 19** — UI framework
 - **TypeScript 5.9** — Type-safe JavaScript
 - **Tailwind CSS 4** — Utility-first CSS (via `@tailwindcss/vite`)
@@ -41,6 +42,7 @@ packages/
 - **@git-diff-view/react** — Diff rendering
 
 ### Backend (Rust)
+
 - **Tauri 2** — Desktop application framework
 - **Serde / Serde JSON** — Serialization
 - **Reqwest** — HTTP client (with rustls-tls)
@@ -50,6 +52,7 @@ packages/
 - **dotenvy** — Environment variable loading
 
 ### Build & Tooling
+
 - **Bun (>=1.3.0)** — Package manager, runtime, and bundler (REQUIRED, do not use npm/yarn/pnpm)
 - **Cargo** — Rust build system (invoked via Tauri CLI)
 - **ESLint 9** — Linting (flat config with typescript-eslint)
@@ -137,22 +140,26 @@ GitHub.com / Extension → gitlurk:// → Rust protocol parser → url-action ev
 ### Key Patterns
 
 #### IPC Communication
+
 - All renderer → Rust communication goes through `packages/app/src/ipc/client.ts`
 - Never call `invoke()` directly outside of `ipc/client.ts`
 - Channels are typed in `packages/shared/src/ipc/channels.ts`
 - Channel names use colon-separated format (`git:status`), converted to underscore for Rust (`git_status`)
 
 #### State Management (Zustand Slices)
+
 - Store is composed of slices: `ReposSlice`, `AuthSlice`, `GitOpsSlice`, `UiSlice`
 - Located in `packages/app/src/stores/`
 - Access via `useAppStore` hook or `useAppStore.getState()` for imperative code
 
 #### Dispatcher Pattern
+
 - `packages/app/src/dispatcher/index.ts` orchestrates all app actions
 - Dispatcher methods handle IPC calls, store updates, and error handling
 - Always wrap IPC calls in try/catch with `getStore().setError()`
 
 #### Component Structure
+
 - Components are in `packages/app/src/components/`
 - Functional components only (no class components)
 - Use `useAppStore` selector for reactive state, `dispatcher` for actions
@@ -270,21 +277,21 @@ All steps must pass before merging.
 
 ## Key Files Reference
 
-| File | Purpose |
-|------|---------|
-| `packages/shared/src/ipc/channels.ts` | IPC channel type definitions |
-| `packages/shared/src/security/path-validator.ts` | Path validation utilities |
-| `packages/shared/src/protocol/` | GitLurk URL protocol parser |
-| `packages/app/src/ipc/client.ts` | IPC wrapper (all Tauri invoke calls) |
-| `packages/app/src/dispatcher/index.ts` | App action orchestrator |
-| `packages/app/src/stores/` | Zustand store slices |
-| `packages/app/src/components/` | React UI components |
-| `packages/app/src-tauri/src/lib.rs` | Rust backend entry point |
-| `packages/app/src-tauri/src/commands/` | Tauri command handlers |
-| `packages/app/src-tauri/Cargo.toml` | Rust dependencies |
-| `packages/app/src-tauri/tauri.conf.json` | Tauri configuration |
-| `packages/cli/src/cli.ts` | CLI entry point |
-| `docs/architecture.md` | Architecture documentation |
-| `docs/security.md` | Security model documentation |
-| `docs/plugin-spec.md` | Plugin specification |
-| `.env.example` | Environment variable template |
+| File                                             | Purpose                              |
+| ------------------------------------------------ | ------------------------------------ |
+| `packages/shared/src/ipc/channels.ts`            | IPC channel type definitions         |
+| `packages/shared/src/security/path-validator.ts` | Path validation utilities            |
+| `packages/shared/src/protocol/`                  | GitLurk URL protocol parser          |
+| `packages/app/src/ipc/client.ts`                 | IPC wrapper (all Tauri invoke calls) |
+| `packages/app/src/dispatcher/index.ts`           | App action orchestrator              |
+| `packages/app/src/stores/`                       | Zustand store slices                 |
+| `packages/app/src/components/`                   | React UI components                  |
+| `packages/app/src-tauri/src/lib.rs`              | Rust backend entry point             |
+| `packages/app/src-tauri/src/commands/`           | Tauri command handlers               |
+| `packages/app/src-tauri/Cargo.toml`              | Rust dependencies                    |
+| `packages/app/src-tauri/tauri.conf.json`         | Tauri configuration                  |
+| `packages/cli/src/cli.ts`                        | CLI entry point                      |
+| `docs/architecture.md`                           | Architecture documentation           |
+| `docs/security.md`                               | Security model documentation         |
+| `docs/plugin-spec.md`                            | Plugin specification                 |
+| `.env.example`                                   | Environment variable template        |
