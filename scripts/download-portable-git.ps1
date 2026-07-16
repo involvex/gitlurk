@@ -1,8 +1,33 @@
 #Requires -Version 5.1
 $ErrorActionPreference = "Stop"
 
-# scripts/ -> repo root
-$Root = Split-Path -Parent $PSScriptRoot
+# Resolve monorepo root by walking up until package.json has workspaces
+# (avoids off-by-one when Actions nesting differs).
+function Find-RepoRoot([string]$StartDir) {
+  $dir = $StartDir
+  for ($i = 0; $i -lt 8; $i++) {
+    $pkg = Join-Path $dir "package.json"
+    if (Test-Path $pkg) {
+      try {
+        $json = Get-Content -Raw $pkg | ConvertFrom-Json
+        $appPkg = Join-Path $dir "packages\app\package.json"
+        if ($null -ne $json.workspaces -and (Test-Path $appPkg)) {
+          return $dir
+        }
+      } catch {
+        # keep walking
+      }
+    }
+    $parent = Split-Path -Parent $dir
+    if ($parent -eq $dir) { break }
+    $dir = $parent
+  }
+  throw "Could not locate GitLurk monorepo root from $StartDir"
+}
+
+$Root = Find-RepoRoot $PSScriptRoot
+Write-Host "Repo root: $Root"
+
 $TargetDir = Join-Path $Root "packages\app\src-tauri\resources\git"
 $BundleDir = Join-Path $Root "packages\app\bundle-resources\git"
 $TempDir = Join-Path $env:TEMP "gitlurk-mingit"
@@ -29,10 +54,19 @@ $gitCandidate = Get-ChildItem -Path $TempDir -Recurse -Filter "git.exe" -ErrorAc
   Select-Object -First 1
 
 if (-not $gitCandidate) {
-  throw "Failed to locate cmd/git.exe in extracted MinGit archive"
+  # Fallback: some archives extract git.exe under mingw64/bin
+  $gitCandidate = Get-ChildItem -Path $TempDir -Recurse -Filter "git.exe" -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+  if (-not $gitCandidate) {
+    throw "Failed to locate git.exe in extracted MinGit archive under $TempDir"
+  }
+  Write-Host "Warning: using non-cmd git.exe at $($gitCandidate.FullName)"
+  $ExtractedRoot = $gitCandidate.Directory.Parent.FullName
+} else {
+  $ExtractedRoot = $gitCandidate.Directory.Parent.FullName
 }
 
-$ExtractedRoot = $gitCandidate.Directory.Parent.FullName
+Write-Host "Extracted MinGit root: $ExtractedRoot"
 
 function Install-MinGit([string]$Destination) {
   if (Test-Path $Destination) {
@@ -40,10 +74,17 @@ function Install-MinGit([string]$Destination) {
   }
   New-Item -ItemType Directory -Path $Destination -Force | Out-Null
   Copy-Item -Path (Join-Path $ExtractedRoot "*") -Destination $Destination -Recurse -Force
-  $gitExe = Join-Path $Destination "cmd\git.exe"
-  if (-not (Test-Path $gitExe)) {
+
+  $cmdGit = Join-Path $Destination "cmd\git.exe"
+  $binGit = Join-Path $Destination "mingw64\bin\git.exe"
+  $gitExe = if (Test-Path $cmdGit) { $cmdGit } elseif (Test-Path $binGit) { $binGit } else { $null }
+
+  if (-not $gitExe) {
+    Write-Host "Contents of $Destination :"
+    Get-ChildItem $Destination | ForEach-Object { Write-Host "  $($_.Name)" }
     throw "git.exe not found after extraction at $Destination"
   }
+
   Write-Host "Portable Git installed to $Destination"
   & $gitExe --version
 }
