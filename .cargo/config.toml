@@ -1,6 +1,6 @@
-# Shared cargo artifacts on external HDD (matches ~/.cargo/config.toml).
-# Prefer space over speed; Windows Defender exclusion recommended for this path.
+# Shared cargo settings for this repo.
+# Do NOT set target-dir here — CI runners have no I: drive.
+# Prefer ~/.cargo/config.toml for a personal target-dir override.
 
 [build]
 incremental = true
-target-dir = "I:/dev/cargo-target"

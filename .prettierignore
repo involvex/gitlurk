@@ -1,0 +1,8 @@
+.cursor
+**/node_modules
+**/dist
+**/target
+I:/dev/cargo-target
+bun.lock
+**/*.tsbuildinfo
+packages/app/src-tauri/gen

@@ -1,5 +1,6 @@
 {
   "name": "gitlurk-desktop",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "bin": {
@@ -18,7 +19,9 @@
     "lint": "eslint .",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "typecheck": "bun run --filter '*' typecheck"
+    "typecheck": "bun run --filter '*' typecheck",
+    "changelog": "bun run scripts/generate-changelog.ts",
+    "release": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/release.ps1"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
