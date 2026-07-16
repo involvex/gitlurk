@@ -1,21 +1,18 @@
 #Requires -Version 5.1
 $ErrorActionPreference = "Stop"
 
-$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+# scripts/ -> repo root
+$Root = Split-Path -Parent $PSScriptRoot
 $TargetDir = Join-Path $Root "packages\app\src-tauri\resources\git"
+$BundleDir = Join-Path $Root "packages\app\bundle-resources\git"
 $TempDir = Join-Path $env:TEMP "gitlurk-mingit"
-
-if (Test-Path $TargetDir) {
-    Remove-Item -Recurse -Force $TargetDir
-}
-New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
 
 $ReleaseApi = "https://api.github.com/repos/git-for-windows/git/releases/latest"
 $Release = Invoke-RestMethod -Uri $ReleaseApi -Headers @{ "User-Agent" = "GitLurk-Desktop" }
 $Asset = $Release.assets | Where-Object { $_.name -match "MinGit-.*-64-bit\.zip$" } | Select-Object -First 1
 
 if (-not $Asset) {
-    throw "MinGit 64-bit asset not found in latest Git for Windows release"
+  throw "MinGit 64-bit asset not found in latest Git for Windows release"
 }
 
 $ZipPath = Join-Path $env:TEMP $Asset.name
@@ -23,20 +20,33 @@ Write-Host "Downloading $($Asset.name)..."
 Invoke-WebRequest -Uri $Asset.browser_download_url -OutFile $ZipPath
 
 if (Test-Path $TempDir) {
-    Remove-Item -Recurse -Force $TempDir
+  Remove-Item -Recurse -Force $TempDir
 }
 Expand-Archive -Path $ZipPath -DestinationPath $TempDir
 
-$Extracted = Get-ChildItem -Path $TempDir -Directory | Select-Object -First 1
-if (-not $Extracted) {
-    throw "Failed to extract MinGit archive"
+$gitCandidate = Get-ChildItem -Path $TempDir -Recurse -Filter "git.exe" -ErrorAction SilentlyContinue |
+  Where-Object { $_.FullName -match '[\\/]cmd[\\/]git\.exe$' } |
+  Select-Object -First 1
+
+if (-not $gitCandidate) {
+  throw "Failed to locate cmd/git.exe in extracted MinGit archive"
 }
 
-Copy-Item -Path (Join-Path $Extracted.FullName "*") -Destination $TargetDir -Recurse -Force
-Write-Host "Portable Git installed to $TargetDir"
+$ExtractedRoot = $gitCandidate.Directory.Parent.FullName
 
-if (Test-Path (Join-Path $TargetDir "cmd\git.exe")) {
-    & (Join-Path $TargetDir "cmd\git.exe") --version
-} else {
-    throw "git.exe not found after extraction"
+function Install-MinGit([string]$Destination) {
+  if (Test-Path $Destination) {
+    Remove-Item -Recurse -Force $Destination
+  }
+  New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+  Copy-Item -Path (Join-Path $ExtractedRoot "*") -Destination $Destination -Recurse -Force
+  $gitExe = Join-Path $Destination "cmd\git.exe"
+  if (-not (Test-Path $gitExe)) {
+    throw "git.exe not found after extraction at $Destination"
+  }
+  Write-Host "Portable Git installed to $Destination"
+  & $gitExe --version
 }
+
+Install-MinGit $TargetDir
+Install-MinGit $BundleDir
