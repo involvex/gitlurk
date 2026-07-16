@@ -554,6 +554,44 @@ export const dispatcher = {
     }
   },
 
+  async watchCiRun(path: string) {
+    const store = getStore();
+    store.setGhRunWatchPath(path);
+    store.clearGhRunWatchLog();
+    store.setGhRunWatchRunning(true);
+    store.setShowGhRunWatch(true);
+    try {
+      const version = await ipcInvoke('dev:gh-version', {});
+      if (!version.installed) {
+        store.setGhRunWatchRunning(false);
+        store.appendGhRunWatchLog(
+          'GitHub CLI (gh) not found. Install from https://cli.github.com\n',
+        );
+        return;
+      }
+      await ipcInvoke('dev:gh-run-watch', { path });
+    } catch (error) {
+      store.setGhRunWatchRunning(false);
+      store.appendGhRunWatchLog(
+        `${error instanceof Error ? error.message : 'Failed to watch CI run'}\n`,
+      );
+    }
+  },
+
+  async stopWatchCiRun() {
+    try {
+      await ipcInvoke('dev:gh-run-watch-stop', {});
+    } catch {
+      // ignore
+    }
+    getStore().setGhRunWatchRunning(false);
+  },
+
+  async closeWatchCiRun() {
+    await dispatcher.stopWatchCiRun();
+    getStore().setShowGhRunWatch(false);
+  },
+
   async removeRepo(path: string) {
     getStore().removeRepo(path);
     await persistRepos();

@@ -7,7 +7,7 @@ Windows-focused Git client built with Tauri 2, React, TypeScript, and Bun.
 - `@gitlurk/app` — Tauri desktop application
 - `@gitlurk/shared` — Typed IPC contracts, protocol parser, path validation
 - `@gitlurk/git` — Hybrid Git service (system Git + bundled fallback)
-- `@gitlurk/cli` — CLI companion (`gitlurk`, `gh` shortcuts, git config)
+- `@involvex/gitlurk-desktop` — CLI companion (`gitlurk`, `gh` shortcuts, git config)
 - `@gitlurk/plugin-sdk` — Plugin API types
 - `@gitlurk/extension` — Chrome/Edge WebExtension bridge
 
@@ -38,11 +38,13 @@ From the repo root:
 
 ```bash
 bun link
+# or: npm i -g @involvex/gitlurk-desktop
 gitlurk --help
 gitlurk          # open cwd in GitLurk Desktop
 gitlurk .        # same
 gitlurk gh run list
 gitlurk git config list --global
+gitlurk install-desktop
 ```
 
 Resolution order for the desktop binary:

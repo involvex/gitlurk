@@ -17,6 +17,10 @@ export interface UiSlice {
   showTerminal: boolean;
   showPlugins: boolean;
   showSettings: boolean;
+  showGhRunWatch: boolean;
+  ghRunWatchLog: string;
+  ghRunWatchRunning: boolean;
+  ghRunWatchPath: string | null;
   explorerMenuEnabled: boolean;
   toast: string | null;
   authDialog: AuthDialogState | null;
@@ -35,6 +39,11 @@ export interface UiSlice {
   setShowTerminal: (show: boolean) => void;
   setShowPlugins: (show: boolean) => void;
   setShowSettings: (show: boolean) => void;
+  setShowGhRunWatch: (show: boolean) => void;
+  appendGhRunWatchLog: (chunk: string) => void;
+  clearGhRunWatchLog: () => void;
+  setGhRunWatchRunning: (running: boolean) => void;
+  setGhRunWatchPath: (path: string | null) => void;
   setExplorerMenuEnabled: (enabled: boolean) => void;
   showToast: (message: string) => void;
   clearToast: () => void;
@@ -70,6 +79,10 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   showTerminal: false,
   showPlugins: false,
   showSettings: false,
+  showGhRunWatch: false,
+  ghRunWatchLog: '',
+  ghRunWatchRunning: false,
+  ghRunWatchPath: null,
   explorerMenuEnabled: false,
   toast: null,
   authDialog: null,
@@ -88,6 +101,12 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   setShowTerminal: (show) => set({ showTerminal: show }),
   setShowPlugins: (show) => set({ showPlugins: show }),
   setShowSettings: (show) => set({ showSettings: show }),
+  setShowGhRunWatch: (show) => set({ showGhRunWatch: show }),
+  appendGhRunWatchLog: (chunk) =>
+    set((state) => ({ ghRunWatchLog: state.ghRunWatchLog + chunk })),
+  clearGhRunWatchLog: () => set({ ghRunWatchLog: '' }),
+  setGhRunWatchRunning: (ghRunWatchRunning) => set({ ghRunWatchRunning }),
+  setGhRunWatchPath: (ghRunWatchPath) => set({ ghRunWatchPath }),
   setExplorerMenuEnabled: (enabled) => set({ explorerMenuEnabled: enabled }),
   showToast: (message) => set({ toast: message }),
   clearToast: () => set({ toast: null }),

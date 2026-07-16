@@ -1,5 +1,6 @@
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::process::Child;
+use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
@@ -21,6 +22,7 @@ pub struct AppState {
     pub data_dir: PathBuf,
     pub git: git_service::GitService,
     pub gh: gh_service::GhService,
+    pub gh_watch: Arc<Mutex<Option<Child>>>,
     pub auth_token: Mutex<Option<String>>,
     pub auth_username: Mutex<Option<String>>,
     pub mcp_token: String,
@@ -35,6 +37,7 @@ impl AppState {
             data_dir,
             git: git_service::GitService::new(),
             gh: gh_service::GhService::new(),
+            gh_watch: Arc::new(Mutex::new(None)),
             auth_token: Mutex::new(None),
             auth_username: Mutex::new(None),
             mcp_token,
@@ -304,6 +307,7 @@ pub fn run() {
             commands::developer::dev_gh_auth_status,
             commands::developer::dev_gh_run_list,
             commands::developer::dev_gh_run_watch,
+            commands::developer::dev_gh_run_watch_stop,
             commands::developer::dev_gh_repo_fork,
             commands::developer::dev_gh_release_create,
             commands::developer::dev_gh_config_list,

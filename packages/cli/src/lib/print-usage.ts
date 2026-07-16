@@ -26,12 +26,16 @@ Git config:
   gitlurk git config set <key> <value> [--global|--local]
   gitlurk git config edit [--global|--local]
 
+Desktop installer:
+  gitlurk install-desktop       Download & launch latest Windows installer
+
 Env:
   GITLURK_DESKTOP_EXE           Path to gitlurk-desktop.exe (optional)
   CARGO_TARGET_DIR              Cargo target dir; uses release/ then debug/
 
 Install:
-  bun link                       (from repo root) — uses the root package.json "bin" field
+  npm i -g @involvex/gitlurk-desktop
+  bun link                       (from repo root, for local development)
 
 If no exe is found, falls back to:
   bun run --filter @gitlurk/app tauri dev --release --no-watch -- <arg>

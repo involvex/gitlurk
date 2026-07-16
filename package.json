@@ -12,7 +12,8 @@
   ],
   "scripts": {
     "dev": "bun run --filter @gitlurk/app dev",
-    "build": "bun run --filter @gitlurk/shared build && bun run --filter @gitlurk/git build && bun run --filter @gitlurk/gh build && bun run --filter @gitlurk/cli build && bun run --filter @gitlurk/app build",
+    "build": "bun run --filter @gitlurk/shared build && bun run --filter @gitlurk/git build && bun run --filter @gitlurk/gh build && bun run --filter @involvex/gitlurk-desktop build && bun run --filter @gitlurk/app build",
+    "publish:cli": "bun run --filter @involvex/gitlurk-desktop prepublishOnly && bunx npm publish --workspace @involvex/gitlurk-desktop",
     "tauri:dev": "bun run --filter @gitlurk/app tauri:dev",
     "tauri:build": "bun run --filter @gitlurk/app tauri:build",
     "test": "bun test",

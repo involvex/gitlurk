@@ -9,6 +9,7 @@ import { TerminalPane } from './components/TerminalPane';
 import { PluginsPanel } from './components/PluginsPanel';
 import { AuthDialog } from './components/AuthDialog';
 import { SettingsDialog } from './components/SettingsDialog';
+import { GhRunWatchDialog } from './components/GhRunWatchDialog';
 import { ResizeHandle } from './components/ResizeHandle';
 import { Toast } from './components/Toast';
 import { dispatcher } from './dispatcher';
@@ -146,6 +147,7 @@ export function App() {
       <CloneDialog />
       <AuthDialog />
       <SettingsDialog />
+      <GhRunWatchDialog />
       <Toast />
     </div>
   );

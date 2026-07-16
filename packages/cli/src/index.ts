@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { ghVersion } from '@gitlurk/gh';
 import { runDesktopCommand } from './commands/desktop.js';
 import { isGhCommand, runGhCommand, runGhPassthrough } from './commands/gh.js';
@@ -6,6 +6,7 @@ import {
   isGitConfigCommand,
   runGitConfigCommand,
 } from './commands/git-config.js';
+import { runInstallDesktop } from './commands/install-desktop.js';
 import { printUsage } from './lib/print-usage.js';
 import { readGitlurkVersion } from './lib/version.js';
 
@@ -41,6 +42,16 @@ async function main(): Promise<void> {
 
   if (help || args[0] === 'help') {
     printUsage();
+    return;
+  }
+
+  if (args[0] === 'install-desktop') {
+    try {
+      await runInstallDesktop();
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    }
     return;
   }
 

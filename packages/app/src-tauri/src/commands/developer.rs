@@ -1,9 +1,28 @@
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
+use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 
-use crate::{terminal, validate_repo_path, AppState};
+use crate::{validate_repo_path, AppState};
+
+fn repo_cwd(path: Option<String>) -> Result<PathBuf, String> {
+    match path {
+        Some(p) => validate_repo_path(&p),
+        None => Ok(std::env::current_dir().map_err(|e| e.to_string())?),
+    }
+}
+
+fn parse_scope(scope: Option<String>) -> Result<String, String> {
+    let value = scope.unwrap_or_else(|| "local".into());
+    if matches!(value.as_str(), "global" | "local" | "system") {
+        Ok(value)
+    } else {
+        Err("scope must be global, local, or system".into())
+    }
+}
 
 #[derive(Serialize)]
 pub struct GhVersionResponse {
@@ -45,20 +64,16 @@ pub struct GhAliasEntry {
     pub expansion: String,
 }
 
-fn repo_cwd(path: Option<String>) -> Result<PathBuf, String> {
-    match path {
-        Some(p) => validate_repo_path(&p),
-        None => Ok(std::env::current_dir().map_err(|e| e.to_string())?),
-    }
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GhRunOutputEvent {
+    data: String,
 }
 
-fn parse_scope(scope: Option<String>) -> Result<String, String> {
-    let value = scope.unwrap_or_else(|| "local".into());
-    if matches!(value.as_str(), "global" | "local" | "system") {
-        Ok(value)
-    } else {
-        Err("scope must be global, local, or system".into())
-    }
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GhRunDoneEvent {
+    exit_code: i32,
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -131,25 +146,109 @@ pub fn dev_gh_run_list(
 
 #[tauri::command(rename_all = "camelCase")]
 pub fn dev_gh_run_watch(
+    app: AppHandle,
     state: State<'_, AppState>,
     run_id: Option<String>,
     repo: Option<String>,
     path: Option<String>,
-) -> Result<(), String> {
+) -> Result<serde_json::Value, String> {
     let cwd = repo_cwd(path)?;
-    state.gh.resolve_gh()?;
+    let gh = state.gh.resolve_gh()?;
 
-    let mut cmd = format!("gh run watch");
-    if let Some(id) = run_id {
-        cmd.push(' ');
-        cmd.push_str(&id);
-    }
-    if let Some(r) = repo {
-        cmd.push_str(" --repo ");
-        cmd.push_str(&r);
+    {
+        let mut watch = state.gh_watch.lock().unwrap();
+        if let Some(mut child) = watch.take() {
+            let _ = child.kill();
+        }
     }
 
-    terminal::open_in_windows_terminal_with_command(cwd.to_string_lossy().as_ref(), &cmd)
+    let mut cmd = Command::new(&gh);
+    cmd.arg("run").arg("watch");
+    if let Some(id) = &run_id {
+        cmd.arg(id);
+    }
+    if let Some(r) = &repo {
+        cmd.arg("--repo").arg(r);
+    }
+    cmd.current_dir(&cwd)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null());
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to start gh run watch: {e}"))?;
+
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+
+    *state.gh_watch.lock().unwrap() = Some(child);
+
+    let app_out = app.clone();
+    if let Some(out) = stdout {
+        std::thread::spawn(move || {
+            let reader = BufReader::new(out);
+            for line in reader.lines().flatten() {
+                let _ = app_out.emit(
+                    "dev:gh-run-output",
+                    GhRunOutputEvent {
+                        data: format!("{line}\n"),
+                    },
+                );
+            }
+        });
+    }
+
+    let app_err = app.clone();
+    if let Some(err) = stderr {
+        std::thread::spawn(move || {
+            let reader = BufReader::new(err);
+            for line in reader.lines().flatten() {
+                let _ = app_err.emit(
+                    "dev:gh-run-output",
+                    GhRunOutputEvent {
+                        data: format!("{line}\n"),
+                    },
+                );
+            }
+        });
+    }
+
+    let app_done = app.clone();
+    let watch_slot: Arc<Mutex<_>> = Arc::clone(&state.gh_watch);
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        let mut slot = watch_slot.lock().unwrap();
+        let Some(child) = slot.as_mut() else {
+            let _ = app_done.emit("dev:gh-run-done", GhRunDoneEvent { exit_code: -1 });
+            break;
+        };
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                let code = status.code().unwrap_or(1);
+                let _ = slot.take();
+                let _ = app_done.emit("dev:gh-run-done", GhRunDoneEvent { exit_code: code });
+                break;
+            }
+            Ok(None) => {}
+            Err(_) => {
+                let _ = slot.take();
+                let _ = app_done.emit("dev:gh-run-done", GhRunDoneEvent { exit_code: 1 });
+                break;
+            }
+        }
+    });
+
+    Ok(serde_json::json!({ "started": true }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn dev_gh_run_watch_stop(state: State<'_, AppState>) -> Result<(), String> {
+    let mut watch = state.gh_watch.lock().unwrap();
+    if let Some(mut child) = watch.take() {
+        let _ = child.kill();
+    }
+    Ok(())
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -293,9 +392,7 @@ pub fn dev_git_config_list(
 ) -> Result<serde_json::Value, String> {
     let cwd = repo_cwd(path)?;
     let scope = parse_scope(scope)?;
-    let entries = state
-        .git
-        .config_list(&scope, &cwd, scope == "local")?;
+    let entries = state.git.config_list(&scope, &cwd, scope == "local")?;
     Ok(serde_json::json!({ "entries": entries }))
 }
 

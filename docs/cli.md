@@ -4,10 +4,16 @@ The `gitlurk` command launches GitLurk Desktop and wraps common GitHub CLI (`gh`
 
 ## Install
 
-From the monorepo root:
+```bash
+npm i -g @involvex/gitlurk-desktop
+# or from the monorepo:
+bun link
+```
+
+Download the Windows desktop app:
 
 ```bash
-bun link
+gitlurk install-desktop
 ```
 
 ## Desktop launcher
@@ -73,6 +79,16 @@ gitlurk git config edit --global
 ```
 
 Scopes: `--global`, `--local` (default), `--system`.
+
+## npm publish
+
+From the monorepo (requires npm login to the `involvex` org):
+
+```bash
+./scripts/publish-npm.ps1
+```
+
+Package name: `@involvex/gitlurk-desktop` (bin: `gitlurk`).
 
 ## Desktop Developer panel
 

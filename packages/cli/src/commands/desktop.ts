@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildOpenRepoUrl } from '@gitlurk/shared';
@@ -61,10 +62,9 @@ export function spawnDesktop(arg: string): void {
   if (exe) {
     console.log(`Launching ${exe}`);
     console.log(`  arg: ${arg}`);
-    const child = Bun.spawn([exe, arg], {
-      stdout: 'ignore',
-      stderr: 'ignore',
-      stdin: 'ignore',
+    const child = spawn(exe, [arg], {
+      detached: true,
+      stdio: 'ignore',
       windowsHide: false,
     });
     child.unref();
@@ -74,7 +74,7 @@ export function spawnDesktop(arg: string): void {
   if (!repoRoot) {
     console.error(
       'GitLurk Desktop executable not found and monorepo root could not be resolved.\n' +
-        'Set GITLURK_DESKTOP_EXE or CARGO_TARGET_DIR, or run `bun link` from the GitLurk checkout.',
+        'Set GITLURK_DESKTOP_EXE or CARGO_TARGET_DIR, or install with `gitlurk install-desktop`.',
     );
     process.exit(1);
   }
@@ -83,9 +83,9 @@ export function spawnDesktop(arg: string): void {
     `No ${EXE_NAME} found — launching via bun tauri from ${repoRoot}`,
   );
   console.log(`  arg: ${arg}`);
-  const child = Bun.spawn(
+  const child = spawn(
+    'bun',
     [
-      'bun',
       'run',
       '--filter',
       '@gitlurk/app',
@@ -98,9 +98,8 @@ export function spawnDesktop(arg: string): void {
     ],
     {
       cwd: repoRoot,
-      stdout: 'inherit',
-      stderr: 'inherit',
-      stdin: 'ignore',
+      detached: true,
+      stdio: 'ignore',
     },
   );
   child.unref();

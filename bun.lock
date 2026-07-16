@@ -47,17 +47,15 @@
       },
     },
     "packages/cli": {
-      "name": "@gitlurk/cli",
+      "name": "@involvex/gitlurk-desktop",
       "version": "0.1.1",
       "bin": {
-        "gitlurk": "./dist/cli.js",
+        "gitlurk": "./dist/index.js",
       },
-      "dependencies": {
+      "devDependencies": {
         "@gitlurk/gh": "workspace:*",
         "@gitlurk/git": "workspace:*",
         "@gitlurk/shared": "workspace:*",
-      },
-      "devDependencies": {
         "typescript": "^5.8.3",
       },
     },
@@ -224,8 +222,6 @@
 
     "@gitlurk/app": ["@gitlurk/app@workspace:packages/app"],
 
-    "@gitlurk/cli": ["@gitlurk/cli@workspace:packages/cli"],
-
     "@gitlurk/extension": ["@gitlurk/extension@workspace:packages/extension"],
 
     "@gitlurk/gh": ["@gitlurk/gh@workspace:packages/gh"],
@@ -245,6 +241,8 @@
     "@humanwhocodes/module-importer": ["@humanwhocodes/module-importer@1.0.1", "", {}, "sha512-bxveV4V8v5Yb4ncFTT3rPSgZBOpCkjfK0y4oVVVJwIuDVBRMDXrPyXRL988i5ap9m9bnyEEjWfm5WkBmtffLfA=="],
 
     "@humanwhocodes/retry": ["@humanwhocodes/retry@0.4.3", "", {}, "sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ=="],
+
+    "@involvex/gitlurk-desktop": ["@involvex/gitlurk-desktop@workspace:packages/cli"],
 
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 

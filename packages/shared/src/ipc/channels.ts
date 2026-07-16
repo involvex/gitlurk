@@ -70,6 +70,7 @@ export interface IpcChannels {
   'dev:gh-auth-status': Record<string, never>;
   'dev:gh-run-list': { repo?: string; limit?: number; path?: string };
   'dev:gh-run-watch': { runId?: string; repo?: string; path?: string };
+  'dev:gh-run-watch-stop': Record<string, never>;
   'dev:gh-repo-fork': { repo?: string; clone?: boolean; path?: string };
   'dev:gh-release-create': {
     tag: string;
@@ -247,7 +248,8 @@ export interface IpcResponses {
       url: string;
     }>;
   };
-  'dev:gh-run-watch': void;
+  'dev:gh-run-watch': { started: boolean };
+  'dev:gh-run-watch-stop': void;
   'dev:gh-repo-fork': { summary: string };
   'dev:gh-release-create': { url: string };
   'dev:gh-config-list': { entries: Array<{ key: string; value: string }> };
@@ -270,6 +272,8 @@ export type IpcEvents = {
   'tray-action': 'pull' | 'show';
   'cli-action': UrlAction;
   'terminal-output': { sessionId: string; data: string };
+  'dev:gh-run-output': { data: string };
+  'dev:gh-run-done': { exitCode: number };
 };
 
 export type IpcChannel = keyof IpcChannels;

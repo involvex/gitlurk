@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ipcInvoke } from '../ipc/client';
+import { dispatcher } from '../dispatcher';
 import { useAppStore } from '../stores';
 
 type ConfigScope = 'global' | 'local' | 'system';
@@ -158,13 +159,11 @@ export function DeveloperPanel() {
             <button
               type="button"
               disabled={busy || !activeRepoPath}
-              onClick={() =>
-                void runAction('Opened run watcher', async () => {
-                  await ipcInvoke('dev:gh-run-watch', {
-                    path: activeRepoPath ?? undefined,
-                  });
-                })
-              }
+              onClick={() => {
+                if (!activeRepoPath) return;
+                useAppStore.getState().setShowSettings(false);
+                void dispatcher.watchCiRun(activeRepoPath);
+              }}
               className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
             >
               Watch latest run

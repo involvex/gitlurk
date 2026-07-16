@@ -170,6 +170,7 @@ export function Sidebar() {
               ['explorer', 'Open in Explorer'],
               ['terminal', 'Open in Terminal'],
               ['github', 'Open on GitHub'],
+              ['watch', 'Watch CI run'],
               ['remove', 'Remove from list'],
             ] as const
           ).map(([id, label]) => (
@@ -189,6 +190,8 @@ export function Sidebar() {
                   void dispatcher.openTerminalAt(path);
                 } else if (id === 'github') {
                   void dispatcher.openRepoOnGitHub(path);
+                } else if (id === 'watch') {
+                  void dispatcher.watchCiRun(path);
                 } else {
                   void dispatcher.removeRepo(path);
                 }

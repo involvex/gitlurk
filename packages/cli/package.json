@@ -1,22 +1,50 @@
 {
-  "name": "@gitlurk/cli",
+  "name": "@involvex/gitlurk-desktop",
   "version": "0.1.1",
-  "private": true,
+  "description": "GitLurk Desktop CLI — open repos, wrap gh, manage git config",
   "type": "module",
   "bin": {
-    "gitlurk": "./dist/cli.js"
+    "gitlurk": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/involvex/gitlurk.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/involvex/gitlurk#readme",
+  "bugs": {
+    "url": "https://github.com/involvex/gitlurk/issues"
+  },
+  "keywords": [
+    "git",
+    "github",
+    "gh",
+    "desktop",
+    "cli",
+    "gitlurk"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "dev": "bun run src/cli.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "bun build src/index.ts --outdir dist --target node --minify && node ./scripts/postbuild.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "bun run build"
   },
-  "dependencies": {
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {},
+  "devDependencies": {
     "@gitlurk/gh": "workspace:*",
     "@gitlurk/git": "workspace:*",
-    "@gitlurk/shared": "workspace:*"
-  },
-  "devDependencies": {
+    "@gitlurk/shared": "workspace:*",
     "typescript": "^5.8.3"
   }
 }
