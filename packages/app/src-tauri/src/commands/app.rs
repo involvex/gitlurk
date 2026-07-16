@@ -4,11 +4,67 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 
 use crate::registry;
-use crate::{AppState, Settings};
+use crate::repo_watcher;
+use crate::{validate_repo_path, AppState, Settings};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoEntry {
+    pub path: String,
+    #[serde(default)]
+    pub pinned: bool,
+    #[serde(default)]
+    pub last_opened_at: Option<String>,
+}
 
 #[derive(Serialize, Deserialize, Default)]
 struct ReposFile {
-    repos: Vec<String>,
+    #[serde(default)]
+    repos: Vec<RepoEntry>,
+}
+
+fn read_repos_file(state: &AppState) -> ReposFile {
+    let file = state.repos_file();
+    if !file.exists() {
+        return ReposFile::default();
+    }
+    let content = match fs::read_to_string(file) {
+        Ok(content) => content,
+        Err(_) => return ReposFile::default(),
+    };
+
+    if let Ok(data) = serde_json::from_str::<ReposFile>(&content) {
+        return data;
+    }
+
+    #[derive(Deserialize)]
+    struct LegacyReposFile {
+        repos: Vec<String>,
+    }
+    if let Ok(legacy) = serde_json::from_str::<LegacyReposFile>(&content) {
+        return ReposFile {
+            repos: legacy
+                .repos
+                .into_iter()
+                .map(|path| RepoEntry {
+                    path,
+                    pinned: false,
+                    last_opened_at: None,
+                })
+                .collect(),
+        };
+    }
+
+    ReposFile::default()
+}
+
+fn write_repos_file(state: &AppState, repos: &[RepoEntry]) -> Result<(), String> {
+    let file = state.repos_file();
+    let data = ReposFile {
+        repos: repos.to_vec(),
+    };
+    let content = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
+    fs::write(file, content).map_err(|e| e.to_string())
 }
 
 fn read_settings(state: &AppState) -> Settings {
@@ -39,21 +95,13 @@ pub fn app_take_pending_action(
 
 #[tauri::command(rename_all = "camelCase")]
 pub fn app_get_repos(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    let file = state.repos_file();
-    if !file.exists() {
-        return Ok(serde_json::json!({ "repos": [] }));
-    }
-    let content = fs::read_to_string(file).map_err(|e| e.to_string())?;
-    let data: ReposFile = serde_json::from_str(&content).unwrap_or_default();
+    let data = read_repos_file(&state);
     Ok(serde_json::json!({ "repos": data.repos }))
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn app_save_repos(state: State<'_, AppState>, repos: Vec<String>) -> Result<(), String> {
-    let file = state.repos_file();
-    let data = ReposFile { repos };
-    let content = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
-    fs::write(file, content).map_err(|e| e.to_string())
+pub fn app_save_repos(state: State<'_, AppState>, repos: Vec<RepoEntry>) -> Result<(), String> {
+    write_repos_file(&state, &repos)
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -71,6 +119,11 @@ pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value,
         "minimizeToTray": settings.minimize_to_tray,
         "terminalShell": settings.terminal_shell,
         "terminalShellPath": settings.terminal_shell_path,
+        "backgroundFetchEnabled": settings.background_fetch_enabled,
+        "backgroundFetchIntervalMin": settings.background_fetch_interval_min,
+        "desktopNotifications": settings.desktop_notifications,
+        "autoRefreshOnChange": settings.auto_refresh_on_change,
+        "onboardingCompleted": settings.onboarding_completed,
     }))
 }
 
@@ -88,6 +141,11 @@ pub fn app_set_settings(
     minimize_to_tray: Option<bool>,
     terminal_shell: Option<String>,
     terminal_shell_path: Option<String>,
+    background_fetch_enabled: Option<bool>,
+    background_fetch_interval_min: Option<u32>,
+    desktop_notifications: Option<bool>,
+    auto_refresh_on_change: Option<bool>,
+    onboarding_completed: Option<bool>,
 ) -> Result<(), String> {
     let mut settings = read_settings(&state);
     if let Some(theme) = theme {
@@ -126,7 +184,6 @@ pub fn app_set_settings(
                 || trimmed.contains('/')
                 || normalized.ends_with(".exe") =>
             {
-                // Treat as custom absolute path.
                 settings.terminal_shell_path = trimmed.to_string();
                 "custom".into()
             }
@@ -135,6 +192,21 @@ pub fn app_set_settings(
     }
     if let Some(v) = terminal_shell_path {
         settings.terminal_shell_path = v.trim().to_string();
+    }
+    if let Some(v) = background_fetch_enabled {
+        settings.background_fetch_enabled = v;
+    }
+    if let Some(v) = background_fetch_interval_min {
+        settings.background_fetch_interval_min = v.clamp(5, 120);
+    }
+    if let Some(v) = desktop_notifications {
+        settings.desktop_notifications = v;
+    }
+    if let Some(v) = auto_refresh_on_change {
+        settings.auto_refresh_on_change = v;
+    }
+    if let Some(v) = onboarding_completed {
+        settings.onboarding_completed = v;
     }
     write_settings(&state, &settings)
 }
@@ -165,4 +237,19 @@ pub fn app_set_explorer_menu(app: AppHandle, enabled: bool) -> Result<(), String
     } else {
         registry::disable_explorer_menu(&app)
     }
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn app_watch_repo(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    path: Option<String>,
+) -> Result<(), String> {
+    state.repo_watcher.stop();
+    let Some(path) = path else {
+        return Ok(());
+    };
+    let dir = validate_repo_path(&path)?;
+    repo_watcher::watch_repo(app, &state.repo_watcher, &dir);
+    Ok(())
 }

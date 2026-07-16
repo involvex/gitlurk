@@ -348,6 +348,279 @@ impl GitService {
             Ok(Some(path))
         }
     }
+
+    pub fn restore_paths(
+        &self,
+        dir: &Path,
+        paths: &[String],
+        staged: bool,
+    ) -> Result<(), String> {
+        if paths.is_empty() {
+            return Ok(());
+        }
+        let mut args = vec!["restore"];
+        if staged {
+            args.push("--staged");
+        }
+        args.push("--");
+        for path in paths {
+            args.push(path);
+        }
+        let output = self.exec(&args, dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn restore_all(&self, dir: &Path, staged: bool) -> Result<(), String> {
+        let mut args = vec!["restore"];
+        if staged {
+            args.push("--staged");
+        }
+        args.push(".");
+        let output = self.exec(&args, dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn clean_paths(&self, dir: &Path, paths: &[String]) -> Result<(), String> {
+        let output = if paths.is_empty() {
+            self.exec(&["clean", "-fd"], dir)?
+        } else {
+            let mut args = vec!["clean", "-fd", "--"];
+            for path in paths {
+                args.push(path);
+            }
+            self.exec(&args, dir)?
+        };
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn stash_push(&self, dir: &Path, message: Option<&str>) -> Result<(), String> {
+        let output = match message {
+            Some(msg) if !msg.trim().is_empty() => self.exec(&["stash", "push", "-m", msg], dir)?,
+            _ => self.exec(&["stash", "push"], dir)?,
+        };
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn stash_list(&self, dir: &Path) -> Result<Vec<StashEntry>, String> {
+        let output = self.exec(&["stash", "list", "--format=%gd%x09%s"], dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        let mut entries = Vec::new();
+        for (index, line) in String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .enumerate()
+        {
+            let message = line
+                .split_once('\t')
+                .map(|(_, msg)| msg.to_string())
+                .unwrap_or_else(|| line.to_string());
+            entries.push(StashEntry { index, message });
+        }
+        Ok(entries)
+    }
+
+    pub fn stash_pop(&self, dir: &Path, index: Option<usize>) -> Result<(), String> {
+        let ref_name = index
+            .map(|i| format!("stash@{{{i}}}"))
+            .unwrap_or_else(|| "stash@{0}".into());
+        let output = self.exec(&["stash", "pop", &ref_name], dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn stash_drop(&self, dir: &Path, index: usize) -> Result<(), String> {
+        let ref_name = format!("stash@{{{index}}}");
+        let output = self.exec(&["stash", "drop", &ref_name], dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn fetch(&self, dir: &Path) -> Result<(), String> {
+        let output = self.exec(&["fetch"], dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn remote_ahead_count(&self, dir: &Path) -> Result<Option<u32>, String> {
+        let branch_output = self.exec(&["branch", "--show-current"], dir)?;
+        let branch = String::from_utf8_lossy(&branch_output.stdout)
+            .trim()
+            .to_string();
+        if branch.is_empty() {
+            return Ok(None);
+        }
+        let upstream = format!("origin/{branch}");
+        let output = self.exec(
+            &[
+                "rev-list",
+                "--count",
+                &format!("HEAD..{upstream}"),
+            ],
+            dir,
+        )?;
+        if !output.status.success() {
+            return Ok(None);
+        }
+        let count = String::from_utf8_lossy(&output.stdout)
+            .trim()
+            .parse::<u32>()
+            .unwrap_or(0);
+        Ok(Some(count))
+    }
+
+    pub fn add_paths(&self, dir: &Path, paths: &[String]) -> Result<(), String> {
+        if paths.is_empty() {
+            return Ok(());
+        }
+        let mut args = vec!["add", "--"];
+        for path in paths {
+            args.push(path);
+        }
+        let output = self.exec(&args, dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn add_all(&self, dir: &Path) -> Result<(), String> {
+        let output = self.exec(&["add", "-A"], dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn reset_paths(&self, dir: &Path, paths: &[String]) -> Result<(), String> {
+        if paths.is_empty() {
+            return Ok(());
+        }
+        let mut args = vec!["reset", "HEAD", "--"];
+        for path in paths {
+            args.push(path);
+        }
+        let output = self.exec(&args, dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn log(&self, dir: &Path, limit: u32) -> Result<Vec<CommitLogEntry>, String> {
+        let limit = limit.max(1).min(500).to_string();
+        let output = self.exec(
+            &[
+                "log",
+                "--graph",
+                "--decorate",
+                &format!("-n{limit}"),
+                "--date=short",
+                "--pretty=format:%m%x1f%H%x1f%an%x1f%ad%x1f%s",
+            ],
+            dir,
+        )?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+
+        let mut entries = Vec::new();
+        for line in String::from_utf8_lossy(&output.stdout).lines() {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            let parts: Vec<&str> = trimmed.split('\x1f').collect();
+            if parts.len() < 5 {
+                continue;
+            }
+            entries.push(CommitLogEntry {
+                graph: parts[0].to_string(),
+                sha: parts[1].to_string(),
+                author: parts[2].to_string(),
+                date: parts[3].to_string(),
+                subject: parts[4].to_string(),
+            });
+        }
+        Ok(entries)
+    }
+
+    pub fn show_commit(&self, dir: &Path, sha: &str) -> Result<DiffResult, String> {
+        let output = self.exec(&["show", "--format=", sha], dir)?;
+        let exit = output.status.code();
+        if !output.status.success() && exit != Some(1) {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        let patch = String::from_utf8_lossy(&output.stdout).to_string();
+        let is_binary = patch.contains("Binary files");
+        Ok(DiffResult { patch, is_binary })
+    }
+
+    pub fn apply_cached_patch(&self, dir: &Path, patch: &str) -> Result<(), String> {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+
+        let git = self.resolve_git()?;
+        let mut child = Command::new(git)
+            .args(["apply", "--cached", "--"])
+            .current_dir(dir)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .env("GIT_TERMINAL_PROMPT", "0")
+            .spawn()
+            .map_err(|e| format!("Failed to run git apply: {e}"))?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(patch.as_bytes())
+                .map_err(|e| format!("Failed to write patch: {e}"))?;
+        }
+
+        let output = child
+            .wait_with_output()
+            .map_err(|e| format!("git apply failed: {e}"))?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StashEntry {
+    pub index: usize,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitLogEntry {
+    pub sha: String,
+    pub subject: String,
+    pub author: String,
+    pub date: String,
+    pub graph: String,
 }
 
 #[derive(Debug, Clone, Serialize)]

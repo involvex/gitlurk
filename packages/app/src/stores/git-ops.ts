@@ -22,6 +22,19 @@ export interface FileDiff {
   isBinary: boolean;
 }
 
+export interface CommitLogEntry {
+  sha: string;
+  subject: string;
+  author: string;
+  date: string;
+  graph: string;
+}
+
+export interface StashEntry {
+  index: number;
+  message: string;
+}
+
 export interface GitOpsSlice {
   status: GitStatus | null;
   branches: string[];
@@ -34,6 +47,11 @@ export interface GitOpsSlice {
   diffKind: DiffKind | null;
   fileDiff: FileDiff | null;
   diffLoading: boolean;
+  stashes: StashEntry[];
+  commitLog: CommitLogEntry[];
+  selectedCommitSha: string | null;
+  commitDiff: FileDiff | null;
+  commitDiffLoading: boolean;
   setStatus: (status: GitStatus | null) => void;
   setBranches: (branches: string[], current: string) => void;
   setPulls: (pulls: PullRequest[]) => void;
@@ -43,6 +61,11 @@ export interface GitOpsSlice {
   setSelectedFile: (file: string | null, kind: DiffKind | null) => void;
   setFileDiff: (diff: FileDiff | null) => void;
   setDiffLoading: (loading: boolean) => void;
+  setStashes: (stashes: StashEntry[]) => void;
+  setCommitLog: (entries: CommitLogEntry[]) => void;
+  setSelectedCommitSha: (sha: string | null) => void;
+  setCommitDiff: (diff: FileDiff | null) => void;
+  setCommitDiffLoading: (loading: boolean) => void;
 }
 
 export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
@@ -57,6 +80,11 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   diffKind: null,
   fileDiff: null,
   diffLoading: false,
+  stashes: [],
+  commitLog: [],
+  selectedCommitSha: null,
+  commitDiff: null,
+  commitDiffLoading: false,
   setStatus: (status) => set({ status }),
   setBranches: (branches, current) => set({ branches, currentBranch: current }),
   setPulls: (pulls) => set({ pulls }),
@@ -66,4 +94,9 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   setSelectedFile: (file, kind) => set({ selectedFile: file, diffKind: kind }),
   setFileDiff: (diff) => set({ fileDiff: diff }),
   setDiffLoading: (loading) => set({ diffLoading: loading }),
+  setStashes: (stashes) => set({ stashes }),
+  setCommitLog: (commitLog) => set({ commitLog }),
+  setSelectedCommitSha: (selectedCommitSha) => set({ selectedCommitSha }),
+  setCommitDiff: (commitDiff) => set({ commitDiff }),
+  setCommitDiffLoading: (commitDiffLoading) => set({ commitDiffLoading }),
 });

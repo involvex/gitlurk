@@ -1,15 +1,19 @@
 import { useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChangesView } from './components/ChangesView';
+import { HistoryPanel } from './components/HistoryPanel';
 import { DiscoverView } from './components/DiscoverView';
 import { CloneDialog } from './components/CloneDialog';
 import { BranchPanel } from './components/BranchPanel';
+import { StashPanel } from './components/StashPanel';
 import { PullRequestPanel } from './components/PullRequestPanel';
 import { TerminalPane } from './components/TerminalPane';
 import { PluginsPanel } from './components/PluginsPanel';
 import { AuthDialog } from './components/AuthDialog';
 import { SettingsDialog } from './components/SettingsDialog';
 import { GhRunWatchDialog } from './components/GhRunWatchDialog';
+import { CommandPalette } from './components/CommandPalette';
+import { OnboardingDialog } from './components/OnboardingDialog';
 import { ResizeHandle } from './components/ResizeHandle';
 import { Toast } from './components/Toast';
 import { dispatcher } from './dispatcher';
@@ -21,11 +25,21 @@ export function App() {
   const explorerMenuEnabled = useAppStore((s) => s.explorerMenuEnabled);
   const error = useAppStore((s) => s.error);
   const appMode = useAppStore((s) => s.appMode);
+  const workspaceTab = useAppStore((s) => s.workspaceTab);
   const rightRailWidth = useAppStore((s) => s.rightRailWidth);
   const unreadNotifications = useAppStore((s) => s.unreadNotifications);
+  const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
 
   useEffect(() => {
     void dispatcher.initialize();
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      dispatcher.handleKeyboardShortcut(event);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   return (
@@ -33,11 +47,15 @@ export function App() {
       className={`flex h-screen flex-col ${resolvedTheme === 'dark' ? 'dark' : 'light'}`}
     >
       <div className="flex min-h-0 flex-1 bg-surface text-foreground">
-        <Sidebar />
-        <ResizeHandle
-          orientation="vertical"
-          onDrag={(delta) => dispatcher.resizeSidebar(delta)}
-        />
+        {!sidebarCollapsed ? (
+          <>
+            <Sidebar />
+            <ResizeHandle
+              orientation="vertical"
+              onDrag={(delta) => dispatcher.resizeSidebar(delta)}
+            />
+          </>
+        ) : null}
         <main className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center justify-between border-b border-border px-4 py-2">
             <div className="flex items-center gap-3">
@@ -68,8 +86,48 @@ export function App() {
                   Discover
                 </button>
               </div>
+              {appMode === 'workspace' ? (
+                <div className="flex rounded-md border border-border p-0.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      useAppStore.getState().setWorkspaceTab('changes')
+                    }
+                    className={`rounded px-2 py-1 text-xs ${
+                      workspaceTab === 'changes'
+                        ? 'bg-primary/20 text-primary'
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      useAppStore.getState().setWorkspaceTab('history')
+                    }
+                    className={`rounded px-2 py-1 text-xs ${
+                      workspaceTab === 'history'
+                        ? 'bg-primary/20 text-primary'
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    History
+                  </button>
+                </div>
+              ) : null}
             </div>
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  useAppStore.getState().setShowCommandPalette(true)
+                }
+                className="rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
+                title="Command palette (Ctrl+K)"
+              >
+                ⌘K
+              </button>
               <button
                 type="button"
                 onClick={() => dispatcher.openNotifications()}
@@ -141,7 +199,7 @@ export function App() {
             <DiscoverView />
           ) : (
             <div className="flex min-h-0 flex-1">
-              <ChangesView />
+              {workspaceTab === 'history' ? <HistoryPanel /> : <ChangesView />}
               <ResizeHandle
                 orientation="vertical"
                 onDrag={(delta) => dispatcher.resizeRightRail(delta)}
@@ -151,6 +209,7 @@ export function App() {
                 style={{ width: rightRailWidth }}
               >
                 <BranchPanel />
+                <StashPanel />
                 <PullRequestPanel />
               </div>
             </div>
@@ -163,6 +222,8 @@ export function App() {
       <AuthDialog />
       <SettingsDialog />
       <GhRunWatchDialog />
+      <CommandPalette />
+      <OnboardingDialog />
       <Toast />
     </div>
   );

@@ -4,6 +4,7 @@ import { dispatcher } from '../dispatcher';
 import type { DiffKind } from '../stores/git-ops';
 import { DiffPanel } from './DiffPanel';
 import { ResizeHandle } from './ResizeHandle';
+import { ConfirmDialog } from './ConfirmDialog';
 
 function FileList({
   title,
@@ -22,19 +23,37 @@ function FileList({
 }) {
   return (
     <section className="rounded-lg border border-border bg-surface-elevated">
-      <header className="border-b border-border px-4 py-2">
+      <header className="flex items-center justify-between border-b border-border px-4 py-2">
         <h3 className="text-sm font-medium">{title}</h3>
+        {kind === 'staged' && files.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => void dispatcher.unstageAll()}
+            className="text-[10px] text-primary hover:underline"
+          >
+            Unstage all
+          </button>
+        ) : null}
+        {kind === 'unstaged' && files.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => void dispatcher.stageAll()}
+            className="text-[10px] text-primary hover:underline"
+          >
+            Stage all
+          </button>
+        ) : null}
       </header>
       {files.length === 0 ? (
         <p className="px-4 py-3 text-xs text-muted">{emptyText}</p>
       ) : (
         <ul className="divide-y divide-border">
           {files.map((file) => (
-            <li key={file}>
+            <li key={file} className="group flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => onSelect(file, kind)}
-                className={`w-full px-4 py-2 text-left font-mono text-xs ${
+                className={`min-w-0 flex-1 px-4 py-2 text-left font-mono text-xs ${
                   selectedFile === file
                     ? 'bg-primary/20 text-primary'
                     : 'hover:bg-surface'
@@ -42,6 +61,35 @@ function FileList({
               >
                 {file}
               </button>
+              <div className="flex shrink-0 gap-1 pr-2 opacity-0 group-hover:opacity-100">
+                {kind === 'staged' ? (
+                  <button
+                    type="button"
+                    title="Unstage"
+                    onClick={() => void dispatcher.unstageFiles([file])}
+                    className="rounded border border-border px-1.5 py-0.5 text-[10px] hover:bg-surface"
+                  >
+                    −
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    title="Stage"
+                    onClick={() => void dispatcher.stageFiles([file])}
+                    className="rounded border border-border px-1.5 py-0.5 text-[10px] hover:bg-surface"
+                  >
+                    +
+                  </button>
+                )}
+                <button
+                  type="button"
+                  title="Discard"
+                  onClick={() => dispatcher.requestDiscard(file, kind)}
+                  className="rounded border border-border px-1.5 py-0.5 text-[10px] text-danger hover:bg-surface"
+                >
+                  ×
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -59,6 +107,7 @@ export function ChangesView() {
   const currentBranch = useAppStore((s) => s.currentBranch);
   const selectedFile = useAppStore((s) => s.selectedFile);
   const fileListWidth = useAppStore((s) => s.fileListWidth);
+  const pendingDiscard = useAppStore((s) => s.pendingDiscard);
   const [aiLoading, setAiLoading] = useState(false);
 
   if (!activeRepoPath) {
@@ -83,13 +132,33 @@ export function ChangesView() {
             Branch: {currentBranch || status?.branch || 'unknown'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => void dispatcher.refreshStatus()}
             className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated"
           >
             Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              dispatcher.setPendingDiscard({ type: 'discard-all-unstaged' })
+            }
+            disabled={!status?.unstaged.length}
+            className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated disabled:opacity-50"
+          >
+            Discard unstaged
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              dispatcher.setPendingDiscard({ type: 'discard-all-untracked' })
+            }
+            disabled={!status?.untracked.length}
+            className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated disabled:opacity-50"
+          >
+            Discard untracked
           </button>
           <button
             type="button"
@@ -203,6 +272,46 @@ export function ChangesView() {
           </button>
         </div>
       </footer>
+
+      {pendingDiscard?.type === 'discard-file' ? (
+        <ConfirmDialog
+          title="Discard changes?"
+          message={`Permanently discard changes to ${pendingDiscard.file}?`}
+          confirmLabel="Discard"
+          onCancel={() => dispatcher.setPendingDiscard(null)}
+          onConfirm={() => {
+            void dispatcher.discardFile(
+              pendingDiscard.file,
+              pendingDiscard.kind,
+            );
+            dispatcher.setPendingDiscard(null);
+          }}
+        />
+      ) : null}
+      {pendingDiscard?.type === 'discard-all-unstaged' ? (
+        <ConfirmDialog
+          title="Discard all unstaged changes?"
+          message="This will restore all modified tracked files to HEAD. This cannot be undone."
+          confirmLabel="Discard all"
+          onCancel={() => dispatcher.setPendingDiscard(null)}
+          onConfirm={() => {
+            void dispatcher.discardAllUnstaged();
+            dispatcher.setPendingDiscard(null);
+          }}
+        />
+      ) : null}
+      {pendingDiscard?.type === 'discard-all-untracked' ? (
+        <ConfirmDialog
+          title="Delete all untracked files?"
+          message="This will permanently delete all untracked files and directories."
+          confirmLabel="Delete all"
+          onCancel={() => dispatcher.setPendingDiscard(null)}
+          onConfirm={() => {
+            void dispatcher.discardAllUntracked();
+            dispatcher.setPendingDiscard(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

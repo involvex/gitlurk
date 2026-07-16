@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
 
@@ -10,6 +10,16 @@ type ContextMenuState = {
 
 export function Sidebar() {
   const repos = useAppStore((s) => s.repos);
+  const sortedRepos = useMemo(() => {
+    const copy = [...repos];
+    copy.sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      const aTime = a.lastOpenedAt ? Date.parse(a.lastOpenedAt) : 0;
+      const bTime = b.lastOpenedAt ? Date.parse(b.lastOpenedAt) : 0;
+      return bTime - aTime;
+    });
+    return copy;
+  }, [repos]);
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
   const username = useAppStore((s) => s.username);
   const isAuthenticating = useAppStore((s) => s.isAuthenticating);
@@ -91,37 +101,54 @@ export function Sidebar() {
         <p className="px-2 py-1 text-xs font-medium uppercase text-muted">
           Repositories
         </p>
-        {repos.length === 0 ? (
+        {sortedRepos.length === 0 ? (
           <p className="px-2 py-4 text-xs text-muted">
             No repositories yet. Open or clone one to get started.
           </p>
         ) : (
           <ul className="space-y-1">
-            {repos.map((repo) => (
+            {sortedRepos.map((repo) => (
               <li key={repo.path}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    useAppStore.getState().setAppMode('workspace');
-                    void dispatcher.selectRepo(repo.path);
-                  }}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    setMenu({
-                      path: repo.path,
-                      x: event.clientX,
-                      y: event.clientY,
-                    });
-                  }}
-                  className={`w-full rounded-md px-2 py-2 text-left text-sm ${
-                    activeRepoPath === repo.path && appMode === 'workspace'
-                      ? 'bg-primary/20 text-primary'
-                      : 'text-foreground hover:bg-surface'
-                  }`}
-                  title={repo.path}
-                >
-                  {repo.name}
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void dispatcher.toggleRepoPin(repo.path)}
+                    className={`rounded px-1 text-xs ${
+                      repo.pinned
+                        ? 'text-accent'
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                    title={repo.pinned ? 'Unpin repository' : 'Pin repository'}
+                    aria-label={
+                      repo.pinned ? 'Unpin repository' : 'Pin repository'
+                    }
+                  >
+                    {repo.pinned ? '★' : '☆'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      useAppStore.getState().setAppMode('workspace');
+                      void dispatcher.selectRepo(repo.path);
+                    }}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setMenu({
+                        path: repo.path,
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
+                    className={`min-w-0 flex-1 rounded-md px-2 py-2 text-left text-sm ${
+                      activeRepoPath === repo.path && appMode === 'workspace'
+                        ? 'bg-primary/20 text-primary'
+                        : 'text-foreground hover:bg-surface'
+                    }`}
+                    title={repo.path}
+                  >
+                    {repo.name}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

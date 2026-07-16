@@ -15,6 +15,12 @@ export function SettingsDialog() {
   const minimizeToTray = useAppStore((s) => s.minimizeToTray);
   const terminalShell = useAppStore((s) => s.terminalShell);
   const terminalShellPath = useAppStore((s) => s.terminalShellPath);
+  const backgroundFetchEnabled = useAppStore((s) => s.backgroundFetchEnabled);
+  const backgroundFetchIntervalMin = useAppStore(
+    (s) => s.backgroundFetchIntervalMin,
+  );
+  const desktopNotifications = useAppStore((s) => s.desktopNotifications);
+  const autoRefreshOnChange = useAppStore((s) => s.autoRefreshOnChange);
 
   const [tab, setTab] = useState<SettingsTab>('general');
   const [provider, setProvider] = useState<AiProvider>(aiProvider);
@@ -247,6 +253,84 @@ export function SettingsDialog() {
                 </span>
               </label>
             ) : null}
+
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={backgroundFetchEnabled}
+                onChange={(e) => {
+                  void dispatcher.setBackgroundFetchEnabled(e.target.checked);
+                }}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block text-sm font-medium">
+                  Background fetch
+                </span>
+                <span className="mt-0.5 block text-xs text-muted">
+                  Periodically fetch from origin and notify when the remote is
+                  ahead.
+                </span>
+              </span>
+            </label>
+
+            {backgroundFetchEnabled ? (
+              <label className="block text-xs font-medium text-muted">
+                Fetch interval (minutes)
+                <select
+                  value={backgroundFetchIntervalMin}
+                  onChange={(e) => {
+                    void dispatcher.setBackgroundFetchIntervalMin(
+                      Number(e.target.value),
+                    );
+                  }}
+                  className="mt-1 w-full rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground"
+                >
+                  <option value={5}>5</option>
+                  <option value={15}>15</option>
+                  <option value={30}>30</option>
+                </select>
+              </label>
+            ) : null}
+
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={desktopNotifications}
+                onChange={(e) => {
+                  void dispatcher.setDesktopNotifications(e.target.checked);
+                }}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block text-sm font-medium">
+                  Desktop notifications
+                </span>
+                <span className="mt-0.5 block text-xs text-muted">
+                  Show OS notifications for new GitHub notifications and when
+                  the remote branch is ahead after fetch.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={autoRefreshOnChange}
+                onChange={(e) => {
+                  void dispatcher.setAutoRefreshOnChange(e.target.checked);
+                }}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block text-sm font-medium">
+                  Auto-refresh on file changes
+                </span>
+                <span className="mt-0.5 block text-xs text-muted">
+                  Refresh git status when files change in the active repository.
+                </span>
+              </span>
+            </label>
           </div>
         ) : tab === 'ai' ? (
           <div className="space-y-4">

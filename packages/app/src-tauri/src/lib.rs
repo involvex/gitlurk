@@ -15,6 +15,7 @@ mod plugin_host;
 mod protocol;
 mod pty_session;
 mod registry;
+mod repo_watcher;
 mod terminal;
 mod tray;
 
@@ -28,6 +29,7 @@ pub struct AppState {
     pub mcp_token: String,
     pub pty_sessions: pty_session::PtySessionManager,
     pub pending_cli_action: Mutex<Option<protocol::UrlAction>>,
+    pub repo_watcher: repo_watcher::RepoWatcher,
 }
 
 impl AppState {
@@ -43,6 +45,7 @@ impl AppState {
             mcp_token,
             pty_sessions: pty_session::PtySessionManager::new(),
             pending_cli_action: Mutex::new(None),
+            repo_watcher: repo_watcher::RepoWatcher::new(),
         }
     }
 
@@ -87,6 +90,16 @@ pub struct Settings {
     pub terminal_shell: String,
     #[serde(default)]
     pub terminal_shell_path: String,
+    #[serde(default = "default_true")]
+    pub background_fetch_enabled: bool,
+    #[serde(default = "default_fetch_interval")]
+    pub background_fetch_interval_min: u32,
+    #[serde(default = "default_true")]
+    pub desktop_notifications: bool,
+    #[serde(default = "default_true")]
+    pub auto_refresh_on_change: bool,
+    #[serde(default)]
+    pub onboarding_completed: bool,
 }
 
 fn default_theme() -> String {
@@ -118,6 +131,12 @@ fn default_terminal_shell() -> String {
     // users can switch to pwsh or a custom path in Settings.
     "powershell".into()
 }
+fn default_true() -> bool {
+    true
+}
+fn default_fetch_interval() -> u32 {
+    15
+}
 
 impl Default for Settings {
     fn default() -> Self {
@@ -133,6 +152,11 @@ impl Default for Settings {
             minimize_to_tray: false,
             terminal_shell: default_terminal_shell(),
             terminal_shell_path: String::new(),
+            background_fetch_enabled: true,
+            background_fetch_interval_min: default_fetch_interval(),
+            desktop_notifications: true,
+            auto_refresh_on_change: true,
+            onboarding_completed: false,
         }
     }
 }
@@ -161,6 +185,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_notification::init())
         .on_window_event(|window, event| {
             match event {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
@@ -311,6 +336,20 @@ pub fn run() {
             commands::git::git_is_repo,
             commands::git::git_get_remote_origin,
             commands::git::git_diff,
+            commands::git::git_restore,
+            commands::git::git_restore_all,
+            commands::git::git_clean,
+            commands::git::git_stash_push,
+            commands::git::git_stash_list,
+            commands::git::git_stash_pop,
+            commands::git::git_stash_drop,
+            commands::git::git_fetch,
+            commands::git::git_remote_ahead,
+            commands::git::git_add,
+            commands::git::git_reset,
+            commands::git::git_log,
+            commands::git::git_show,
+            commands::git::git_apply_cached,
             commands::dialog::dialog_open_directory,
             commands::dialog::dialog_save_directory,
             commands::app::app_get_repos,
@@ -322,6 +361,7 @@ pub fn run() {
             commands::app::app_set_theme,
             commands::app::app_get_explorer_menu,
             commands::app::app_set_explorer_menu,
+            commands::app::app_watch_repo,
             commands::auth::auth_github_device_start,
             commands::auth::auth_github_device_poll,
             commands::auth::auth_get_token,

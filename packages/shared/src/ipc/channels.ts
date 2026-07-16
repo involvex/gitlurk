@@ -22,7 +22,13 @@ export interface IpcChannels {
   'shell:open-terminal': { path: string };
   'shell:reveal-in-explorer': { path: string };
   'app:get-repos': Record<string, never>;
-  'app:save-repos': { repos: string[] };
+  'app:save-repos': {
+    repos: Array<{
+      path: string;
+      pinned?: boolean;
+      lastOpenedAt?: string | null;
+    }>;
+  };
   'app:take-pending-action': Record<string, never>;
   'app:get-theme': Record<string, never>;
   'app:set-theme': { theme: 'light' | 'dark' | 'system' };
@@ -39,7 +45,13 @@ export interface IpcChannels {
     minimizeToTray?: boolean;
     terminalShell?: 'pwsh' | 'powershell' | 'cmd' | 'custom';
     terminalShellPath?: string;
+    backgroundFetchEnabled?: boolean;
+    backgroundFetchIntervalMin?: number;
+    desktopNotifications?: boolean;
+    autoRefreshOnChange?: boolean;
+    onboardingCompleted?: boolean;
   };
+  'app:watch-repo': { path?: string | null };
   'app:get-explorer-menu': Record<string, never>;
   'app:set-explorer-menu': { enabled: boolean };
   'git:diff': {
@@ -47,6 +59,20 @@ export interface IpcChannels {
     file: string;
     kind: 'staged' | 'unstaged' | 'untracked';
   };
+  'git:restore': { path: string; files: string[]; staged?: boolean };
+  'git:restore-all': { path: string; staged?: boolean };
+  'git:clean': { path: string; files?: string[] };
+  'git:stash-push': { path: string; message?: string };
+  'git:stash-list': { path: string };
+  'git:stash-pop': { path: string; index?: number };
+  'git:stash-drop': { path: string; index: number };
+  'git:fetch': { path: string };
+  'git:remote-ahead': { path: string };
+  'git:add': { path: string; files?: string[] };
+  'git:reset': { path: string; files: string[] };
+  'git:log': { path: string; limit?: number };
+  'git:show': { path: string; sha: string };
+  'git:apply-cached': { path: string; patch: string };
   'terminal:spawn': {
     cwd: string;
     cols: number;
@@ -139,10 +165,17 @@ export interface IpcResponses {
   'shell:open-external': void;
   'shell:open-terminal': void;
   'shell:reveal-in-explorer': void;
-  'app:get-repos': { repos: string[] };
+  'app:get-repos': {
+    repos: Array<{
+      path: string;
+      pinned: boolean;
+      lastOpenedAt: string | null;
+    }>;
+  };
   'app:save-repos': void;
   'app:take-pending-action':
-    import('../protocol/parse-app-url.js').UrlAction | null;
+    | import('../protocol/parse-app-url.js').UrlAction
+    | null;
   'app:get-theme': { theme: 'light' | 'dark' | 'system' };
   'app:set-theme': void;
   'app:get-settings': {
@@ -157,11 +190,41 @@ export interface IpcResponses {
     minimizeToTray: boolean;
     terminalShell: 'pwsh' | 'powershell' | 'cmd' | 'custom';
     terminalShellPath: string;
+    backgroundFetchEnabled: boolean;
+    backgroundFetchIntervalMin: number;
+    desktopNotifications: boolean;
+    autoRefreshOnChange: boolean;
+    onboardingCompleted: boolean;
   };
   'app:set-settings': void;
+  'app:watch-repo': void;
   'app:get-explorer-menu': { enabled: boolean };
   'app:set-explorer-menu': void;
   'git:diff': { patch: string; isBinary: boolean };
+  'git:restore': void;
+  'git:restore-all': void;
+  'git:clean': void;
+  'git:stash-push': void;
+  'git:stash-list': {
+    entries: Array<{ index: number; message: string }>;
+  };
+  'git:stash-pop': void;
+  'git:stash-drop': void;
+  'git:fetch': void;
+  'git:remote-ahead': { ahead: number | null };
+  'git:add': void;
+  'git:reset': void;
+  'git:log': {
+    entries: Array<{
+      sha: string;
+      subject: string;
+      author: string;
+      date: string;
+      graph: string;
+    }>;
+  };
+  'git:show': { patch: string; isBinary: boolean };
+  'git:apply-cached': void;
   'terminal:spawn': { sessionId: string };
   'terminal:write': void;
   'terminal:resize': void;
@@ -291,6 +354,7 @@ export type IpcEvents = {
   'terminal-output': { sessionId: string; data: string };
   'dev:gh-run-output': { data: string };
   'dev:gh-run-done': { exitCode: number };
+  'repo-changed': Record<string, never>;
 };
 
 export type IpcChannel = keyof IpcChannels;

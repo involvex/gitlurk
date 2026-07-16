@@ -139,3 +139,152 @@ pub fn git_diff(
         "isBinary": result.is_binary,
     }))
 }
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_restore(
+    state: State<'_, AppState>,
+    path: String,
+    files: Vec<String>,
+    staged: Option<bool>,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state
+        .git
+        .restore_paths(&dir, &files, staged.unwrap_or(false))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_restore_all(
+    state: State<'_, AppState>,
+    path: String,
+    staged: Option<bool>,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.restore_all(&dir, staged.unwrap_or(false))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_clean(
+    state: State<'_, AppState>,
+    path: String,
+    files: Option<Vec<String>>,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.clean_paths(&dir, &files.unwrap_or_default())
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_stash_push(
+    state: State<'_, AppState>,
+    path: String,
+    message: Option<String>,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state
+        .git
+        .stash_push(&dir, message.as_deref())
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_stash_list(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<serde_json::Value, String> {
+    let dir = validate_repo_path(&path)?;
+    let entries = state.git.stash_list(&dir)?;
+    Ok(serde_json::json!({ "entries": entries }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_stash_pop(
+    state: State<'_, AppState>,
+    path: String,
+    index: Option<usize>,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.stash_pop(&dir, index)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_stash_drop(
+    state: State<'_, AppState>,
+    path: String,
+    index: usize,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.stash_drop(&dir, index)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_fetch(state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.fetch(&dir)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_remote_ahead(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<serde_json::Value, String> {
+    let dir = validate_repo_path(&path)?;
+    let ahead = state.git.remote_ahead_count(&dir)?;
+    Ok(serde_json::json!({ "ahead": ahead }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_add(
+    state: State<'_, AppState>,
+    path: String,
+    files: Option<Vec<String>>,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    match files {
+        Some(list) if !list.is_empty() => state.git.add_paths(&dir, &list),
+        _ => state.git.add_all(&dir),
+    }
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_reset(
+    state: State<'_, AppState>,
+    path: String,
+    files: Vec<String>,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.reset_paths(&dir, &files)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_log(
+    state: State<'_, AppState>,
+    path: String,
+    limit: Option<u32>,
+) -> Result<serde_json::Value, String> {
+    let dir = validate_repo_path(&path)?;
+    let entries = state.git.log(&dir, limit.unwrap_or(50))?;
+    Ok(serde_json::json!({ "entries": entries }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_show(
+    state: State<'_, AppState>,
+    path: String,
+    sha: String,
+) -> Result<serde_json::Value, String> {
+    let dir = validate_repo_path(&path)?;
+    let result = state.git.show_commit(&dir, &sha)?;
+    Ok(serde_json::json!({
+        "patch": result.patch,
+        "isBinary": result.is_binary,
+    }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_apply_cached(
+    state: State<'_, AppState>,
+    path: String,
+    patch: String,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.apply_cached_patch(&dir, &patch)
+}

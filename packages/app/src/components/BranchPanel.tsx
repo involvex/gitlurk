@@ -11,7 +11,7 @@ export function BranchPanel() {
   if (!activeRepoPath) return null;
 
   return (
-    <aside className="w-56 shrink-0 border-l border-border bg-surface-elevated p-4">
+    <aside className="shrink-0 border-l border-border bg-surface-elevated p-4">
       <h3 className="mb-3 text-sm font-semibold">Branches</h3>
       <ul className="mb-4 max-h-48 space-y-1 overflow-y-auto">
         {branches.map((branch) => (
