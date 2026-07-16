@@ -1,6 +1,6 @@
 {
   "name": "@gitlurk/extension",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "scripts": {
     "build": "bun build src/content-script.ts --outdir dist --target browser && bun build src/background.ts --outdir dist --target browser"
