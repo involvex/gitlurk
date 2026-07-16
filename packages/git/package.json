@@ -1,5 +1,5 @@
 {
-  "name": "@mygit/git",
+  "name": "@gitlurk/git",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@mygit/shared": "workspace:*"
+    "@gitlurk/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

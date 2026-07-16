@@ -1,0 +1,6 @@
+# Shared cargo artifacts on external HDD (matches ~/.cargo/config.toml).
+# Prefer space over speed; Windows Defender exclusion recommended for this path.
+
+[build]
+incremental = true
+target-dir = "I:/dev/cargo-target"

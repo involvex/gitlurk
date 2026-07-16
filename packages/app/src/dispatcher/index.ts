@@ -1,14 +1,26 @@
-import { parseGitHubRemoteUrl } from '@mygit/shared';
+import { parseGitHubRemoteUrl } from '@gitlurk/shared';
 import { ipcInvoke, onEvent, runningInTauri } from '../ipc/client';
 import { useAppStore } from '../stores';
+import type { AiProvider } from '../stores/ui';
 
 function getStore() {
   return useAppStore.getState();
 }
 
+let githubSignInCancelled = false;
+let notificationPollTimer: ReturnType<typeof setInterval> | null = null;
+let panelPersistTimer: ReturnType<typeof setTimeout> | null = null;
+
 async function persistRepos() {
   const repos = getStore().repos.map((r) => r.path);
   await ipcInvoke('app:save-repos', { repos });
+}
+
+function schedulePanelPersist() {
+  if (panelPersistTimer) clearTimeout(panelPersistTimer);
+  panelPersistTimer = setTimeout(() => {
+    void dispatcher.persistPanelSettings();
+  }, 250);
 }
 
 export const dispatcher = {
@@ -20,9 +32,9 @@ export const dispatcher = {
       return;
     }
 
-    const [{ repos }, { theme }, auth, explorerMenu] = await Promise.all([
+    const [{ repos }, settings, auth, explorerMenu] = await Promise.all([
       ipcInvoke('app:get-repos', {}),
-      ipcInvoke('app:get-theme', {}),
+      ipcInvoke('app:get-settings', {}),
       ipcInvoke('auth:get-token', {}),
       ipcInvoke('app:get-explorer-menu', {}),
     ]);
@@ -33,10 +45,20 @@ export const dispatcher = {
         name: path.split(/[/\\]/).pop() ?? path,
       })),
     );
-    getStore().setTheme(theme);
+    getStore().setTheme(settings.theme);
+    getStore().applyPanelSettings({
+      sidebarWidth: settings.sidebarWidth,
+      fileListWidth: settings.fileListWidth,
+      rightRailWidth: settings.rightRailWidth,
+      terminalHeight: settings.terminalHeight,
+      aiProvider: settings.aiProvider,
+      aiModel: settings.aiModel,
+      kiloBaseUrl: settings.kiloBaseUrl,
+    });
     getStore().setAuth(auth.username);
     getStore().setExplorerMenuEnabled(explorerMenu.enabled);
-    await dispatcher.applyTheme(theme);
+    await dispatcher.applyTheme(settings.theme);
+    dispatcher.startNotificationPolling();
 
     await onEvent('url-action', (action) => {
       void dispatcher.handleUrlAction(action);
@@ -49,6 +71,98 @@ export const dispatcher = {
         void dispatcher.pullActiveRepo();
       }
     });
+
+    // Cold-start --open-local is queued before the webview listens; drain it now.
+    const pending = await ipcInvoke('app:take-pending-action', {});
+    if (pending) {
+      await dispatcher.handleUrlAction(pending);
+    }
+  },
+
+  startNotificationPolling() {
+    if (notificationPollTimer) {
+      clearInterval(notificationPollTimer);
+      notificationPollTimer = null;
+    }
+    const poll = async () => {
+      if (!getStore().username) {
+        getStore().setUnreadNotifications(0);
+        return;
+      }
+      try {
+        const result = await ipcInvoke('github:list-notifications', {
+          all: false,
+        });
+        getStore().setUnreadNotifications(result.unreadCount);
+      } catch {
+        // Ignore poll failures (missing scope until re-auth, offline, etc.)
+      }
+    };
+    void poll();
+    notificationPollTimer = setInterval(() => void poll(), 60_000);
+  },
+
+  async persistPanelSettings() {
+    const s = getStore();
+    await ipcInvoke('app:set-settings', {
+      sidebarWidth: s.sidebarWidth,
+      fileListWidth: s.fileListWidth,
+      rightRailWidth: s.rightRailWidth,
+      terminalHeight: s.terminalHeight,
+    });
+  },
+
+  resizeSidebar(delta: number) {
+    getStore().setSidebarWidth(getStore().sidebarWidth + delta);
+    schedulePanelPersist();
+  },
+
+  resizeFileList(delta: number) {
+    getStore().setFileListWidth(getStore().fileListWidth + delta);
+    schedulePanelPersist();
+  },
+
+  resizeRightRail(delta: number) {
+    getStore().setRightRailWidth(getStore().rightRailWidth + delta);
+    schedulePanelPersist();
+  },
+
+  resizeTerminal(delta: number, fromHeight?: number) {
+    const base = fromHeight ?? getStore().terminalHeight;
+    getStore().setTerminalHeight(base + delta);
+  },
+
+  async saveAiSettings(opts: {
+    aiProvider: AiProvider;
+    aiModel: string;
+    kiloBaseUrl: string;
+  }) {
+    getStore().setAiProvider(opts.aiProvider);
+    getStore().setAiModel(opts.aiModel);
+    getStore().setKiloBaseUrl(opts.kiloBaseUrl);
+    await ipcInvoke('app:set-settings', {
+      aiProvider: opts.aiProvider,
+      aiModel: opts.aiModel,
+      kiloBaseUrl: opts.kiloBaseUrl,
+    });
+  },
+
+  async generateCommitMessage() {
+    const path = getStore().activeRepoPath;
+    if (!path) return;
+    try {
+      const { message } = await ipcInvoke('ai:generate-commit-message', {
+        path,
+      });
+      getStore().setCommitMessage(message);
+      getStore().showToast('Commit message generated');
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate commit message',
+      );
+    }
   },
 
   async applyTheme(theme: 'light' | 'dark' | 'system') {
@@ -250,12 +364,16 @@ export const dispatcher = {
   },
 
   async signInGitHub() {
+    githubSignInCancelled = false;
     getStore().setAuthenticating(true);
+    getStore().setError(null);
     try {
       const device = await ipcInvoke('auth:github-device-start', {});
-      getStore().showToast(
-        `Enter code ${device.userCode} at ${device.verificationUri}`,
-      );
+      getStore().setAuthDialog({
+        userCode: device.userCode,
+        verificationUri: device.verificationUri,
+        status: 'Waiting for authorization…',
+      });
       await ipcInvoke('shell:open-external', {
         url: device.verificationUri,
       });
@@ -263,19 +381,33 @@ export const dispatcher = {
       const deadline = Date.now() + device.expiresIn * 1000;
       let intervalMs = device.interval * 1000;
       while (Date.now() < deadline) {
+        if (githubSignInCancelled) {
+          getStore().setAuthDialogStatus('Cancelled');
+          return;
+        }
         await new Promise((r) => setTimeout(r, intervalMs));
+        if (githubSignInCancelled) {
+          return;
+        }
         const result = await ipcInvoke('auth:github-device-poll', {
           deviceCode: device.deviceCode,
         });
         if (result.success) {
           const auth = await ipcInvoke('auth:get-token', {});
           getStore().setAuth(auth.username);
+          getStore().setAuthDialog(null);
           getStore().showToast(`Signed in as ${auth.username ?? 'user'}`);
+          dispatcher.startNotificationPolling();
           await dispatcher.refreshPullRequests();
           return;
         }
         if (result.slowDown) {
           intervalMs += 5000;
+          getStore().setAuthDialogStatus(
+            'GitHub asked to slow down — retrying…',
+          );
+        } else {
+          getStore().setAuthDialogStatus('Waiting for authorization…');
         }
         if (result.error) {
           throw new Error(result.error);
@@ -283,17 +415,32 @@ export const dispatcher = {
       }
       throw new Error('Device authorization timed out');
     } catch (error) {
+      getStore().setAuthDialog(null);
       getStore().setError(
         error instanceof Error ? error.message : 'Sign in failed',
       );
     } finally {
       getStore().setAuthenticating(false);
+      if (githubSignInCancelled) {
+        getStore().setAuthDialog(null);
+      }
     }
+  },
+
+  cancelGitHubSignIn() {
+    githubSignInCancelled = true;
+    getStore().setAuthDialog(null);
+    getStore().setAuthenticating(false);
+  },
+
+  async openExternal(url: string) {
+    await ipcInvoke('shell:open-external', { url });
   },
 
   async signOut() {
     await ipcInvoke('auth:logout', {});
     getStore().setAuth(null);
+    getStore().setUnreadNotifications(0);
   },
 
   async setExplorerMenu(enabled: boolean) {
@@ -366,11 +513,55 @@ export const dispatcher = {
   async openTerminal() {
     const path = getStore().activeRepoPath;
     if (!path) return;
+    await dispatcher.openTerminalAt(path);
+  },
+
+  async openTerminalAt(path: string) {
     await ipcInvoke('shell:open-terminal', { path });
   },
 
+  async revealInExplorer(path: string) {
+    try {
+      await ipcInvoke('shell:reveal-in-explorer', { path });
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Failed to open Explorer',
+      );
+    }
+  },
+
+  async openRepoOnGitHub(path: string) {
+    try {
+      const { url: origin } = await ipcInvoke('git:get-remote-origin', {
+        path,
+      });
+      if (!origin) {
+        getStore().showToast('No remote origin configured');
+        return;
+      }
+      const parsed = parseGitHubRemoteUrl(origin);
+      if (!parsed) {
+        getStore().showToast('Remote is not a GitHub repository');
+        return;
+      }
+      await ipcInvoke('shell:open-external', {
+        url: `https://github.com/${parsed.owner}/${parsed.repo}`,
+      });
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Failed to open GitHub',
+      );
+    }
+  },
+
+  async removeRepo(path: string) {
+    getStore().removeRepo(path);
+    await persistRepos();
+    getStore().showToast('Repository removed from list');
+  },
+
   async handleUrlAction(
-    action: import('@mygit/shared').UrlAction,
+    action: import('@gitlurk/shared').UrlAction,
   ): Promise<void> {
     switch (action.type) {
       case 'openRepo':
@@ -398,7 +589,11 @@ export const dispatcher = {
               name: action.branch,
             });
           }
-          await dispatcher.refreshStatus();
+          getStore().setAppMode('workspace');
+          await dispatcher.selectRepo(action.path);
+          getStore().showToast(`Opened ${action.path}`);
+        } else {
+          getStore().setError(`Not a Git repository: ${action.path}`);
         }
         break;
       }

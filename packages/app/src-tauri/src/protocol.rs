@@ -33,7 +33,7 @@ pub fn parse_app_url(raw: &str) -> UrlAction {
         Err(_) => return UrlAction::Unknown { raw: raw.to_string() },
     };
 
-    if parsed.scheme() != "mygit" {
+    if parsed.scheme() != "gitlurk" {
         return UrlAction::Unknown { raw: raw.to_string() };
     }
 

@@ -8,7 +8,7 @@ import {
 describe('parseAppUrl', () => {
   test('parses openRepo for github.com', () => {
     const action = parseAppUrl(
-      'mygit://openRepo/https://github.com/owner/repo',
+      'gitlurk://openRepo/https://github.com/owner/repo',
     );
     expect(action).toEqual({
       type: 'openRepo',
@@ -19,7 +19,7 @@ describe('parseAppUrl', () => {
 
   test('rejects non-github hosts', () => {
     const action = parseAppUrl(
-      'mygit://openRepo/https://gitlab.com/owner/repo',
+      'gitlurk://openRepo/https://gitlab.com/owner/repo',
     );
     expect(action.type).toBe('unknown');
   });

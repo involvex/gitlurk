@@ -1,16 +1,19 @@
 {
-  "name": "mygit-desktop",
+  "name": "gitlurk-desktop",
   "private": true,
   "type": "module",
+  "bin": {
+    "gitlurk": "./packages/cli/src/cli.ts"
+  },
   "workspaces": [
     "packages/*",
     "packages/plugins/*"
   ],
   "scripts": {
-    "dev": "bun run --filter @mygit/app dev",
-    "build": "bun run --filter @mygit/shared build && bun run --filter @mygit/git build && bun run --filter @mygit/app build",
-    "tauri:dev": "bun run --filter @mygit/app tauri:dev",
-    "tauri:build": "bun run --filter @mygit/app tauri:build",
+    "dev": "bun run --filter @gitlurk/app dev",
+    "build": "bun run --filter @gitlurk/shared build && bun run --filter @gitlurk/git build && bun run --filter @gitlurk/app build",
+    "tauri:dev": "bun run --filter @gitlurk/app tauri:dev",
+    "tauri:build": "bun run --filter @gitlurk/app tauri:build",
     "test": "bun test",
     "lint": "eslint .",
     "format": "prettier . --write",

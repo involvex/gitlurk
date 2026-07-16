@@ -24,7 +24,13 @@ function getBundledGitPath(): string | null {
   const candidates = [
     path.join(process.cwd(), 'resources', 'git', 'cmd', 'git.exe'),
     path.join(process.cwd(), 'resources', 'git', 'bin', 'git.exe'),
-    path.join(process.env.LOCALAPPDATA ?? '', 'MyGit', 'git', 'cmd', 'git.exe'),
+    path.join(
+      process.env.LOCALAPPDATA ?? '',
+      'GitLurk',
+      'git',
+      'cmd',
+      'git.exe',
+    ),
   ];
 
   for (const candidate of candidates) {

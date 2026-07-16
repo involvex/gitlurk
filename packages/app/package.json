@@ -1,5 +1,5 @@
 {
-  "name": "@mygit/app",
+  "name": "@gitlurk/app",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@git-diff-view/react": "^0.1.6",
-    "@mygit/git": "workspace:*",
-    "@mygit/shared": "workspace:*",
+    "@gitlurk/git": "workspace:*",
+    "@gitlurk/shared": "workspace:*",
     "@tauri-apps/api": "^2.5.0",
     "@tauri-apps/plugin-deep-link": "^2.2.1",
     "@tauri-apps/plugin-dialog": "^2.2.1",

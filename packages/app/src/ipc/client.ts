@@ -1,6 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import type { IpcChannels, IpcResponses, IpcEvents } from '@mygit/shared';
+import type { IpcChannels, IpcResponses, IpcEvents } from '@gitlurk/shared';
 
 /** Maps typed channels (`git:status`) to Tauri command names (`git_status`). */
 export function channelToCommand(channel: string): string {
@@ -16,7 +16,7 @@ export async function ipcInvoke<
 >(channel: K, payload: IpcChannels[K]): Promise<IpcResponses[K]> {
   if (!isTauri()) {
     throw new Error(
-      'MyGit must run inside the desktop app. Use: bun run tauri:dev',
+      'GitLurk must run inside the desktop app. Use: bun run tauri:dev',
     );
   }
   return invoke(channelToCommand(String(channel)), payload);

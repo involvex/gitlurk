@@ -19,7 +19,7 @@ struct PluginRequest {
 }
 
 pub fn load_manifest(plugin_dir: &Path) -> Result<PluginManifest, String> {
-    let manifest_path = plugin_dir.join("mygit.plugin.json");
+    let manifest_path = plugin_dir.join("gitlurk.plugin.json");
     let content = std::fs::read_to_string(manifest_path).map_err(|e| e.to_string())?;
     serde_json::from_str(&content).map_err(|e| e.to_string())
 }

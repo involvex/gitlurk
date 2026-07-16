@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $TargetDir = Join-Path $Root "packages\app\src-tauri\resources\git"
-$TempDir = Join-Path $env:TEMP "mygit-mingit"
+$TempDir = Join-Path $env:TEMP "gitlurk-mingit"
 
 if (Test-Path $TargetDir) {
     Remove-Item -Recurse -Force $TargetDir
@@ -11,7 +11,7 @@ if (Test-Path $TargetDir) {
 New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
 
 $ReleaseApi = "https://api.github.com/repos/git-for-windows/git/releases/latest"
-$Release = Invoke-RestMethod -Uri $ReleaseApi -Headers @{ "User-Agent" = "MyGit-Desktop" }
+$Release = Invoke-RestMethod -Uri $ReleaseApi -Headers @{ "User-Agent" = "GitLurk-Desktop" }
 $Asset = $Release.assets | Where-Object { $_.name -match "MinGit-.*-64-bit\.zip$" } | Select-Object -First 1
 
 if (-not $Asset) {

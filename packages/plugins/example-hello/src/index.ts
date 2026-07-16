@@ -1,6 +1,6 @@
-import type { MyGitPluginApi } from '@mygit/plugin-sdk';
+import type { GitLurkPluginApi } from '@gitlurk/plugin-sdk';
 
-const api: MyGitPluginApi = {
+const api: GitLurkPluginApi = {
   git: {
     async status(repoPath) {
       void repoPath;
@@ -26,7 +26,7 @@ const api: MyGitPluginApi = {
   },
 };
 
-export default function activate(pluginApi: MyGitPluginApi) {
+export default function activate(pluginApi: GitLurkPluginApi) {
   pluginApi.commands.register('hello.say', async (ctx) => {
     const status = await pluginApi.git.status(ctx.repoPath);
     pluginApi.ui.toast(`Branch: ${status.branch}`);

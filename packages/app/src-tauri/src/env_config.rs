@@ -33,24 +33,37 @@ fn env_value(keys: &[&str]) -> Option<String> {
 }
 
 pub fn github_client_id() -> String {
-    env_value(&["GITHUB_CLIENT_ID", "MYGIT_GITHUB_CLIENT_ID"])
-        .or_else(|| {
-            option_env!("MYGIT_GITHUB_CLIENT_ID")
-                .filter(|id| !id.is_empty())
-                .map(str::to_string)
-        })
-        .unwrap_or_else(|| "Ov23liPLACEHOLDER".to_string())
+    env_value(&[
+        "GITHUB_CLIENT_ID",
+        "GITLURK_GITHUB_CLIENT_ID",
+        "MYGIT_GITHUB_CLIENT_ID",
+    ])
+    .or_else(|| {
+        option_env!("GITLURK_GITHUB_CLIENT_ID")
+            .or(option_env!("MYGIT_GITHUB_CLIENT_ID"))
+            .filter(|id| !id.is_empty())
+            .map(str::to_string)
+    })
+    .unwrap_or_else(|| "Ov23liPLACEHOLDER".to_string())
 }
 
 /// Reserved for future web OAuth callback flows.
 #[allow(dead_code)]
 pub fn github_redirect_uri() -> String {
-    env_value(&["GITHUB_REDIRECT_URI", "MYGIT_GITHUB_REDIRECT_URI"])
-        .unwrap_or_else(|| "http://127.0.0.1/callback".to_string())
+    env_value(&[
+        "GITHUB_REDIRECT_URI",
+        "GITLURK_GITHUB_REDIRECT_URI",
+        "MYGIT_GITHUB_REDIRECT_URI",
+    ])
+    .unwrap_or_else(|| "http://127.0.0.1/callback".to_string())
 }
 
 /// Device Flow does not use a client secret; kept for future OAuth flows (backend only).
 #[allow(dead_code)]
 pub fn github_client_secret() -> Option<String> {
-    env_value(&["GITHUB_CLIENT_SECRET", "MYGIT_GITHUB_CLIENT_SECRET"])
+    env_value(&[
+        "GITHUB_CLIENT_SECRET",
+        "GITLURK_GITHUB_CLIENT_SECRET",
+        "MYGIT_GITHUB_CLIENT_SECRET",
+    ])
 }

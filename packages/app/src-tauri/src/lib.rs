@@ -23,6 +23,7 @@ pub struct AppState {
     pub auth_username: Mutex<Option<String>>,
     pub mcp_token: String,
     pub pty_sessions: pty_session::PtySessionManager,
+    pub pending_cli_action: Mutex<Option<protocol::UrlAction>>,
 }
 
 impl AppState {
@@ -35,6 +36,7 @@ impl AppState {
             auth_username: Mutex::new(None),
             mcp_token,
             pty_sessions: pty_session::PtySessionManager::new(),
+            pending_cli_action: Mutex::new(None),
         }
     }
 
@@ -45,11 +47,74 @@ impl AppState {
     pub fn settings_file(&self) -> PathBuf {
         self.data_dir.join("settings.json")
     }
+
+    pub fn queue_cli_action(&self, action: protocol::UrlAction) {
+        *self.pending_cli_action.lock().unwrap() = Some(action);
+    }
+
+    pub fn take_cli_action(&self) -> Option<protocol::UrlAction> {
+        self.pending_cli_action.lock().unwrap().take()
+    }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
+    #[serde(default = "default_theme")]
     pub theme: String,
+    #[serde(default = "default_sidebar_width")]
+    pub sidebar_width: u32,
+    #[serde(default = "default_file_list_width")]
+    pub file_list_width: u32,
+    #[serde(default = "default_right_rail_width")]
+    pub right_rail_width: u32,
+    #[serde(default = "default_terminal_height")]
+    pub terminal_height: u32,
+    #[serde(default = "default_ai_provider")]
+    pub ai_provider: String,
+    #[serde(default = "default_ai_model")]
+    pub ai_model: String,
+    #[serde(default = "default_kilo_base_url")]
+    pub kilo_base_url: String,
+}
+
+fn default_theme() -> String {
+    "system".into()
+}
+fn default_sidebar_width() -> u32 {
+    256
+}
+fn default_file_list_width() -> u32 {
+    280
+}
+fn default_right_rail_width() -> u32 {
+    224
+}
+fn default_terminal_height() -> u32 {
+    192
+}
+fn default_ai_provider() -> String {
+    "opencode".into()
+}
+fn default_ai_model() -> String {
+    "deepseek-v4-flash-free".into()
+}
+fn default_kilo_base_url() -> String {
+    "https://api.kilo.ai/v1".into()
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            theme: default_theme(),
+            sidebar_width: default_sidebar_width(),
+            file_list_width: default_file_list_width(),
+            right_rail_width: default_right_rail_width(),
+            terminal_height: default_terminal_height(),
+            ai_provider: default_ai_provider(),
+            ai_model: default_ai_model(),
+            kilo_base_url: default_kilo_base_url(),
+        }
+    }
 }
 
 pub fn run() {
@@ -71,17 +136,42 @@ pub fn run() {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
-                for arg in argv {
-                    if arg.starts_with("mygit://") {
-                        protocol::handle_deep_link(app, &arg);
+                let mut i = 0;
+                while i < argv.len() {
+                    let arg = &argv[i];
+                    if arg.starts_with("gitlurk://") {
+                        protocol::handle_deep_link(app, arg);
                     } else if arg.starts_with("--open-local=") {
-                        let path = arg.trim_start_matches("--open-local=");
+                        let path = arg.trim_start_matches("--open-local=").to_string();
                         let action = protocol::UrlAction::OpenLocalRepo {
-                            path: path.to_string(),
+                            path,
                             branch: None,
                         };
-                        let _ = app.emit("cli-action", action);
+                        if let Some(state) = app.try_state::<AppState>() {
+                            state.queue_cli_action(action.clone());
+                        }
+                        emit_to_main(app, "cli-action", action);
+                    } else if arg == "--open-local" {
+                        if let Some(path) = argv.get(i + 1) {
+                            let action = protocol::UrlAction::OpenLocalRepo {
+                                path: path.clone(),
+                                branch: None,
+                            };
+                            if let Some(state) = app.try_state::<AppState>() {
+                                state.queue_cli_action(action.clone());
+                            }
+                            emit_to_main(app, "cli-action", action);
+                            i += 1;
+                        }
+                    } else if arg.starts_with("--clone=") {
+                        let url = arg.trim_start_matches("--clone=").to_string();
+                        let action = protocol::UrlAction::Clone { url };
+                        if let Some(state) = app.try_state::<AppState>() {
+                            state.queue_cli_action(action.clone());
+                        }
+                        emit_to_main(app, "cli-action", action);
                     }
+                    i += 1;
                 }
             },
         ));
@@ -128,7 +218,9 @@ pub fn run() {
             app.state::<AppState>().git.set_bundled_search_paths(bundled_paths);
 
             tray::setup_tray(app.handle())?;
-            registry::register_explorer_menu_if_enabled(app.handle())?;
+            if let Err(err) = registry::register_explorer_menu_if_enabled(app.handle()) {
+                eprintln!("Explorer context menu registration failed: {err}");
+            }
 
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -138,12 +230,15 @@ pub fn run() {
             });
 
             if let Some(action) = registry::parse_cli_args() {
+                // Store for the frontend to pick up after listeners are ready —
+                // emitting here races the webview boot and drops --open-local.
+                app.state::<AppState>().queue_cli_action(action.clone());
                 emit_to_main(app.handle(), "cli-action", action);
             }
 
             #[cfg(desktop)]
             {
-                app.deep_link().register("mygit")?;
+                app.deep_link().register("gitlurk")?;
                 if let Ok(Some(urls)) = app.deep_link().get_current() {
                     for url in urls {
                         protocol::handle_deep_link(app.handle(), url.as_ref());
@@ -169,6 +264,9 @@ pub fn run() {
             commands::dialog::dialog_save_directory,
             commands::app::app_get_repos,
             commands::app::app_save_repos,
+            commands::app::app_get_settings,
+            commands::app::app_set_settings,
+            commands::app::app_take_pending_action,
             commands::app::app_get_theme,
             commands::app::app_set_theme,
             commands::app::app_get_explorer_menu,
@@ -178,8 +276,19 @@ pub fn run() {
             commands::auth::auth_get_token,
             commands::auth::auth_logout,
             commands::github::github_list_prs,
+            commands::github::github_list_notifications,
+            commands::github::github_mark_notification_read,
+            commands::github::github_list_feed,
+            commands::github::github_search_repos,
+            commands::github::github_trending,
+            commands::ai::ai_set_api_key,
+            commands::ai::ai_has_api_key,
+            commands::ai::ai_list_models,
+            commands::ai::ai_generate_commit_message,
+            commands::ai::ai_test_connection,
             commands::shell::shell_open_external,
             commands::shell::shell_open_terminal,
+            commands::shell::shell_reveal_in_explorer,
             commands::terminal::terminal_spawn,
             commands::terminal::terminal_write,
             commands::terminal::terminal_resize,

@@ -1,4 +1,4 @@
-import { buildOpenRepoUrl } from '@mygit/shared';
+import { buildOpenRepoUrl } from '@gitlurk/shared';
 
 function getCloneUrl(): string | null {
   const input = document.querySelector<HTMLInputElement>(
@@ -7,8 +7,8 @@ function getCloneUrl(): string | null {
   return input?.value ?? null;
 }
 
-function injectMyGitButton() {
-  if (document.getElementById('mygit-open-button')) return;
+function injectGitLurkButton() {
+  if (document.getElementById('gitlurk-open-button')) return;
 
   const cloneUrl = getCloneUrl();
   if (!cloneUrl) return;
@@ -20,14 +20,14 @@ function injectMyGitButton() {
   if (!container) return;
 
   const link = document.createElement('a');
-  link.id = 'mygit-open-button';
-  link.textContent = 'Open with MyGit Desktop';
+  link.id = 'gitlurk-open-button';
+  link.textContent = 'Open with GitLurk Desktop';
   link.href = buildOpenRepoUrl(cloneUrl);
   link.className = 'btn btn-sm btn-block';
   link.style.marginTop = '8px';
   container.appendChild(link);
 }
 
-const observer = new MutationObserver(() => injectMyGitButton());
+const observer = new MutationObserver(() => injectGitLurkButton());
 observer.observe(document.body, { childList: true, subtree: true });
-injectMyGitButton();
+injectGitLurkButton();

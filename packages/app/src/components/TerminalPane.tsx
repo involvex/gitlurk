@@ -3,11 +3,13 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { ipcInvoke, onEvent } from '../ipc/client';
+import { dispatcher } from '../dispatcher';
 import { useAppStore } from '../stores';
 
 export function TerminalPane() {
   const show = useAppStore((s) => s.showTerminal);
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
+  const terminalHeight = useAppStore((s) => s.terminalHeight);
   const containerRef = useRef<HTMLDivElement>(null);
   const sessionIdRef = useRef<string | null>(null);
 
@@ -97,6 +99,26 @@ export function TerminalPane() {
 
   return (
     <div className="border-t border-border bg-surface">
+      <div
+        role="separator"
+        aria-orientation="horizontal"
+        onPointerDown={(event) => {
+          const startY = event.clientY;
+          const startH = useAppStore.getState().terminalHeight;
+          const onMove = (e: PointerEvent) => {
+            const delta = startY - e.clientY;
+            dispatcher.resizeTerminal(delta, startH);
+          };
+          const onUp = () => {
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+            void dispatcher.persistPanelSettings();
+          };
+          window.addEventListener('pointermove', onMove);
+          window.addEventListener('pointerup', onUp);
+        }}
+        className="h-1 cursor-row-resize bg-border/60 hover:bg-primary/50"
+      />
       <div className="flex items-center justify-between px-4 py-2">
         <span className="text-xs font-medium text-muted">Terminal</span>
         <button
@@ -107,7 +129,11 @@ export function TerminalPane() {
           Close
         </button>
       </div>
-      <div ref={containerRef} className="h-48 px-2 pb-2" />
+      <div
+        ref={containerRef}
+        className="px-2 pb-2"
+        style={{ height: terminalHeight }}
+      />
     </div>
   );
 }

@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
 import type { DiffKind } from '../stores/git-ops';
 import { DiffPanel } from './DiffPanel';
+import { ResizeHandle } from './ResizeHandle';
 
 function FileList({
   title,
@@ -56,12 +58,14 @@ export function ChangesView() {
   const commitMessage = useAppStore((s) => s.commitMessage);
   const currentBranch = useAppStore((s) => s.currentBranch);
   const selectedFile = useAppStore((s) => s.selectedFile);
+  const fileListWidth = useAppStore((s) => s.fileListWidth);
+  const [aiLoading, setAiLoading] = useState(false);
 
   if (!activeRepoPath) {
     return (
       <div className="flex flex-1 items-center justify-center text-muted">
         <div className="text-center">
-          <p className="text-lg font-medium">Welcome to MyGit Desktop</p>
+          <p className="text-lg font-medium">Welcome to GitLurk Desktop</p>
           <p className="mt-2 text-sm">
             Open a local repository or clone from GitHub to begin.
           </p>
@@ -126,8 +130,11 @@ export function ChangesView() {
         </div>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr]">
-        <div className="space-y-4 overflow-y-auto border-r border-border p-4">
+      <div className="flex min-h-0 flex-1">
+        <div
+          className="space-y-4 overflow-y-auto border-r border-border p-4"
+          style={{ width: fileListWidth }}
+        >
           <FileList
             title="Staged changes"
             files={status?.staged ?? []}
@@ -153,6 +160,10 @@ export function ChangesView() {
             onSelect={(file, kind) => void dispatcher.loadFileDiff(file, kind)}
           />
         </div>
+        <ResizeHandle
+          orientation="vertical"
+          onDrag={(delta) => dispatcher.resizeFileList(delta)}
+        />
         <DiffPanel />
       </div>
 
@@ -168,14 +179,29 @@ export function ChangesView() {
           placeholder="Describe your changes"
           className="mb-3 h-20 w-full resize-none rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
         />
-        <button
-          type="button"
-          onClick={() => void dispatcher.commit()}
-          disabled={loading || !commitMessage.trim()}
-          className="rounded-md bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover disabled:opacity-50"
-        >
-          Commit to {currentBranch || status?.branch || 'branch'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={aiLoading || loading}
+            onClick={() => {
+              setAiLoading(true);
+              void dispatcher
+                .generateCommitMessage()
+                .finally(() => setAiLoading(false));
+            }}
+            className="rounded-md border border-border px-4 py-2 text-sm hover:bg-surface-elevated disabled:opacity-50"
+          >
+            {aiLoading ? 'Generating…' : 'Generate with AI'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void dispatcher.commit()}
+            disabled={loading || !commitMessage.trim()}
+            className="rounded-md bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover disabled:opacity-50"
+          >
+            Commit to {currentBranch || status?.branch || 'branch'}
+          </button>
+        </div>
       </footer>
     </div>
   );

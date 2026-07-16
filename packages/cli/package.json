@@ -1,17 +1,18 @@
 {
-  "name": "@mygit/cli",
+  "name": "@gitlurk/cli",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "bin": {
-    "mygit": "./dist/cli.js"
+    "gitlurk": "./dist/cli.js"
   },
   "scripts": {
+    "dev": "bun run src/cli.ts",
     "build": "bun build src/cli.ts --outdir dist --target bun",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@mygit/shared": "workspace:*"
+    "@gitlurk/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

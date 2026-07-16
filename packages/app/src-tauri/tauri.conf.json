@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MyGit Desktop",
+  "productName": "GitLurk Desktop",
   "version": "0.1.0",
-  "identifier": "dev.mygit.desktop",
+  "identifier": "dev.gitlurk.desktop",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "MyGit Desktop",
+        "title": "GitLurk Desktop",
         "width": 1280,
         "height": 800,
         "minWidth": 960,
@@ -50,11 +50,11 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["mygit"]
+        "schemes": ["gitlurk"]
       }
     },
     "updater": {
-      "endpoints": ["https://releases.mygit.dev/latest.json"],
+      "endpoints": ["https://releases.gitlurk.dev/latest.json"],
       "pubkey": "REPLACE_WITH_PUBLIC_KEY"
     }
   }

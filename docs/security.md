@@ -1,6 +1,6 @@
 # Security Model
 
-## Protocol Handler (`mygit://`)
+## Protocol Handler (`gitlurk://`)
 
 - Only `github.com` hosts accepted for remote repo actions
 - Parsed in Rust before emitting to renderer
@@ -21,7 +21,7 @@
 
 - Binds to `127.0.0.1` on ephemeral port
 - Requires `Authorization: Bearer <token>` header
-- Token stored in `%APPDATA%/MyGit/mcp-token.txt`
+- Token stored in `%APPDATA%/GitLurk/mcp-token.txt`
 
 ## Plugins
 
@@ -39,14 +39,14 @@ Configuration is read from `.env` in the repo root during development, and from 
 | `GITHUB_REDIRECT_URI`  | No       | Defaults to `http://127.0.0.1/callback`                            |
 | `GITHUB_CLIENT_SECRET` | No       | Not used by Device Flow; loaded in Rust only, never sent to the UI |
 
-Legacy aliases `MYGIT_GITHUB_*` are also supported.
+Legacy aliases `GITLURK_GITHUB_*` and `MYGIT_GITHUB_*` are also supported.
 
 Load order (later overrides earlier):
 
 1. Repo root `.env` (dev)
 2. Bundled `oauth.env` (release)
 3. `.env` next to the installed executable
-4. `%APPDATA%/dev.mygit.desktop/.env` (per-user override)
+4. `%APPDATA%/dev.gitlurk.desktop/.env` (per-user override)
 
 Copy `.env.example` to `.env` and set your Client ID:
 
@@ -75,7 +75,7 @@ https://github.com/settings/developers → **OAuth Apps** → **New OAuth App**.
 
 | Field                          | What to enter                                                                                                                    |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| **Application name**           | `MyGit Desktop` (or any name you prefer)                                                                                         |
+| **Application name**           | `GitLurk Desktop` (or any name you prefer)                                                                                       |
 | **Homepage URL**               | Your repo or project page, e.g. `https://github.com/<you>/github-desktop-app` — or `http://localhost` if you have no public site |
 | **Application description**    | Optional — e.g. `Windows Git desktop client`                                                                                     |
 | **Authorization callback URL** | `http://127.0.0.1/callback` — required by the form but **not used** by Device Flow; localhost is fine                            |

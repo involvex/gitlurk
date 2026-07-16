@@ -29,3 +29,23 @@ pub fn shell_open_terminal(_state: State<'_, AppState>, path: String) -> Result<
     let dir = validate_repo_path(&path)?;
     terminal::open_in_windows_terminal(dir.to_string_lossy().as_ref())
 }
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn shell_reveal_in_explorer(path: String) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    #[cfg(windows)]
+    {
+        std::process::Command::new("explorer.exe")
+            .arg(dir.as_os_str())
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(windows))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&dir)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}

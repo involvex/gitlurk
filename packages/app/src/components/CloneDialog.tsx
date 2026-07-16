@@ -74,7 +74,7 @@ export function CloneDialog() {
             <div>
               <p className="mb-2 text-sm text-muted">
                 Run this in your terminal, or switch to HTTPS/SSH to clone
-                directly in MyGit:
+                directly in GitLurk:
               </p>
               <code className="block rounded-md bg-surface px-3 py-2 font-mono text-xs">
                 {cliCommand}

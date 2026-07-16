@@ -288,7 +288,7 @@ fn find_bundled_git(extra_paths: &[PathBuf]) -> Option<PathBuf> {
     if let Ok(local) = std::env::var("LOCALAPPDATA") {
         candidates.push(
             PathBuf::from(local)
-                .join("MyGit")
+                .join("GitLurk")
                 .join("git")
                 .join("cmd")
                 .join("git.exe"),

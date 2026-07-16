@@ -1,0 +1,6 @@
+# MinGit binaries (run scripts/download-portable-git.ps1)
+/cmd/
+/mingw64/
+/usr/
+*.exe
+*.dll

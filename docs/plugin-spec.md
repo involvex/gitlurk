@@ -1,6 +1,6 @@
-# MyGit Plugin Specification v1
+# GitLurk Plugin Specification v1
 
-## Manifest (`mygit.plugin.json`)
+## Manifest (`gitlurk.plugin.json`)
 
 ```json
 {
@@ -42,7 +42,7 @@ Response:
   "id": "example.hello",
   "name": "Hello Plugin",
   "version": "1.0.0",
-  "downloadUrl": "https://marketplace.mygit.dev/plugins/example.hello-1.0.0.zip",
+  "downloadUrl": "https://marketplace.gitlurk.dev/plugins/example.hello-1.0.0.zip",
   "sha256": "...",
   "permissions": ["git.read", "ui.toast"]
 }

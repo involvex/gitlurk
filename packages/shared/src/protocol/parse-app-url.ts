@@ -10,7 +10,7 @@ const ALLOWED_HOSTS = new Set(['github.com', 'www.github.com']);
 export function parseAppUrl(raw: string): UrlAction {
   try {
     const u = new URL(raw);
-    if (u.protocol !== 'mygit:') {
+    if (u.protocol !== 'gitlurk:') {
       return { type: 'unknown', raw };
     }
 
@@ -65,7 +65,7 @@ export function parseAppUrl(raw: string): UrlAction {
 }
 
 export function buildOpenRepoUrl(repoUrl: string, branch?: string): string {
-  const base = `mygit://openRepo/${repoUrl}`;
+  const base = `gitlurk://openRepo/${repoUrl}`;
   return branch ? `${base}?branch=${encodeURIComponent(branch)}` : base;
 }
 

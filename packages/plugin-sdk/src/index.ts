@@ -9,7 +9,7 @@ export interface GitStatus {
   untracked: string[];
 }
 
-export interface MyGitPluginApi {
+export interface GitLurkPluginApi {
   git: {
     status(repoPath: string): Promise<GitStatus>;
   };
@@ -24,4 +24,4 @@ export interface MyGitPluginApi {
   };
 }
 
-export type PluginActivate = (api: MyGitPluginApi) => void;
+export type PluginActivate = (api: GitLurkPluginApi) => void;

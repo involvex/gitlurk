@@ -3,7 +3,7 @@ use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager};
 
 pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
-    let show = MenuItem::with_id(app, "tray_show", "Show MyGit", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, "tray_show", "Show GitLurk", true, None::<&str>)?;
     let pull = MenuItem::with_id(app, "tray_pull", "Pull Active Repo", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "tray_quit", "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(
@@ -16,9 +16,9 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         ],
     )?;
 
-    TrayIconBuilder::new()
+    let mut builder = TrayIconBuilder::new()
         .menu(&menu)
-        .tooltip("MyGit Desktop")
+        .tooltip("GitLurk Desktop")
         .on_menu_event(|app, event| match event.id().as_ref() {
             "tray_show" => {
                 if let Some(window) = app.get_webview_window("main") {
@@ -42,8 +42,14 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
                     let _ = window.set_focus();
                 }
             }
-        })
-        .build(app)?;
+        });
 
+    if let Some(icon) = app.default_window_icon() {
+        builder = builder.icon(icon.clone());
+    } else {
+        builder = builder.icon(tauri::include_image!("icons/32x32.png"));
+    }
+
+    builder.build(app)?;
     Ok(())
 }

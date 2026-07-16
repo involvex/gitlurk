@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "MyGit Desktop Bridge",
+  "name": "GitLurk Desktop Bridge",
   "version": "0.1.0",
-  "description": "Adds Open with MyGit Desktop to GitHub clone UI",
+  "description": "Adds Open with GitLurk Desktop to GitHub clone UI",
   "permissions": ["activeTab"],
   "host_permissions": ["https://github.com/*"],
   "background": {

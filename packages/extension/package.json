@@ -1,11 +1,11 @@
 {
-  "name": "@mygit/extension",
+  "name": "@gitlurk/extension",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "bun build src/content-script.ts --outdir dist --target browser && bun build src/background.ts --outdir dist --target browser"
   },
   "dependencies": {
-    "@mygit/shared": "workspace:*"
+    "@gitlurk/shared": "workspace:*"
   }
 }

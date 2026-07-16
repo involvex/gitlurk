@@ -1,3 +1,3 @@
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('MyGit Desktop Bridge installed');
+  console.log('GitLurk Desktop Bridge installed');
 });
