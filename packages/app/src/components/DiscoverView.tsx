@@ -51,7 +51,8 @@ const TRENDING_LANGS = [
 
 export function DiscoverView() {
   const username = useAppStore((s) => s.username);
-  const [tab, setTab] = useState<DiscoverTab>('notifications');
+  const discoverTab = useAppStore((s) => s.discoverTab);
+  const [tab, setTab] = useState<DiscoverTab>(discoverTab);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -59,6 +60,15 @@ export function DiscoverView() {
   const [repos, setRepos] = useState<RepoCard[]>([]);
   const [query, setQuery] = useState('stars:>1000');
   const [language, setLanguage] = useState('all');
+
+  useEffect(() => {
+    setTab(discoverTab);
+  }, [discoverTab]);
+
+  const selectTab = (next: DiscoverTab) => {
+    setTab(next);
+    useAppStore.getState().setDiscoverTab(next);
+  };
 
   const loadTab = useCallback(
     async (next: DiscoverTab) => {
@@ -162,7 +172,7 @@ export function DiscoverView() {
             <button
               key={id}
               type="button"
-              onClick={() => setTab(id)}
+              onClick={() => selectTab(id)}
               className={`rounded-md px-3 py-1.5 text-xs ${
                 tab === id
                   ? 'bg-primary/20 text-primary'

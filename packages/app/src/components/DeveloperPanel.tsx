@@ -28,11 +28,13 @@ export function DeveloperPanel() {
     Array<{ name: string; expansion: string }>
   >([]);
   const [runs, setRuns] = useState<GhRun[]>([]);
+  const [detailsLoaded, setDetailsLoaded] = useState(false);
 
   const [gitScope, setGitScope] = useState<ConfigScope>('global');
   const [gitConfig, setGitConfig] = useState<
     Array<{ key: string; value: string; origin?: string }>
   >([]);
+  const [gitLoaded, setGitLoaded] = useState(false);
   const [gitFilter, setGitFilter] = useState('');
   const [newGitKey, setNewGitKey] = useState('');
   const [newGitValue, setNewGitValue] = useState('');
@@ -42,60 +44,91 @@ export function DeveloperPanel() {
   const [releaseTitle, setReleaseTitle] = useState('');
   const [releaseNotes, setReleaseNotes] = useState('');
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
   const repoPath =
     gitScope === 'local' && activeRepoPath ? activeRepoPath : undefined;
 
-  const loadGh = useCallback(async () => {
-    const versionInfo = await ipcInvoke('dev:gh-version', {});
-    setGhInstalled(versionInfo.installed);
-    setGhVersion(versionInfo.version);
-    if (!versionInfo.installed) return;
-
-    const auth = await ipcInvoke('dev:gh-auth-status', {});
-    setGhLoggedIn(auth.loggedIn);
-    setGhAuth(auth.summary);
-
-    const config = await ipcInvoke('dev:gh-config-list', {});
-    setGhConfig(config.entries);
-
-    const aliases = await ipcInvoke('dev:gh-alias-list', {});
-    setGhAliases(aliases.aliases);
+  // Fast path only — never block the UI with auth/config/run list on open.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const versionInfo = await ipcInvoke('dev:gh-version', {});
+        if (cancelled) return;
+        setGhInstalled(versionInfo.installed);
+        setGhVersion(versionInfo.version);
+      } catch (err) {
+        if (!cancelled) {
+          setStatus(err instanceof Error ? err.message : 'Failed to detect gh');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const loadGitConfig = useCallback(async () => {
-    const result = await ipcInvoke('dev:git-config-list', {
-      scope: gitScope,
-      path: repoPath,
-    });
-    setGitConfig(result.entries);
-  }, [gitScope, repoPath]);
-
-  const loadRuns = useCallback(async () => {
-    if (!activeRepoPath || !ghInstalled) return;
+  const loadDetails = useCallback(async () => {
+    if (!ghInstalled) return;
+    setLoading(true);
+    setStatus(null);
     try {
-      const result = await ipcInvoke('dev:gh-run-list', {
-        path: activeRepoPath,
-        limit: 5,
-      });
-      setRuns(result.runs);
-    } catch {
-      setRuns([]);
+      const [auth, config, aliases] = await Promise.all([
+        ipcInvoke('dev:gh-auth-status', {}),
+        ipcInvoke('dev:gh-config-list', {}),
+        ipcInvoke('dev:gh-alias-list', {}),
+      ]);
+      setGhLoggedIn(auth.loggedIn);
+      setGhAuth(auth.summary);
+      setGhConfig(config.entries);
+      setGhAliases(aliases.aliases);
+      setDetailsLoaded(true);
+
+      if (activeRepoPath) {
+        try {
+          const result = await ipcInvoke('dev:gh-run-list', {
+            path: activeRepoPath,
+            limit: 5,
+          });
+          setRuns(result.runs);
+        } catch {
+          setRuns([]);
+        }
+      }
+    } catch (err) {
+      setStatus(
+        err instanceof Error ? err.message : 'Failed to load gh details',
+      );
+    } finally {
+      setLoading(false);
     }
-  }, [activeRepoPath, ghInstalled]);
+  }, [ghInstalled, activeRepoPath]);
 
-  useEffect(() => {
-    void loadGh();
-  }, [loadGh]);
-
-  useEffect(() => {
-    void loadGitConfig();
-  }, [loadGitConfig]);
-
-  useEffect(() => {
-    void loadRuns();
-  }, [loadRuns]);
+  const loadGitConfig = useCallback(async () => {
+    if (gitScope === 'local' && !activeRepoPath) {
+      setStatus('Select a repository for local config.');
+      return;
+    }
+    setLoading(true);
+    setStatus(null);
+    try {
+      const result = await ipcInvoke('dev:git-config-list', {
+        scope: gitScope,
+        path: repoPath,
+      });
+      setGitConfig(result.entries);
+      setGitLoaded(true);
+    } catch (err) {
+      setStatus(
+        err instanceof Error ? err.message : 'Failed to load git config',
+      );
+      setGitConfig([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [gitScope, repoPath, activeRepoPath]);
 
   const runAction = async (label: string, action: () => Promise<void>) => {
     setBusy(true);
@@ -124,7 +157,19 @@ export function DeveloperPanel() {
   return (
     <div className="space-y-5">
       <section className="rounded-md border border-border p-3">
-        <h3 className="mb-2 text-sm font-semibold">GitHub CLI</h3>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">GitHub CLI</h3>
+          {ghInstalled ? (
+            <button
+              type="button"
+              disabled={loading || busy}
+              onClick={() => void loadDetails()}
+              className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+            >
+              {detailsLoaded ? 'Refresh' : 'Load details'}
+            </button>
+          ) : null}
+        </div>
         {!ghInstalled ? (
           <p className="text-xs text-muted">
             gh is not installed.{' '}
@@ -142,10 +187,14 @@ export function DeveloperPanel() {
           </p>
         ) : (
           <div className="space-y-2 text-xs text-muted">
-            <p>{ghVersion}</p>
-            <p className={ghLoggedIn ? 'text-green-500' : 'text-amber-500'}>
-              {ghLoggedIn ? 'Authenticated' : 'Not authenticated'}
-            </p>
+            <p>{ghVersion ?? 'gh installed'}</p>
+            {detailsLoaded ? (
+              <p className={ghLoggedIn ? 'text-green-500' : 'text-amber-500'}>
+                {ghLoggedIn ? 'Authenticated' : 'Not authenticated'}
+              </p>
+            ) : (
+              <p>Click “Load details” for auth, config, aliases, and runs.</p>
+            )}
             {ghAuth ? (
               <pre className="max-h-24 overflow-auto rounded bg-surface-elevated p-2 text-[10px] whitespace-pre-wrap">
                 {ghAuth}
@@ -177,20 +226,11 @@ export function DeveloperPanel() {
                     path: activeRepoPath ?? undefined,
                     clone: false,
                   });
-                  await loadGh();
                 })
               }
               className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
             >
               Fork repo
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void loadRuns()}
-              className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
-            >
-              Refresh runs
             </button>
           </div>
         ) : null}
@@ -219,91 +259,109 @@ export function DeveloperPanel() {
           </ul>
         ) : null}
 
-        {ghInstalled ? (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <input
-              value={newGhKey}
-              onChange={(e) => setNewGhKey(e.target.value)}
-              placeholder="gh config key"
-              className="rounded border border-border bg-surface-elevated px-2 py-1 text-xs"
-            />
-            <input
-              value={newGhValue}
-              onChange={(e) => setNewGhValue(e.target.value)}
-              placeholder="value"
-              className="rounded border border-border bg-surface-elevated px-2 py-1 text-xs"
-            />
-            <button
-              type="button"
-              disabled={busy || !newGhKey || !newGhValue}
-              onClick={() =>
-                void runAction('gh config updated', async () => {
-                  await ipcInvoke('dev:gh-config-set', {
-                    key: newGhKey,
-                    value: newGhValue,
-                  });
-                  setNewGhKey('');
-                  setNewGhValue('');
-                  await loadGh();
-                })
-              }
-              className="rounded bg-accent px-2 py-1 text-xs text-white disabled:opacity-50 sm:col-span-2"
-            >
-              Set gh config
-            </button>
-          </div>
-        ) : null}
+        {detailsLoaded && ghInstalled ? (
+          <>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <input
+                value={newGhKey}
+                onChange={(e) => setNewGhKey(e.target.value)}
+                placeholder="gh config key"
+                className="rounded border border-border bg-surface-elevated px-2 py-1 text-xs"
+              />
+              <input
+                value={newGhValue}
+                onChange={(e) => setNewGhValue(e.target.value)}
+                placeholder="value"
+                className="rounded border border-border bg-surface-elevated px-2 py-1 text-xs"
+              />
+              <button
+                type="button"
+                disabled={busy || !newGhKey || !newGhValue}
+                onClick={() =>
+                  void runAction('gh config updated', async () => {
+                    await ipcInvoke('dev:gh-config-set', {
+                      key: newGhKey,
+                      value: newGhValue,
+                    });
+                    setNewGhKey('');
+                    setNewGhValue('');
+                    await loadDetails();
+                  })
+                }
+                className="rounded bg-accent px-2 py-1 text-xs text-white disabled:opacity-50 sm:col-span-2"
+              >
+                Set gh config
+              </button>
+            </div>
 
-        {ghAliases.length > 0 ? (
-          <div className="mt-3">
-            <p className="mb-1 text-xs font-medium">Aliases</p>
-            <ul className="max-h-24 space-y-1 overflow-auto text-[11px] text-muted">
-              {ghAliases.map((alias) => (
-                <li key={alias.name}>
-                  <span className="font-mono text-foreground">
-                    {alias.name}
-                  </span>
-                  {' → '}
-                  {alias.expansion}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+            {ghAliases.length > 0 ? (
+              <div className="mt-3">
+                <p className="mb-1 text-xs font-medium">Aliases</p>
+                <ul className="max-h-24 space-y-1 overflow-auto text-[11px] text-muted">
+                  {ghAliases.map((alias) => (
+                    <li key={alias.name}>
+                      <span className="font-mono text-foreground">
+                        {alias.name}
+                      </span>
+                      {' → '}
+                      {alias.expansion}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
-        {ghConfig.length > 0 ? (
-          <div className="mt-3">
-            <p className="mb-1 text-xs font-medium">gh config</p>
-            <ul className="max-h-28 space-y-1 overflow-auto text-[11px] text-muted">
-              {ghConfig.slice(0, 20).map((entry) => (
-                <li key={entry.key}>
-                  <span className="font-mono text-foreground">{entry.key}</span>
-                  {' = '}
-                  {entry.value}
-                </li>
-              ))}
-            </ul>
-          </div>
+            {ghConfig.length > 0 ? (
+              <div className="mt-3">
+                <p className="mb-1 text-xs font-medium">gh config</p>
+                <ul className="max-h-28 space-y-1 overflow-auto text-[11px] text-muted">
+                  {ghConfig.slice(0, 20).map((entry) => (
+                    <li key={entry.key}>
+                      <span className="font-mono text-foreground">
+                        {entry.key}
+                      </span>
+                      {' = '}
+                      {entry.value}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </>
         ) : null}
       </section>
 
       <section className="rounded-md border border-border p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold">Git config</h3>
-          <select
-            value={gitScope}
-            onChange={(e) => setGitScope(e.target.value as ConfigScope)}
-            className="rounded border border-border bg-surface-elevated px-2 py-1 text-xs"
-          >
-            <option value="global">Global</option>
-            <option value="local">Local (active repo)</option>
-            <option value="system">System</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <select
+              value={gitScope}
+              onChange={(e) => {
+                setGitScope(e.target.value as ConfigScope);
+                setGitLoaded(false);
+                setGitConfig([]);
+              }}
+              className="rounded border border-border bg-surface-elevated px-2 py-1 text-xs"
+            >
+              <option value="global">Global</option>
+              <option value="local">Local (active repo)</option>
+              <option value="system">System</option>
+            </select>
+            <button
+              type="button"
+              disabled={loading || busy}
+              onClick={() => void loadGitConfig()}
+              className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+            >
+              {gitLoaded ? 'Refresh' : 'Load'}
+            </button>
+          </div>
         </div>
 
-        {gitScope === 'local' && !activeRepoPath ? (
+        {!gitLoaded ? (
           <p className="text-xs text-muted">
-            Select a repository for local config.
+            Click Load to list git config (avoids freezing on open).
           </p>
         ) : (
           <>
@@ -420,6 +478,7 @@ export function DeveloperPanel() {
         </section>
       ) : null}
 
+      {loading ? <p className="text-xs text-muted">Loading…</p> : null}
       {status ? <p className="text-xs text-muted">{status}</p> : null}
     </div>
   );

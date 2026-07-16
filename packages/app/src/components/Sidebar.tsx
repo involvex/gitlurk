@@ -15,7 +15,6 @@ export function Sidebar() {
   const isAuthenticating = useAppStore((s) => s.isAuthenticating);
   const sidebarWidth = useAppStore((s) => s.sidebarWidth);
   const appMode = useAppStore((s) => s.appMode);
-  const unreadNotifications = useAppStore((s) => s.unreadNotifications);
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +65,7 @@ export function Sidebar() {
       <div className="px-3 pb-2">
         <button
           type="button"
-          onClick={() => useAppStore.getState().setAppMode('discover')}
+          onClick={() => dispatcher.openDiscover('feed')}
           className={`flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm ${
             appMode === 'discover'
               ? 'bg-primary/20 text-primary'
@@ -74,11 +73,6 @@ export function Sidebar() {
           }`}
         >
           <span>Discover</span>
-          {unreadNotifications > 0 ? (
-            <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] text-white">
-              {unreadNotifications > 99 ? '99+' : unreadNotifications}
-            </span>
-          ) : null}
         </button>
         <button
           type="button"

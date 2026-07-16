@@ -269,7 +269,7 @@ export interface IpcResponses {
 export type IpcEvents = {
   'url-action': UrlAction;
   'git:progress': { op: string; percent: number; message: string };
-  'tray-action': 'pull' | 'show';
+  'tray-action': 'pull' | 'show' | 'notifications' | 'discover' | 'settings';
   'cli-action': UrlAction;
   'terminal-output': { sessionId: string; data: string };
   'dev:gh-run-output': { data: string };

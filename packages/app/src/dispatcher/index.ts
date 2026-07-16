@@ -69,6 +69,14 @@ export const dispatcher = {
     await onEvent('tray-action', (action) => {
       if (action === 'pull') {
         void dispatcher.pullActiveRepo();
+      } else if (action === 'notifications') {
+        dispatcher.openNotifications();
+      } else if (action === 'discover') {
+        dispatcher.openDiscover();
+      } else if (action === 'settings') {
+        getStore().setShowSettings(true);
+      } else if (action === 'show') {
+        // Window already focused by tray; nothing else required.
       }
     });
 
@@ -100,6 +108,15 @@ export const dispatcher = {
     };
     void poll();
     notificationPollTimer = setInterval(() => void poll(), 60_000);
+  },
+
+  openDiscover(tab: import('../stores/ui').DiscoverTab = 'feed') {
+    getStore().setDiscoverTab(tab);
+    getStore().setAppMode('discover');
+  },
+
+  openNotifications() {
+    dispatcher.openDiscover('notifications');
   },
 
   async persistPanelSettings() {

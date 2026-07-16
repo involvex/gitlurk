@@ -22,6 +22,7 @@ export function App() {
   const error = useAppStore((s) => s.error);
   const appMode = useAppStore((s) => s.appMode);
   const rightRailWidth = useAppStore((s) => s.rightRailWidth);
+  const unreadNotifications = useAppStore((s) => s.unreadNotifications);
 
   useEffect(() => {
     void dispatcher.initialize();
@@ -57,7 +58,7 @@ export function App() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => useAppStore.getState().setAppMode('discover')}
+                  onClick={() => dispatcher.openDiscover('feed')}
                   className={`rounded px-2 py-1 text-xs ${
                     appMode === 'discover'
                       ? 'bg-primary/20 text-primary'
@@ -69,6 +70,20 @@ export function App() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => dispatcher.openNotifications()}
+                className="relative rounded-md border border-border px-2.5 py-1.5 text-sm hover:bg-surface-elevated"
+                title="Notifications"
+                aria-label="Notifications"
+              >
+                <span aria-hidden>🔔</span>
+                {unreadNotifications > 0 ? (
+                  <span className="absolute -top-1 -right-1 min-w-[1rem] rounded-full bg-accent px-1 text-center text-[10px] leading-4 text-white">
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </span>
+                ) : null}
+              </button>
               <label className="flex items-center gap-2 text-xs text-muted">
                 <input
                   type="checkbox"

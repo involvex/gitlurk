@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type AppMode = 'workspace' | 'discover';
+export type DiscoverTab = 'notifications' | 'feed' | 'explore' | 'trending';
 export type AiProvider = 'opencode' | 'kilo';
 
 export interface AuthDialogState {
@@ -25,6 +26,7 @@ export interface UiSlice {
   toast: string | null;
   authDialog: AuthDialogState | null;
   appMode: AppMode;
+  discoverTab: DiscoverTab;
   sidebarWidth: number;
   fileListWidth: number;
   rightRailWidth: number;
@@ -50,6 +52,7 @@ export interface UiSlice {
   setAuthDialog: (dialog: AuthDialogState | null) => void;
   setAuthDialogStatus: (status: string) => void;
   setAppMode: (mode: AppMode) => void;
+  setDiscoverTab: (tab: DiscoverTab) => void;
   setSidebarWidth: (width: number) => void;
   setFileListWidth: (width: number) => void;
   setRightRailWidth: (width: number) => void;
@@ -87,6 +90,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   toast: null,
   authDialog: null,
   appMode: 'workspace',
+  discoverTab: 'notifications',
   sidebarWidth: 256,
   fileListWidth: 280,
   rightRailWidth: 224,
@@ -116,6 +120,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
       state.authDialog ? { authDialog: { ...state.authDialog, status } } : {},
     ),
   setAppMode: (appMode) => set({ appMode }),
+  setDiscoverTab: (discoverTab) => set({ discoverTab }),
   setSidebarWidth: (width) => set({ sidebarWidth: clamp(width, 180, 420) }),
   setFileListWidth: (width) => set({ fileListWidth: clamp(width, 180, 480) }),
   setRightRailWidth: (width) => set({ rightRailWidth: clamp(width, 160, 400) }),
