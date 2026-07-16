@@ -36,9 +36,16 @@ pub fn git_clone(
     state: State<'_, AppState>,
     url: String,
     dir: String,
+    recurse_submodules: Option<bool>,
+    depth: Option<u32>,
 ) -> Result<serde_json::Value, String> {
     let target = validate_repo_path(&dir)?;
-    state.git.clone_repo(&url, &target)?;
+    state.git.clone_repo(
+        &url,
+        &target,
+        recurse_submodules.unwrap_or(false),
+        depth,
+    )?;
     Ok(serde_json::json!({ "path": target.to_string_lossy() }))
 }
 

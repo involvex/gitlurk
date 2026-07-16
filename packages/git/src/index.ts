@@ -182,17 +182,23 @@ export async function cloneRepository(
   url: string,
   targetDir: string,
   onProgress?: GitProgressCallback,
+  options?: { recurseSubmodules?: boolean; depth?: number },
 ): Promise<string> {
   const parent = path.dirname(targetDir);
   if (!fs.existsSync(parent)) {
     fs.mkdirSync(parent, { recursive: true });
   }
 
-  const result = await gitExec(
-    ['clone', '--progress', url, targetDir],
-    parent,
-    onProgress,
-  );
+  const args = ['clone', '--progress'];
+  if (options?.recurseSubmodules) {
+    args.push('--recurse-submodules');
+  }
+  if (options?.depth && options.depth > 0) {
+    args.push('--depth', String(options.depth));
+  }
+  args.push(url, targetDir);
+
+  const result = await gitExec(args, parent, onProgress);
 
   if (result.exitCode !== 0) {
     throw new Error(result.stderr || result.stdout || 'Clone failed');

@@ -69,6 +69,7 @@ pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value,
         "aiModel": settings.ai_model,
         "kiloBaseUrl": settings.kilo_base_url,
         "minimizeToTray": settings.minimize_to_tray,
+        "terminalShell": settings.terminal_shell,
     }))
 }
 
@@ -84,6 +85,7 @@ pub fn app_set_settings(
     ai_model: Option<String>,
     kilo_base_url: Option<String>,
     minimize_to_tray: Option<bool>,
+    terminal_shell: Option<String>,
 ) -> Result<(), String> {
     let mut settings = read_settings(&state);
     if let Some(theme) = theme {
@@ -112,6 +114,13 @@ pub fn app_set_settings(
     }
     if let Some(v) = minimize_to_tray {
         settings.minimize_to_tray = v;
+    }
+    if let Some(v) = terminal_shell {
+        let normalized = v.trim().to_ascii_lowercase();
+        settings.terminal_shell = match normalized.as_str() {
+            "powershell" | "cmd" | "pwsh" => normalized,
+            _ => "pwsh".into(),
+        };
     }
     write_settings(&state, &settings)
 }

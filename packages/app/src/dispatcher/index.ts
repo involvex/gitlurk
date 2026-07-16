@@ -55,6 +55,7 @@ export const dispatcher = {
       aiModel: settings.aiModel,
       kiloBaseUrl: settings.kiloBaseUrl,
       minimizeToTray: settings.minimizeToTray,
+      terminalShell: settings.terminalShell,
     });
     getStore().setAuth(auth.username);
     getStore().setExplorerMenuEnabled(explorerMenu.enabled);
@@ -170,6 +171,11 @@ export const dispatcher = {
     await ipcInvoke('app:set-settings', { minimizeToTray: enabled });
   },
 
+  async setTerminalShell(shell: 'pwsh' | 'powershell' | 'cmd') {
+    getStore().setTerminalShell(shell);
+    await ipcInvoke('app:set-settings', { terminalShell: shell });
+  },
+
   async generateCommitMessage() {
     const path = getStore().activeRepoPath;
     if (!path) return;
@@ -229,11 +235,20 @@ export const dispatcher = {
     await dispatcher.refreshPullRequests();
   },
 
-  async cloneRepo(url: string, dir: string) {
+  async cloneRepo(
+    url: string,
+    dir: string,
+    options?: { recurseSubmodules?: boolean; depth?: number },
+  ) {
     getStore().setGitOpLoading(true);
     getStore().setError(null);
     try {
-      const { path } = await ipcInvoke('git:clone', { url, dir });
+      const { path } = await ipcInvoke('git:clone', {
+        url,
+        dir,
+        recurseSubmodules: options?.recurseSubmodules,
+        depth: options?.depth,
+      });
       getStore().addRepo(path);
       await persistRepos();
       getStore().setShowCloneDialog(false);

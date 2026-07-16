@@ -1,6 +1,19 @@
+use std::fs;
+
 use tauri::{AppHandle, State};
 
-use crate::AppState;
+use crate::{AppState, Settings};
+
+fn read_settings(state: &AppState) -> Settings {
+    let file = state.settings_file();
+    if !file.exists() {
+        return Settings::default();
+    }
+    fs::read_to_string(file)
+        .ok()
+        .and_then(|content| serde_json::from_str(&content).ok())
+        .unwrap_or_default()
+}
 
 #[tauri::command(rename_all = "camelCase")]
 pub fn terminal_spawn(
@@ -9,10 +22,15 @@ pub fn terminal_spawn(
     cwd: String,
     cols: u16,
     rows: u16,
+    shell: Option<String>,
 ) -> Result<serde_json::Value, String> {
+    let settings = read_settings(&state);
+    let preference = shell
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or(settings.terminal_shell);
     let session_id = state
         .pty_sessions
-        .spawn(app, cwd, cols, rows)?;
+        .spawn(app, cwd, cols, rows, &preference)?;
     Ok(serde_json::json!({ "sessionId": session_id }))
 }
 

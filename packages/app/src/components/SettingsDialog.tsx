@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ipcInvoke } from '../ipc/client';
 import { dispatcher } from '../dispatcher';
 import { useAppStore } from '../stores';
-import type { AiProvider } from '../stores/ui';
+import type { AiProvider, TerminalShell } from '../stores/ui';
 import { DeveloperPanel } from './DeveloperPanel';
 
 type SettingsTab = 'general' | 'ai' | 'developer';
@@ -13,6 +13,7 @@ export function SettingsDialog() {
   const aiModel = useAppStore((s) => s.aiModel);
   const kiloBaseUrl = useAppStore((s) => s.kiloBaseUrl);
   const minimizeToTray = useAppStore((s) => s.minimizeToTray);
+  const terminalShell = useAppStore((s) => s.terminalShell);
 
   const [tab, setTab] = useState<SettingsTab>('general');
   const [provider, setProvider] = useState<AiProvider>(aiProvider);
@@ -23,6 +24,7 @@ export function SettingsDialog() {
   const [hasKey, setHasKey] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [aiLoaded, setAiLoaded] = useState(false);
 
   useEffect(() => {
     if (!show) return;
@@ -32,21 +34,40 @@ export function SettingsDialog() {
     setKiloUrl(kiloBaseUrl);
     setApiKey('');
     setStatus(null);
+    setAiLoaded(false);
+    setModels([]);
+  }, [show, aiProvider, aiModel, kiloBaseUrl]);
+
+  useEffect(() => {
+    if (!show || tab !== 'ai' || aiLoaded) return;
+    let cancelled = false;
     void (async () => {
-      const keyState = await ipcInvoke('ai:has-api-key', {
-        provider: aiProvider,
-      });
-      setHasKey(keyState.hasKey);
       try {
-        const listed = await ipcInvoke('ai:list-models', {});
-        setModels(listed.models);
-      } catch {
-        setModels(
-          aiProvider === 'kilo' ? ['kilo-auto'] : ['deepseek-v4-flash-free'],
-        );
+        const keyState = await ipcInvoke('ai:has-api-key', {
+          provider: aiProvider,
+        });
+        if (cancelled) return;
+        setHasKey(keyState.hasKey);
+        try {
+          const listed = await ipcInvoke('ai:list-models', {});
+          if (!cancelled) setModels(listed.models);
+        } catch {
+          if (!cancelled) {
+            setModels(
+              aiProvider === 'kilo'
+                ? ['kilo-auto']
+                : ['deepseek-v4-flash-free'],
+            );
+          }
+        }
+      } finally {
+        if (!cancelled) setAiLoaded(true);
       }
     })();
-  }, [show, aiProvider, aiModel, kiloBaseUrl]);
+    return () => {
+      cancelled = true;
+    };
+  }, [show, tab, aiLoaded, aiProvider]);
 
   if (!show) return null;
 
@@ -174,9 +195,34 @@ export function SettingsDialog() {
                 </span>
               </span>
             </label>
+
+            <label className="block text-xs font-medium text-muted">
+              Built-in terminal shell
+              <select
+                value={terminalShell}
+                onChange={(e) => {
+                  void dispatcher.setTerminalShell(
+                    e.target.value as TerminalShell,
+                  );
+                }}
+                className="mt-1 w-full rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground"
+              >
+                <option value="pwsh">PowerShell 7 (pwsh)</option>
+                <option value="powershell">Windows PowerShell 5.1</option>
+                <option value="cmd">Command Prompt (cmd)</option>
+              </select>
+              <span className="mt-1 block font-normal text-muted">
+                Used by the in-app terminal pane. Re-open the pane after
+                changing. Defaults to pwsh with a safe absolute path fallback.
+              </span>
+            </label>
           </div>
         ) : tab === 'ai' ? (
           <div className="space-y-4">
+            {!aiLoaded ? (
+              <p className="text-xs text-muted">Loading AI settings…</p>
+            ) : null}
+
             <label className="block text-xs font-medium text-muted">
               AI provider
               <select

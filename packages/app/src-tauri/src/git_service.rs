@@ -121,7 +121,13 @@ impl GitService {
         })
     }
 
-    pub fn clone_repo(&self, url: &str, target: &Path) -> Result<(), String> {
+    pub fn clone_repo(
+        &self,
+        url: &str,
+        target: &Path,
+        recurse_submodules: bool,
+        depth: Option<u32>,
+    ) -> Result<(), String> {
         if let Some(parent) = target.parent() {
             std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
@@ -133,7 +139,21 @@ impl GitService {
             .and_then(|n| n.to_str())
             .ok_or_else(|| "Invalid folder name".to_string())?;
 
-        let output = self.exec(&["clone", url, folder_name], parent)?;
+        let mut args = vec!["clone".to_string()];
+        if recurse_submodules {
+            args.push("--recurse-submodules".to_string());
+        }
+        if let Some(d) = depth {
+            if d > 0 {
+                args.push("--depth".to_string());
+                args.push(d.to_string());
+            }
+        }
+        args.push(url.to_string());
+        args.push(folder_name.to_string());
+
+        let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+        let output = self.exec(&arg_refs, parent)?;
         if !output.status.success() {
             return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
         }

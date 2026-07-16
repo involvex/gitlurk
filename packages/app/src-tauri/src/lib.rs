@@ -83,6 +83,8 @@ pub struct Settings {
     pub kilo_base_url: String,
     #[serde(default)]
     pub minimize_to_tray: bool,
+    #[serde(default = "default_terminal_shell")]
+    pub terminal_shell: String,
 }
 
 fn default_theme() -> String {
@@ -109,6 +111,9 @@ fn default_ai_model() -> String {
 fn default_kilo_base_url() -> String {
     "https://api.kilo.ai/v1".into()
 }
+fn default_terminal_shell() -> String {
+    "pwsh".into()
+}
 
 impl Default for Settings {
     fn default() -> Self {
@@ -122,6 +127,7 @@ impl Default for Settings {
             ai_model: default_ai_model(),
             kilo_base_url: default_kilo_base_url(),
             minimize_to_tray: false,
+            terminal_shell: default_terminal_shell(),
         }
     }
 }

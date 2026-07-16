@@ -4,6 +4,7 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export type AppMode = 'workspace' | 'discover';
 export type DiscoverTab = 'notifications' | 'feed' | 'explore' | 'trending';
 export type AiProvider = 'opencode' | 'kilo';
+export type TerminalShell = 'pwsh' | 'powershell' | 'cmd';
 
 export interface AuthDialogState {
   userCode: string;
@@ -35,6 +36,7 @@ export interface UiSlice {
   aiModel: string;
   kiloBaseUrl: string;
   minimizeToTray: boolean;
+  terminalShell: TerminalShell;
   unreadNotifications: number;
   setTheme: (theme: ThemeMode) => void;
   setResolvedTheme: (theme: 'light' | 'dark') => void;
@@ -62,6 +64,7 @@ export interface UiSlice {
   setAiModel: (model: string) => void;
   setKiloBaseUrl: (url: string) => void;
   setMinimizeToTray: (enabled: boolean) => void;
+  setTerminalShell: (shell: TerminalShell) => void;
   setUnreadNotifications: (count: number) => void;
   applyPanelSettings: (settings: {
     sidebarWidth: number;
@@ -72,6 +75,7 @@ export interface UiSlice {
     aiModel: string;
     kiloBaseUrl: string;
     minimizeToTray?: boolean;
+    terminalShell?: TerminalShell;
   }) => void;
 }
 
@@ -102,6 +106,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   aiModel: 'deepseek-v4-flash-free',
   kiloBaseUrl: 'https://api.kilo.ai/v1',
   minimizeToTray: false,
+  terminalShell: 'pwsh',
   unreadNotifications: 0,
   setTheme: (theme) => set({ theme }),
   setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
@@ -134,6 +139,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   setAiModel: (aiModel) => set({ aiModel }),
   setKiloBaseUrl: (kiloBaseUrl) => set({ kiloBaseUrl }),
   setMinimizeToTray: (minimizeToTray) => set({ minimizeToTray }),
+  setTerminalShell: (terminalShell) => set({ terminalShell }),
   setUnreadNotifications: (unreadNotifications) => set({ unreadNotifications }),
   applyPanelSettings: (settings) =>
     set({
@@ -146,6 +152,9 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
       kiloBaseUrl: settings.kiloBaseUrl,
       ...(typeof settings.minimizeToTray === 'boolean'
         ? { minimizeToTray: settings.minimizeToTray }
+        : {}),
+      ...(settings.terminalShell
+        ? { terminalShell: settings.terminalShell }
         : {}),
     }),
 });

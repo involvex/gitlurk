@@ -11,10 +11,15 @@ export function CloneDialog() {
   const [tab, setTab] = useState<CloneTab>('https');
   const [url, setUrl] = useState('https://github.com/owner/repo.git');
   const [localPath, setLocalPath] = useState('');
+  const [recurseSubmodules, setRecurseSubmodules] = useState(false);
+  const [shallowClone, setShallowClone] = useState(false);
+  const [depth, setDepth] = useState('1');
 
   if (!show) return null;
 
-  const cliCommand = `gh repo clone ${url.replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '')}`;
+  const cliCommand = `gh repo clone ${url.replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '')}${
+    recurseSubmodules ? ' -- --recurse-submodules' : ''
+  }`;
 
   async function pickDirectory() {
     const dir = await ipcInvoke('dialog:save-directory', {
@@ -26,7 +31,16 @@ export function CloneDialog() {
 
   async function handleClone() {
     if (!url.trim() || !localPath.trim()) return;
-    await dispatcher.cloneRepo(url.trim(), localPath.trim());
+    const parsedDepth = shallowClone ? Number.parseInt(depth, 10) : undefined;
+    await dispatcher.cloneRepo(url.trim(), localPath.trim(), {
+      recurseSubmodules,
+      depth:
+        typeof parsedDepth === 'number' &&
+        Number.isFinite(parsedDepth) &&
+        parsedDepth > 0
+          ? parsedDepth
+          : undefined,
+    });
   }
 
   return (
@@ -111,6 +125,53 @@ export function CloneDialog() {
               </button>
             </div>
           </label>
+
+          {tab !== 'cli' ? (
+            <div className="space-y-3 rounded-md border border-border bg-surface px-3 py-3">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={recurseSubmodules}
+                  onChange={(e) => setRecurseSubmodules(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-medium">
+                    Recurse submodules
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    Passes <code>--recurse-submodules</code> to git clone.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={shallowClone}
+                  onChange={(e) => setShallowClone(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span className="block flex-1">
+                  <span className="block text-sm font-medium">
+                    Shallow clone
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    Limit history depth (faster for large repos).
+                  </span>
+                  {shallowClone ? (
+                    <input
+                      type="number"
+                      min={1}
+                      value={depth}
+                      onChange={(e) => setDepth(e.target.value)}
+                      className="mt-2 w-24 rounded-md border border-border bg-surface-elevated px-2 py-1 text-sm"
+                    />
+                  ) : null}
+                </span>
+              </label>
+            </div>
+          ) : null}
         </div>
 
         <footer className="flex justify-end gap-2 border-t border-border px-5 py-4">

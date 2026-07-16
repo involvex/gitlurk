@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
@@ -35,6 +36,7 @@ impl PtySessionManager {
         cwd: String,
         cols: u16,
         rows: u16,
+        shell_preference: &str,
     ) -> Result<String, String> {
         let pty_system = native_pty_system();
         let pair = pty_system
@@ -46,12 +48,13 @@ impl PtySessionManager {
             })
             .map_err(|e| e.to_string())?;
 
-        let mut cmd = CommandBuilder::new("powershell.exe");
+        let shell = resolve_shell(shell_preference);
+        let mut cmd = CommandBuilder::new(&shell);
         cmd.cwd(cwd);
         let _child = pair
             .slave
             .spawn_command(cmd)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!("Failed to start shell ({shell}): {e}"))?;
         drop(pair.slave);
 
         let mut reader = pair.master.try_clone_reader().map_err(|e| e.to_string())?;
@@ -108,4 +111,99 @@ impl PtySessionManager {
         self.sessions.lock().unwrap().remove(session_id);
         Ok(())
     }
+}
+
+/// Resolve an absolute shell path. Prefer full paths to avoid WindowsApps
+/// stubs that show "Application Error" when spawning `powershell.exe` by name.
+pub fn resolve_shell(preference: &str) -> String {
+    let pref = preference.trim().to_ascii_lowercase();
+    match pref.as_str() {
+        "cmd" => resolve_cmd(),
+        "powershell" => resolve_windows_powershell().unwrap_or_else(resolve_cmd),
+        // Default / "pwsh": PowerShell 7 if present, else Windows PowerShell, else cmd.
+        _ => resolve_pwsh()
+            .or_else(resolve_windows_powershell)
+            .unwrap_or_else(resolve_cmd),
+    }
+}
+
+fn resolve_cmd() -> String {
+    std::env::var("ComSpec").unwrap_or_else(|_| {
+        let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
+        PathBuf::from(system_root)
+            .join("System32")
+            .join("cmd.exe")
+            .to_string_lossy()
+            .into_owned()
+    })
+}
+
+fn resolve_windows_powershell() -> Option<String> {
+    let system_root = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".into());
+    let path = PathBuf::from(system_root)
+        .join("System32")
+        .join("WindowsPowerShell")
+        .join("v1.0")
+        .join("powershell.exe");
+    if path.is_file() {
+        Some(path.to_string_lossy().into_owned())
+    } else {
+        None
+    }
+}
+
+fn resolve_pwsh() -> Option<String> {
+    if let Some(from_path) = find_on_path("pwsh.exe") {
+        return Some(from_path);
+    }
+
+    let program_files = [
+        std::env::var("ProgramFiles").ok(),
+        std::env::var("ProgramFiles(x86)").ok(),
+        Some(r"C:\Program Files".into()),
+    ];
+
+    for pf in program_files.into_iter().flatten() {
+        let base = PathBuf::from(pf).join("PowerShell");
+        if let Some(found) = newest_pwsh_under(&base) {
+            return Some(found);
+        }
+    }
+
+    None
+}
+
+fn newest_pwsh_under(base: &Path) -> Option<String> {
+    if !base.is_dir() {
+        return None;
+    }
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(base) {
+        for entry in entries.flatten() {
+            let pwsh = entry.path().join("pwsh.exe");
+            if pwsh.is_file() {
+                candidates.push(pwsh);
+            }
+        }
+    }
+    candidates.sort();
+    candidates
+        .pop()
+        .map(|p| p.to_string_lossy().into_owned())
+}
+
+fn find_on_path(exe: &str) -> Option<String> {
+    let path = std::env::var_os("PATH")?;
+    for dir in std::env::split_paths(&path) {
+        let candidate = dir.join(exe);
+        if candidate.is_file() {
+            // Skip WindowsApps execution aliases — they often fail under ConPTY.
+            let as_str = candidate.to_string_lossy();
+            if as_str.contains(r"\WindowsApps\") {
+                continue;
+            }
+            return Some(as_str.into_owned());
+        }
+    }
+    None
 }

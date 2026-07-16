@@ -2,7 +2,12 @@ import type { UrlAction } from '../protocol/parse-app-url.js';
 
 export interface IpcChannels {
   'git:status': { path: string };
-  'git:clone': { url: string; dir: string; depth?: number };
+  'git:clone': {
+    url: string;
+    dir: string;
+    depth?: number;
+    recurseSubmodules?: boolean;
+  };
   'git:commit': { path: string; message: string; files?: string[] };
   'git:pull': { path: string };
   'git:push': { path: string };
@@ -32,6 +37,7 @@ export interface IpcChannels {
     aiModel?: string;
     kiloBaseUrl?: string;
     minimizeToTray?: boolean;
+    terminalShell?: 'pwsh' | 'powershell' | 'cmd';
   };
   'app:get-explorer-menu': Record<string, never>;
   'app:set-explorer-menu': { enabled: boolean };
@@ -40,7 +46,12 @@ export interface IpcChannels {
     file: string;
     kind: 'staged' | 'unstaged' | 'untracked';
   };
-  'terminal:spawn': { cwd: string; cols: number; rows: number };
+  'terminal:spawn': {
+    cwd: string;
+    cols: number;
+    rows: number;
+    shell?: 'pwsh' | 'powershell' | 'cmd';
+  };
   'terminal:write': { sessionId: string; data: string };
   'terminal:resize': { sessionId: string; cols: number; rows: number };
   'terminal:kill': { sessionId: string };
@@ -142,6 +153,7 @@ export interface IpcResponses {
     aiModel: string;
     kiloBaseUrl: string;
     minimizeToTray: boolean;
+    terminalShell: 'pwsh' | 'powershell' | 'cmd';
   };
   'app:set-settings': void;
   'app:get-explorer-menu': { enabled: boolean };
