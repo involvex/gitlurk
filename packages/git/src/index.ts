@@ -286,3 +286,148 @@ export async function getRemoteOriginUrl(dir: string): Promise<string | null> {
   }
   return result.stdout.trim();
 }
+
+export type GitConfigScope = 'global' | 'local' | 'system';
+
+export interface GitConfigEntry {
+  key: string;
+  value: string;
+  origin?: string;
+}
+
+function scopeFlag(scope: GitConfigScope): string {
+  return `--${scope}`;
+}
+
+function parseConfigLine(line: string): GitConfigEntry | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  const originMatch = trimmed.match(/^file:(.+?)\s+(.+)$/);
+  if (originMatch) {
+    const rest = originMatch[2] ?? '';
+    const eq = rest.indexOf('=');
+    if (eq === -1) return null;
+    return {
+      origin: originMatch[1],
+      key: rest.slice(0, eq),
+      value: rest.slice(eq + 1),
+    };
+  }
+
+  const eq = trimmed.indexOf('=');
+  if (eq === -1) return null;
+  return {
+    key: trimmed.slice(0, eq),
+    value: trimmed.slice(eq + 1),
+  };
+}
+
+export async function gitConfigList(options: {
+  scope?: GitConfigScope;
+  cwd?: string;
+  showOrigin?: boolean;
+}): Promise<GitConfigEntry[]> {
+  const cwd = options.cwd ?? process.cwd();
+  const scope = options.scope ?? 'local';
+  const args = ['config', scopeFlag(scope), '--list'];
+  if (options.showOrigin ?? scope === 'local') {
+    args.push('--show-origin');
+  }
+
+  const result = await gitExec(args, cwd);
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Failed to list git config');
+  }
+
+  return result.stdout
+    .split(/\r?\n/)
+    .map(parseConfigLine)
+    .filter((entry): entry is GitConfigEntry => entry !== null);
+}
+
+export async function gitConfigGet(options: {
+  key: string;
+  scope?: GitConfigScope;
+  cwd?: string;
+}): Promise<string | null> {
+  const cwd = options.cwd ?? process.cwd();
+  const scope = options.scope ?? 'local';
+  const result = await gitExec(['config', scopeFlag(scope), options.key], cwd);
+
+  if (result.exitCode !== 0) return null;
+  return result.stdout.trim();
+}
+
+export async function gitConfigSet(options: {
+  key: string;
+  value: string;
+  scope?: GitConfigScope;
+  cwd?: string;
+}): Promise<void> {
+  const cwd = options.cwd ?? process.cwd();
+  const scope = options.scope ?? 'local';
+  const result = await gitExec(
+    ['config', scopeFlag(scope), options.key, options.value],
+    cwd,
+  );
+
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || 'Failed to set git config');
+  }
+}
+
+export async function gitConfigPath(options: {
+  scope: GitConfigScope;
+  cwd?: string;
+}): Promise<string | null> {
+  const cwd = options.cwd ?? process.cwd();
+  const result = await gitExec(
+    ['config', scopeFlag(options.scope), '--path'],
+    cwd,
+  );
+  if (result.exitCode !== 0) return null;
+  return result.stdout.trim() || null;
+}
+
+export async function gitConfigEdit(options: {
+  scope?: GitConfigScope;
+  cwd?: string;
+}): Promise<void> {
+  const cwd = options.cwd ?? process.cwd();
+  const scope = options.scope ?? 'global';
+  const configPath = await gitConfigPath({ scope, cwd });
+
+  if (!configPath) {
+    throw new Error(`Could not resolve ${scope} git config file path`);
+  }
+
+  const editor =
+    process.env.GIT_EDITOR ??
+    process.env.VISUAL ??
+    process.env.EDITOR ??
+    (platform() === 'win32' ? 'notepad' : 'vi');
+
+  const editorParts = editor.split(/\s+/).filter(Boolean);
+  const command = editorParts[0];
+  if (!command) {
+    throw new Error('No editor configured');
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const proc = spawn(command, [...editorParts.slice(1), configPath], {
+      cwd,
+      stdio: 'inherit',
+      shell: platform() === 'win32',
+    });
+
+    proc.on('error', reject);
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`Editor exited with code ${code}`));
+        return;
+      }
+      resolve();
+    });
+  });
+}

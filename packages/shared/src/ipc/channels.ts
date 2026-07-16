@@ -66,6 +66,41 @@ export interface IpcChannels {
   'ai:list-models': Record<string, never>;
   'ai:generate-commit-message': { path: string; style?: string };
   'ai:test-connection': Record<string, never>;
+  'dev:gh-version': Record<string, never>;
+  'dev:gh-auth-status': Record<string, never>;
+  'dev:gh-run-list': { repo?: string; limit?: number; path?: string };
+  'dev:gh-run-watch': { runId?: string; repo?: string; path?: string };
+  'dev:gh-repo-fork': { repo?: string; clone?: boolean; path?: string };
+  'dev:gh-release-create': {
+    tag: string;
+    title?: string;
+    notes?: string;
+    draft?: boolean;
+    path?: string;
+  };
+  'dev:gh-config-list': Record<string, never>;
+  'dev:gh-config-get': { key: string };
+  'dev:gh-config-set': { key: string; value: string };
+  'dev:gh-alias-list': Record<string, never>;
+  'dev:git-config-list': {
+    scope?: 'global' | 'local' | 'system';
+    path?: string;
+  };
+  'dev:git-config-get': {
+    key: string;
+    scope?: 'global' | 'local' | 'system';
+    path?: string;
+  };
+  'dev:git-config-set': {
+    key: string;
+    value: string;
+    scope?: 'global' | 'local' | 'system';
+    path?: string;
+  };
+  'dev:git-config-edit': {
+    scope?: 'global' | 'local' | 'system';
+    path?: string;
+  };
 }
 
 export interface IpcResponses {
@@ -201,6 +236,32 @@ export interface IpcResponses {
   'ai:list-models': { models: string[]; provider: string };
   'ai:generate-commit-message': { message: string };
   'ai:test-connection': { ok: boolean; provider: string };
+  'dev:gh-version': { installed: boolean; version: string | null };
+  'dev:gh-auth-status': { loggedIn: boolean; summary: string };
+  'dev:gh-run-list': {
+    runs: Array<{
+      id: string;
+      status: string;
+      workflow: string;
+      createdAt: string;
+      url: string;
+    }>;
+  };
+  'dev:gh-run-watch': void;
+  'dev:gh-repo-fork': { summary: string };
+  'dev:gh-release-create': { url: string };
+  'dev:gh-config-list': { entries: Array<{ key: string; value: string }> };
+  'dev:gh-config-get': { value: string | null };
+  'dev:gh-config-set': void;
+  'dev:gh-alias-list': {
+    aliases: Array<{ name: string; expansion: string }>;
+  };
+  'dev:git-config-list': {
+    entries: Array<{ key: string; value: string; origin?: string }>;
+  };
+  'dev:git-config-get': { value: string | null };
+  'dev:git-config-set': void;
+  'dev:git-config-edit': void;
 }
 
 export type IpcEvents = {

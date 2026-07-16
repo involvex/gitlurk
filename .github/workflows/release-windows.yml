@@ -24,6 +24,7 @@ jobs:
         run: |
           bun run --filter @gitlurk/shared build
           bun run --filter @gitlurk/git build
+          bun run --filter @gitlurk/gh build
           bun run --filter @gitlurk/plugin-sdk build
           bun run --filter @gitlurk/app typecheck
           bun run --filter @gitlurk/app build

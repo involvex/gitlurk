@@ -259,6 +259,110 @@ impl GitService {
     pub fn set_bundled_search_paths(&self, paths: Vec<PathBuf>) {
         *self.bundled_paths.lock().unwrap() = paths;
     }
+
+    pub fn config_list(
+        &self,
+        scope: &str,
+        cwd: &Path,
+        show_origin: bool,
+    ) -> Result<Vec<GitConfigEntry>, String> {
+        let scope_flag = format!("--{scope}");
+        let mut args = vec!["config", scope_flag.as_str(), "--list"];
+        if show_origin {
+            args.push("--show-origin");
+        }
+        let output = self.exec(&args, cwd)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout
+            .lines()
+            .filter_map(parse_config_line)
+            .collect())
+    }
+
+    pub fn config_get(&self, key: &str, scope: &str, cwd: &Path) -> Result<Option<String>, String> {
+        let scope_flag = format!("--{scope}");
+        let output = self.exec(&["config", scope_flag.as_str(), key], cwd)?;
+        if !output.status.success() {
+            return Ok(None);
+        }
+        let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if value.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(value))
+        }
+    }
+
+    pub fn config_set(
+        &self,
+        key: &str,
+        value: &str,
+        scope: &str,
+        cwd: &Path,
+    ) -> Result<(), String> {
+        let scope_flag = format!("--{scope}");
+        let output = self.exec(
+            &["config", scope_flag.as_str(), key, value],
+            cwd,
+        )?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn config_path(&self, scope: &str, cwd: &Path) -> Result<Option<String>, String> {
+        let scope_flag = format!("--{scope}");
+        let output = self.exec(&["config", scope_flag.as_str(), "--path"], cwd)?;
+        if !output.status.success() {
+            return Ok(None);
+        }
+        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if path.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(path))
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitConfigEntry {
+    pub key: String,
+    pub value: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub origin: Option<String>,
+}
+
+fn parse_config_line(line: &str) -> Option<GitConfigEntry> {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if let Some((origin, rest)) = trimmed.split_once('\t') {
+        if let Some(origin_path) = origin.strip_prefix("file:") {
+            if let Some((key, value)) = rest.split_once('=') {
+                return Some(GitConfigEntry {
+                    key: key.to_string(),
+                    value: value.to_string(),
+                    origin: Some(origin_path.to_string()),
+                });
+            }
+        }
+    }
+
+    let (key, value) = trimmed.split_once('=')?;
+    Some(GitConfigEntry {
+        key: key.to_string(),
+        value: value.to_string(),
+        origin: None,
+    })
 }
 
 fn find_system_git() -> Option<PathBuf> {

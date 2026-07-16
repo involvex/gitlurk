@@ -7,6 +7,7 @@ use tauri_plugin_deep_link::DeepLinkExt;
 
 mod commands;
 mod env_config;
+mod gh_service;
 mod git_service;
 mod mcp_server;
 mod plugin_host;
@@ -19,6 +20,7 @@ mod tray;
 pub struct AppState {
     pub data_dir: PathBuf,
     pub git: git_service::GitService,
+    pub gh: gh_service::GhService,
     pub auth_token: Mutex<Option<String>>,
     pub auth_username: Mutex<Option<String>>,
     pub mcp_token: String,
@@ -32,6 +34,7 @@ impl AppState {
         Self {
             data_dir,
             git: git_service::GitService::new(),
+            gh: gh_service::GhService::new(),
             auth_token: Mutex::new(None),
             auth_username: Mutex::new(None),
             mcp_token,
@@ -297,6 +300,20 @@ pub fn run() {
             commands::plugins::plugins_list_installed,
             commands::plugins::plugins_install,
             commands::plugins::plugins_invoke,
+            commands::developer::dev_gh_version,
+            commands::developer::dev_gh_auth_status,
+            commands::developer::dev_gh_run_list,
+            commands::developer::dev_gh_run_watch,
+            commands::developer::dev_gh_repo_fork,
+            commands::developer::dev_gh_release_create,
+            commands::developer::dev_gh_config_list,
+            commands::developer::dev_gh_config_get,
+            commands::developer::dev_gh_config_set,
+            commands::developer::dev_gh_alias_list,
+            commands::developer::dev_git_config_list,
+            commands::developer::dev_git_config_get,
+            commands::developer::dev_git_config_set,
+            commands::developer::dev_git_config_edit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

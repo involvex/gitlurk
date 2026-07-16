@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod app;
 pub mod auth;
+pub mod developer;
 pub mod dialog;
 pub mod git;
 pub mod github;

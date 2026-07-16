@@ -18,7 +18,7 @@
     },
     "packages/app": {
       "name": "@gitlurk/app",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@git-diff-view/react": "^0.1.6",
         "@gitlurk/git": "workspace:*",
@@ -48,11 +48,13 @@
     },
     "packages/cli": {
       "name": "@gitlurk/cli",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "bin": {
         "gitlurk": "./dist/cli.js",
       },
       "dependencies": {
+        "@gitlurk/gh": "workspace:*",
+        "@gitlurk/git": "workspace:*",
         "@gitlurk/shared": "workspace:*",
       },
       "devDependencies": {
@@ -61,14 +63,21 @@
     },
     "packages/extension": {
       "name": "@gitlurk/extension",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@gitlurk/shared": "workspace:*",
       },
     },
+    "packages/gh": {
+      "name": "@gitlurk/gh",
+      "version": "0.1.1",
+      "devDependencies": {
+        "typescript": "^5.8.3",
+      },
+    },
     "packages/git": {
       "name": "@gitlurk/git",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@gitlurk/shared": "workspace:*",
       },
@@ -78,21 +87,21 @@
     },
     "packages/plugin-sdk": {
       "name": "@gitlurk/plugin-sdk",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "devDependencies": {
         "typescript": "^5.8.3",
       },
     },
     "packages/plugins/example-hello": {
       "name": "example-hello",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@gitlurk/plugin-sdk": "workspace:*",
       },
     },
     "packages/shared": {
       "name": "@gitlurk/shared",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "devDependencies": {
         "typescript": "^5.8.3",
       },
@@ -218,6 +227,8 @@
     "@gitlurk/cli": ["@gitlurk/cli@workspace:packages/cli"],
 
     "@gitlurk/extension": ["@gitlurk/extension@workspace:packages/extension"],
+
+    "@gitlurk/gh": ["@gitlurk/gh@workspace:packages/gh"],
 
     "@gitlurk/git": ["@gitlurk/git@workspace:packages/git"],
 
