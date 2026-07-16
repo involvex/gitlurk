@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use portable_pty::{native_pty_system, Child, CommandBuilder, PtySize};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
@@ -14,6 +14,9 @@ pub struct PtySessionManager {
 
 struct PtySessionHandle {
     writer: Box<dyn Write + Send>,
+    /// Must stay alive for the ConPTY session; dropping early can trigger
+    /// 0xc0000142 (STATUS_DLL_INIT_FAILED) while the shell is still starting.
+    _child: Box<dyn Child + Send + Sync>,
 }
 
 #[derive(Clone, Serialize)]
@@ -37,6 +40,7 @@ impl PtySessionManager {
         cols: u16,
         rows: u16,
         shell_preference: &str,
+        custom_path: Option<&str>,
     ) -> Result<String, String> {
         let pty_system = native_pty_system();
         let pair = pty_system
@@ -48,10 +52,17 @@ impl PtySessionManager {
             })
             .map_err(|e| e.to_string())?;
 
-        let shell = resolve_shell(shell_preference);
+        let shell = resolve_shell(shell_preference, custom_path)?;
         let mut cmd = CommandBuilder::new(&shell);
-        cmd.cwd(cwd);
-        let _child = pair
+        cmd.cwd(&cwd);
+
+        // Interactive flags for PowerShell hosts.
+        let lower = shell.to_ascii_lowercase();
+        if lower.ends_with("pwsh.exe") || lower.ends_with("powershell.exe") {
+            cmd.arg("-NoLogo");
+        }
+
+        let child = pair
             .slave
             .spawn_command(cmd)
             .map_err(|e| format!("Failed to start shell ({shell}): {e}"))?;
@@ -85,7 +96,10 @@ impl PtySessionManager {
 
         self.sessions.lock().unwrap().insert(
             session_id.clone(),
-            PtySessionHandle { writer },
+            PtySessionHandle {
+                writer,
+                _child: child,
+            },
         );
 
         Ok(session_id)
@@ -114,16 +128,66 @@ impl PtySessionManager {
 }
 
 /// Resolve an absolute shell path. Prefer full paths to avoid WindowsApps
-/// stubs that show "Application Error" when spawning `powershell.exe` by name.
-pub fn resolve_shell(preference: &str) -> String {
-    let pref = preference.trim().to_ascii_lowercase();
-    match pref.as_str() {
-        "cmd" => resolve_cmd(),
-        "powershell" => resolve_windows_powershell().unwrap_or_else(resolve_cmd),
-        // Default / "pwsh": PowerShell 7 if present, else Windows PowerShell, else cmd.
-        _ => resolve_pwsh()
+/// stubs / broken shims that show Application Error 0xc0000142 under ConPTY.
+pub fn resolve_shell(
+    preference: &str,
+    custom_path: Option<&str>,
+) -> Result<String, String> {
+    let pref = preference.trim();
+    if pref.is_empty() {
+        return Ok(resolve_pwsh()
             .or_else(resolve_windows_powershell)
-            .unwrap_or_else(resolve_cmd),
+            .unwrap_or_else(resolve_cmd));
+    }
+
+    let lower = pref.to_ascii_lowercase();
+    if lower == "custom" {
+        let path = custom_path
+            .map(str::trim)
+            .filter(|p| !p.is_empty())
+            .ok_or_else(|| {
+                "Custom shell path is empty — set it in Settings → General".to_string()
+            })?;
+        return validate_shell_path(path);
+    }
+
+    // Allow pasting a full path as the preference itself.
+    if looks_like_path(pref) {
+        return validate_shell_path(pref);
+    }
+
+    match lower.as_str() {
+        "cmd" => Ok(resolve_cmd()),
+        "powershell" => resolve_windows_powershell()
+            .ok_or_else(|| "Windows PowerShell not found".to_string()),
+        "pwsh" => {
+            if let Some(path) = custom_path.map(str::trim).filter(|p| !p.is_empty()) {
+                return validate_shell_path(path);
+            }
+            resolve_pwsh()
+                .or_else(resolve_windows_powershell)
+                .ok_or_else(|| "PowerShell 7 (pwsh) not found".to_string())
+        }
+        _ => Ok(resolve_pwsh()
+            .or_else(resolve_windows_powershell)
+            .unwrap_or_else(resolve_cmd)),
+    }
+}
+
+fn looks_like_path(value: &str) -> bool {
+    value.contains('\\')
+        || value.contains('/')
+        || value.ends_with(".exe")
+        || value.ends_with(".cmd")
+        || value.ends_with(".bat")
+}
+
+fn validate_shell_path(path: &str) -> Result<String, String> {
+    let p = PathBuf::from(path);
+    if p.is_file() {
+        Ok(p.to_string_lossy().into_owned())
+    } else {
+        Err(format!("Shell executable not found: {path}"))
     }
 }
 
@@ -153,13 +217,11 @@ fn resolve_windows_powershell() -> Option<String> {
 }
 
 fn resolve_pwsh() -> Option<String> {
-    if let Some(from_path) = find_on_path("pwsh.exe") {
-        return Some(from_path);
-    }
-
+    // Prefer the MSI/ZIP install under Program Files — PATH often hits
+    // WindowsApps aliases or .dotnet\tools shims that fail under ConPTY.
     let program_files = [
         std::env::var("ProgramFiles").ok(),
-        std::env::var("ProgramFiles(x86)").ok(),
+        std::env::var("ProgramW6432").ok(),
         Some(r"C:\Program Files".into()),
     ];
 
@@ -170,7 +232,7 @@ fn resolve_pwsh() -> Option<String> {
         }
     }
 
-    None
+    find_on_path("pwsh.exe")
 }
 
 fn newest_pwsh_under(base: &Path) -> Option<String> {
@@ -196,14 +258,18 @@ fn find_on_path(exe: &str) -> Option<String> {
     let path = std::env::var_os("PATH")?;
     for dir in std::env::split_paths(&path) {
         let candidate = dir.join(exe);
-        if candidate.is_file() {
-            // Skip WindowsApps execution aliases — they often fail under ConPTY.
-            let as_str = candidate.to_string_lossy();
-            if as_str.contains(r"\WindowsApps\") {
-                continue;
-            }
-            return Some(as_str.into_owned());
+        if !candidate.is_file() {
+            continue;
         }
+        let as_str = candidate.to_string_lossy();
+        // Skip known-broken ConPTY hosts / app execution aliases.
+        if as_str.contains(r"\WindowsApps\")
+            || as_str.contains(r"\.dotnet\tools\")
+            || as_str.contains(r"\AppData\Local\Microsoft\WindowsApps\")
+        {
+            continue;
+        }
+        return Some(as_str.into_owned());
     }
     None
 }

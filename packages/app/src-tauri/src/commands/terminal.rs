@@ -23,14 +23,29 @@ pub fn terminal_spawn(
     cols: u16,
     rows: u16,
     shell: Option<String>,
+    shell_path: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let settings = read_settings(&state);
     let preference = shell
         .filter(|s| !s.trim().is_empty())
         .unwrap_or(settings.terminal_shell);
-    let session_id = state
-        .pty_sessions
-        .spawn(app, cwd, cols, rows, &preference)?;
+    let custom = shell_path
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| {
+            if settings.terminal_shell_path.trim().is_empty() {
+                None
+            } else {
+                Some(settings.terminal_shell_path.clone())
+            }
+        });
+    let session_id = state.pty_sessions.spawn(
+        app,
+        cwd,
+        cols,
+        rows,
+        &preference,
+        custom.as_deref(),
+    )?;
     Ok(serde_json::json!({ "sessionId": session_id }))
 }
 

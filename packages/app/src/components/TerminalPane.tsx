@@ -11,6 +11,7 @@ export function TerminalPane() {
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
   const terminalHeight = useAppStore((s) => s.terminalHeight);
   const terminalShell = useAppStore((s) => s.terminalShell);
+  const terminalShellPath = useAppStore((s) => s.terminalShellPath);
   const containerRef = useRef<HTMLDivElement>(null);
   const sessionIdRef = useRef<string | null>(null);
 
@@ -55,6 +56,7 @@ export function TerminalPane() {
           cols,
           rows,
           shell: terminalShell,
+          shellPath: terminalShellPath || undefined,
         });
         if (disposed) {
           await ipcInvoke('terminal:kill', { sessionId });
@@ -95,7 +97,7 @@ export function TerminalPane() {
       }
       term.dispose();
     };
-  }, [show, activeRepoPath, terminalShell]);
+  }, [show, activeRepoPath, terminalShell, terminalShellPath]);
 
   if (!show) return null;
 

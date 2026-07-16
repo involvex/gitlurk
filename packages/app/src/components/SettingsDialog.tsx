@@ -14,6 +14,7 @@ export function SettingsDialog() {
   const kiloBaseUrl = useAppStore((s) => s.kiloBaseUrl);
   const minimizeToTray = useAppStore((s) => s.minimizeToTray);
   const terminalShell = useAppStore((s) => s.terminalShell);
+  const terminalShellPath = useAppStore((s) => s.terminalShellPath);
 
   const [tab, setTab] = useState<SettingsTab>('general');
   const [provider, setProvider] = useState<AiProvider>(aiProvider);
@@ -207,15 +208,45 @@ export function SettingsDialog() {
                 }}
                 className="mt-1 w-full rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground"
               >
-                <option value="pwsh">PowerShell 7 (pwsh)</option>
                 <option value="powershell">Windows PowerShell 5.1</option>
+                <option value="pwsh">PowerShell 7 (pwsh)</option>
                 <option value="cmd">Command Prompt (cmd)</option>
+                <option value="custom">Custom executable…</option>
               </select>
               <span className="mt-1 block font-normal text-muted">
                 Used by the in-app terminal pane. Re-open the pane after
-                changing. Defaults to pwsh with a safe absolute path fallback.
+                changing. Prefer 5.1 or a custom path if PowerShell 7 fails
+                under ConPTY (error 0xc0000142).
               </span>
             </label>
+
+            {terminalShell === 'custom' || terminalShell === 'pwsh' ? (
+              <label className="block text-xs font-medium text-muted">
+                {terminalShell === 'custom'
+                  ? 'Custom shell path'
+                  : 'Optional pwsh path override'}
+                <input
+                  value={terminalShellPath}
+                  onChange={(e) => {
+                    useAppStore.getState().setTerminalShellPath(e.target.value);
+                  }}
+                  onBlur={() => {
+                    void dispatcher.setTerminalShellPath(terminalShellPath);
+                  }}
+                  placeholder={
+                    terminalShell === 'custom'
+                      ? String.raw`C:\Program Files\Git\bin\bash.exe`
+                      : String.raw`C:\Program Files\PowerShell\7\pwsh.exe`
+                  }
+                  className="mt-1 w-full rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground"
+                />
+                <span className="mt-1 block font-normal text-muted">
+                  {terminalShell === 'custom'
+                    ? 'Full path to an .exe (Git bash, nu, etc.).'
+                    : 'Leave blank to use Program Files\\PowerShell\\7\\pwsh.exe.'}
+                </span>
+              </label>
+            ) : null}
           </div>
         ) : tab === 'ai' ? (
           <div className="space-y-4">

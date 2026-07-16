@@ -4,7 +4,7 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export type AppMode = 'workspace' | 'discover';
 export type DiscoverTab = 'notifications' | 'feed' | 'explore' | 'trending';
 export type AiProvider = 'opencode' | 'kilo';
-export type TerminalShell = 'pwsh' | 'powershell' | 'cmd';
+export type TerminalShell = 'pwsh' | 'powershell' | 'cmd' | 'custom';
 
 export interface AuthDialogState {
   userCode: string;
@@ -37,6 +37,7 @@ export interface UiSlice {
   kiloBaseUrl: string;
   minimizeToTray: boolean;
   terminalShell: TerminalShell;
+  terminalShellPath: string;
   unreadNotifications: number;
   setTheme: (theme: ThemeMode) => void;
   setResolvedTheme: (theme: 'light' | 'dark') => void;
@@ -65,6 +66,7 @@ export interface UiSlice {
   setKiloBaseUrl: (url: string) => void;
   setMinimizeToTray: (enabled: boolean) => void;
   setTerminalShell: (shell: TerminalShell) => void;
+  setTerminalShellPath: (path: string) => void;
   setUnreadNotifications: (count: number) => void;
   applyPanelSettings: (settings: {
     sidebarWidth: number;
@@ -76,6 +78,7 @@ export interface UiSlice {
     kiloBaseUrl: string;
     minimizeToTray?: boolean;
     terminalShell?: TerminalShell;
+    terminalShellPath?: string;
   }) => void;
 }
 
@@ -106,7 +109,8 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   aiModel: 'deepseek-v4-flash-free',
   kiloBaseUrl: 'https://api.kilo.ai/v1',
   minimizeToTray: false,
-  terminalShell: 'pwsh',
+  terminalShell: 'powershell',
+  terminalShellPath: '',
   unreadNotifications: 0,
   setTheme: (theme) => set({ theme }),
   setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
@@ -140,6 +144,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   setKiloBaseUrl: (kiloBaseUrl) => set({ kiloBaseUrl }),
   setMinimizeToTray: (minimizeToTray) => set({ minimizeToTray }),
   setTerminalShell: (terminalShell) => set({ terminalShell }),
+  setTerminalShellPath: (terminalShellPath) => set({ terminalShellPath }),
   setUnreadNotifications: (unreadNotifications) => set({ unreadNotifications }),
   applyPanelSettings: (settings) =>
     set({
@@ -155,6 +160,9 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
         : {}),
       ...(settings.terminalShell
         ? { terminalShell: settings.terminalShell }
+        : {}),
+      ...(typeof settings.terminalShellPath === 'string'
+        ? { terminalShellPath: settings.terminalShellPath }
         : {}),
     }),
 });

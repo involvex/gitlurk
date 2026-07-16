@@ -56,6 +56,7 @@ export const dispatcher = {
       kiloBaseUrl: settings.kiloBaseUrl,
       minimizeToTray: settings.minimizeToTray,
       terminalShell: settings.terminalShell,
+      terminalShellPath: settings.terminalShellPath,
     });
     getStore().setAuth(auth.username);
     getStore().setExplorerMenuEnabled(explorerMenu.enabled);
@@ -171,9 +172,14 @@ export const dispatcher = {
     await ipcInvoke('app:set-settings', { minimizeToTray: enabled });
   },
 
-  async setTerminalShell(shell: 'pwsh' | 'powershell' | 'cmd') {
+  async setTerminalShell(shell: 'pwsh' | 'powershell' | 'cmd' | 'custom') {
     getStore().setTerminalShell(shell);
     await ipcInvoke('app:set-settings', { terminalShell: shell });
+  },
+
+  async setTerminalShellPath(path: string) {
+    getStore().setTerminalShellPath(path);
+    await ipcInvoke('app:set-settings', { terminalShellPath: path });
   },
 
   async generateCommitMessage() {

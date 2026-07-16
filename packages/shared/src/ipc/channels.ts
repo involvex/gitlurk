@@ -37,7 +37,8 @@ export interface IpcChannels {
     aiModel?: string;
     kiloBaseUrl?: string;
     minimizeToTray?: boolean;
-    terminalShell?: 'pwsh' | 'powershell' | 'cmd';
+    terminalShell?: 'pwsh' | 'powershell' | 'cmd' | 'custom';
+    terminalShellPath?: string;
   };
   'app:get-explorer-menu': Record<string, never>;
   'app:set-explorer-menu': { enabled: boolean };
@@ -50,7 +51,8 @@ export interface IpcChannels {
     cwd: string;
     cols: number;
     rows: number;
-    shell?: 'pwsh' | 'powershell' | 'cmd';
+    shell?: 'pwsh' | 'powershell' | 'cmd' | 'custom';
+    shellPath?: string;
   };
   'terminal:write': { sessionId: string; data: string };
   'terminal:resize': { sessionId: string; cols: number; rows: number };
@@ -153,7 +155,8 @@ export interface IpcResponses {
     aiModel: string;
     kiloBaseUrl: string;
     minimizeToTray: boolean;
-    terminalShell: 'pwsh' | 'powershell' | 'cmd';
+    terminalShell: 'pwsh' | 'powershell' | 'cmd' | 'custom';
+    terminalShellPath: string;
   };
   'app:set-settings': void;
   'app:get-explorer-menu': { enabled: boolean };

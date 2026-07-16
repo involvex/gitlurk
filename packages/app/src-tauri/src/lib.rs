@@ -85,6 +85,8 @@ pub struct Settings {
     pub minimize_to_tray: bool,
     #[serde(default = "default_terminal_shell")]
     pub terminal_shell: String,
+    #[serde(default)]
+    pub terminal_shell_path: String,
 }
 
 fn default_theme() -> String {
@@ -112,7 +114,9 @@ fn default_kilo_base_url() -> String {
     "https://api.kilo.ai/v1".into()
 }
 fn default_terminal_shell() -> String {
-    "pwsh".into()
+    // Windows PowerShell 5.1 is the most reliable ConPTY host on many machines;
+    // users can switch to pwsh or a custom path in Settings.
+    "powershell".into()
 }
 
 impl Default for Settings {
@@ -128,6 +132,7 @@ impl Default for Settings {
             kilo_base_url: default_kilo_base_url(),
             minimize_to_tray: false,
             terminal_shell: default_terminal_shell(),
+            terminal_shell_path: String::new(),
         }
     }
 }

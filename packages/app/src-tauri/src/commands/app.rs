@@ -70,6 +70,7 @@ pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value,
         "kiloBaseUrl": settings.kilo_base_url,
         "minimizeToTray": settings.minimize_to_tray,
         "terminalShell": settings.terminal_shell,
+        "terminalShellPath": settings.terminal_shell_path,
     }))
 }
 
@@ -86,6 +87,7 @@ pub fn app_set_settings(
     kilo_base_url: Option<String>,
     minimize_to_tray: Option<bool>,
     terminal_shell: Option<String>,
+    terminal_shell_path: Option<String>,
 ) -> Result<(), String> {
     let mut settings = read_settings(&state);
     if let Some(theme) = theme {
@@ -116,11 +118,23 @@ pub fn app_set_settings(
         settings.minimize_to_tray = v;
     }
     if let Some(v) = terminal_shell {
-        let normalized = v.trim().to_ascii_lowercase();
+        let trimmed = v.trim();
+        let normalized = trimmed.to_ascii_lowercase();
         settings.terminal_shell = match normalized.as_str() {
-            "powershell" | "cmd" | "pwsh" => normalized,
-            _ => "pwsh".into(),
+            "powershell" | "cmd" | "pwsh" | "custom" => normalized,
+            _ if trimmed.contains('\\')
+                || trimmed.contains('/')
+                || normalized.ends_with(".exe") =>
+            {
+                // Treat as custom absolute path.
+                settings.terminal_shell_path = trimmed.to_string();
+                "custom".into()
+            }
+            _ => "powershell".into(),
         };
+    }
+    if let Some(v) = terminal_shell_path {
+        settings.terminal_shell_path = v.trim().to_string();
     }
     write_settings(&state, &settings)
 }
