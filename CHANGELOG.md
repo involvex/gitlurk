@@ -4,6 +4,9 @@ All notable changes to GitLurk Desktop.
 
 ## [Unreleased] - 2026-07-16
 
+- Add GitHub funding config. ([02131c2](https://github.com/involvex/gitlurk/commit/02131c2))
+- Add bun version bumper used by the release script. ([1a38356](https://github.com/involvex/gitlurk/commit/1a38356))
+- Fix CI prettier check and add Tauri release script. ([8ac14d9](https://github.com/involvex/gitlurk/commit/8ac14d9))
 - Add Discover hub, AI commits, resizable panels, and fix CLI open. ([fcc7efb](https://github.com/involvex/gitlurk/commit/fcc7efb))
 - ✨ feat: load GitHub OAuth config from root .env ([53e790d](https://github.com/involvex/gitlurk/commit/53e790d))
 - ✨ feat: add Phase 2 features and fix IPC command routing ([af7a334](https://github.com/involvex/gitlurk/commit/af7a334))
