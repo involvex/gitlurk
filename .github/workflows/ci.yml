@@ -33,8 +33,8 @@ jobs:
       - name: Test
         run: bun test
 
-      - name: Typecheck app
-        run: bun run --filter @gitlurk/app typecheck
+      - name: Typecheck
+        run: bun run typecheck
 
       - name: Build frontend
         run: bun run --filter @gitlurk/app build
