@@ -85,12 +85,22 @@ pub fn github_list_prs(
 struct NotificationSubject {
     title: String,
     url: Option<String>,
+    #[serde(rename = "type")]
+    subject_type: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct NotificationOwner {
+    avatar_url: Option<String>,
+    #[allow(dead_code)]
+    login: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct NotificationRepo {
     full_name: String,
     html_url: String,
+    owner: Option<NotificationOwner>,
 }
 
 #[derive(Deserialize)]
@@ -128,12 +138,20 @@ pub fn github_list_notifications(
     let notifications: Vec<serde_json::Value> = items
         .into_iter()
         .map(|n| {
-            let html_url = n
-                .subject
-                .url
+            let subject_type = n.subject.subject_type.as_deref().unwrap_or("");
+            let html_url = notification_html_url(
+                subject_type,
+                &n.subject.title,
+                n.subject.url.as_deref(),
+                &n.repository.full_name,
+                &n.repository.html_url,
+            );
+            let avatar_url = n
+                .repository
+                .owner
                 .as_ref()
-                .and_then(|u| api_url_to_html(u))
-                .unwrap_or_else(|| n.repository.html_url.clone());
+                .and_then(|o| o.avatar_url.clone())
+                .unwrap_or_default();
             serde_json::json!({
                 "id": n.id,
                 "title": n.subject.title,
@@ -142,6 +160,8 @@ pub fn github_list_notifications(
                 "updatedAt": n.updated_at,
                 "repo": n.repository.full_name,
                 "url": html_url,
+                "subjectType": subject_type,
+                "avatarUrl": avatar_url,
             })
         })
         .collect();
@@ -150,6 +170,30 @@ pub fn github_list_notifications(
         "notifications": notifications,
         "unreadCount": unread_count,
     }))
+}
+
+fn notification_html_url(
+    subject_type: &str,
+    title: &str,
+    subject_url: Option<&str>,
+    full_name: &str,
+    repo_html_url: &str,
+) -> String {
+    if subject_type.eq_ignore_ascii_case("Release") {
+        let tag = urlencoding_lite(title);
+        return format!("https://github.com/{full_name}/releases/tag/{tag}");
+    }
+
+    if let Some(api_url) = subject_url {
+        if let Some(mut html) = api_url_to_html(api_url) {
+            if subject_type.eq_ignore_ascii_case("PullRequest") {
+                html = html.replacen("/pulls/", "/pull/", 1);
+            }
+            return html;
+        }
+    }
+
+    repo_html_url.to_string()
 }
 
 fn api_url_to_html(api_url: &str) -> Option<String> {
@@ -182,6 +226,7 @@ pub fn github_mark_notification_read(
 #[derive(Deserialize)]
 struct FeedActor {
     login: String,
+    avatar_url: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -236,6 +281,7 @@ pub fn github_list_feed(state: State<'_, AppState>) -> Result<serde_json::Value,
                 "createdAt": e.created_at,
                 "summary": summary,
                 "url": format!("https://github.com/{}", e.repo.name),
+                "avatarUrl": e.actor.avatar_url.unwrap_or_default(),
             })
         })
         .collect();
@@ -281,6 +327,13 @@ fn feed_summary(event_type: &str, payload: &serde_json::Value) -> String {
 }
 
 #[derive(Deserialize)]
+struct SearchRepoOwner {
+    avatar_url: Option<String>,
+    #[allow(dead_code)]
+    login: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct SearchRepoItem {
     full_name: String,
     html_url: String,
@@ -288,11 +341,30 @@ struct SearchRepoItem {
     stargazers_count: u64,
     language: Option<String>,
     forks_count: u64,
+    owner: Option<SearchRepoOwner>,
+    clone_url: Option<String>,
+    private: Option<bool>,
+    updated_at: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct SearchReposResponse {
     items: Vec<SearchRepoItem>,
+}
+
+fn map_repo_card(r: SearchRepoItem) -> serde_json::Value {
+    serde_json::json!({
+        "fullName": r.full_name,
+        "url": r.html_url,
+        "description": r.description.unwrap_or_default(),
+        "stars": r.stargazers_count,
+        "forks": r.forks_count,
+        "language": r.language.unwrap_or_default(),
+        "avatarUrl": r.owner.and_then(|o| o.avatar_url).unwrap_or_default(),
+        "cloneUrl": r.clone_url.unwrap_or_default(),
+        "private": r.private.unwrap_or(false),
+        "updatedAt": r.updated_at.unwrap_or_default(),
+    })
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -321,20 +393,7 @@ pub fn github_search_repos(
     }
 
     let data: SearchReposResponse = response.json().map_err(|e| e.to_string())?;
-    let repos: Vec<serde_json::Value> = data
-        .items
-        .into_iter()
-        .map(|r| {
-            serde_json::json!({
-                "fullName": r.full_name,
-                "url": r.html_url,
-                "description": r.description.unwrap_or_default(),
-                "stars": r.stargazers_count,
-                "forks": r.forks_count,
-                "language": r.language.unwrap_or_default(),
-            })
-        })
-        .collect();
+    let repos: Vec<serde_json::Value> = data.items.into_iter().map(map_repo_card).collect();
 
     Ok(serde_json::json!({ "repos": repos }))
 }
@@ -369,8 +428,43 @@ pub fn github_trending(
     }
 
     let data: SearchReposResponse = response.json().map_err(|e| e.to_string())?;
-    let repos: Vec<serde_json::Value> = data
-        .items
+    let repos: Vec<serde_json::Value> = data.items.into_iter().map(map_repo_card).collect();
+
+    Ok(serde_json::json!({ "repos": repos }))
+}
+
+#[derive(Deserialize)]
+struct MyRepoItem {
+    full_name: String,
+    html_url: String,
+    description: Option<String>,
+    stargazers_count: u64,
+    language: Option<String>,
+    forks_count: u64,
+    clone_url: Option<String>,
+    private: Option<bool>,
+    updated_at: Option<String>,
+    owner: Option<SearchRepoOwner>,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_list_my_repos(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    let token = require_token(&state)?;
+    let client = github_client();
+    let request = auth_headers(
+        client.get(
+            "https://api.github.com/user/repos?sort=updated&per_page=50&affiliation=owner,collaborator,organization_member",
+        ),
+        Some(&token),
+    );
+
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("GitHub my repos error: {}", response.status()));
+    }
+
+    let items: Vec<MyRepoItem> = response.json().map_err(|e| e.to_string())?;
+    let repos: Vec<serde_json::Value> = items
         .into_iter()
         .map(|r| {
             serde_json::json!({
@@ -380,6 +474,10 @@ pub fn github_trending(
                 "stars": r.stargazers_count,
                 "forks": r.forks_count,
                 "language": r.language.unwrap_or_default(),
+                "avatarUrl": r.owner.and_then(|o| o.avatar_url).unwrap_or_default(),
+                "cloneUrl": r.clone_url.unwrap_or_default(),
+                "private": r.private.unwrap_or(false),
+                "updatedAt": r.updated_at.unwrap_or_default(),
             })
         })
         .collect();

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
+import { ipcInvoke } from '../ipc/client';
 
 type ContextMenuState = {
   path: string;
@@ -158,7 +159,18 @@ export function Sidebar() {
       <div className="border-t border-border p-3">
         {username ? (
           <div className="flex items-center justify-between gap-2">
-            <span className="truncate text-xs text-muted">@{username}</span>
+            <button
+              type="button"
+              title={`Open github.com/${username}`}
+              onClick={() => {
+                void ipcInvoke('shell:open-external', {
+                  url: `https://github.com/${username}`,
+                });
+              }}
+              className="truncate text-xs text-muted hover:text-primary hover:underline"
+            >
+              @{username}
+            </button>
             <button
               type="button"
               onClick={() => void dispatcher.signOut()}

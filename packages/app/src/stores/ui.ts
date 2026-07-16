@@ -1,9 +1,12 @@
 import type { StateCreator } from 'zustand';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemePreset =
+  'github-dark' | 'github-light' | 'dim' | 'high-contrast';
 export type AppMode = 'workspace' | 'discover';
 export type WorkspaceTab = 'changes' | 'history';
-export type DiscoverTab = 'notifications' | 'feed' | 'explore' | 'trending';
+export type DiscoverTab =
+  'notifications' | 'feed' | 'explore' | 'trending' | 'my-repos';
 export type AiProvider = 'opencode' | 'kilo';
 export type TerminalShell = 'pwsh' | 'powershell' | 'cmd' | 'custom';
 
@@ -15,6 +18,7 @@ export interface AuthDialogState {
 
 export interface UiSlice {
   theme: ThemeMode;
+  themePreset: ThemePreset;
   resolvedTheme: 'light' | 'dark';
   showCloneDialog: boolean;
   showTerminal: boolean;
@@ -49,12 +53,15 @@ export interface UiSlice {
   desktopNotifications: boolean;
   autoRefreshOnChange: boolean;
   onboardingCompleted: boolean;
+  hotkeyShowApp: string;
+  hotkeyCommandPalette: string;
   pendingDiscard:
     | { type: 'discard-file'; file: string; kind: import('./git-ops').DiffKind }
     | { type: 'discard-all-unstaged' }
     | { type: 'discard-all-untracked' }
     | null;
   setTheme: (theme: ThemeMode) => void;
+  setThemePreset: (preset: ThemePreset) => void;
   setResolvedTheme: (theme: 'light' | 'dark') => void;
   setShowCloneDialog: (show: boolean) => void;
   setShowTerminal: (show: boolean) => void;
@@ -92,6 +99,8 @@ export interface UiSlice {
   setDesktopNotifications: (enabled: boolean) => void;
   setAutoRefreshOnChange: (enabled: boolean) => void;
   setOnboardingCompleted: (completed: boolean) => void;
+  setHotkeyShowApp: (hotkey: string) => void;
+  setHotkeyCommandPalette: (hotkey: string) => void;
   setPendingDiscard: (
     pending:
       | {
@@ -119,6 +128,9 @@ export interface UiSlice {
     desktopNotifications?: boolean;
     autoRefreshOnChange?: boolean;
     onboardingCompleted?: boolean;
+    themePreset?: ThemePreset;
+    hotkeyShowApp?: string;
+    hotkeyCommandPalette?: string;
   }) => void;
 }
 
@@ -127,6 +139,7 @@ const clamp = (value: number, min: number, max: number) =>
 
 export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   theme: 'system',
+  themePreset: 'github-dark',
   resolvedTheme: 'dark',
   showCloneDialog: false,
   showTerminal: false,
@@ -161,8 +174,11 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   desktopNotifications: true,
   autoRefreshOnChange: true,
   onboardingCompleted: false,
+  hotkeyShowApp: 'Ctrl+Alt+G',
+  hotkeyCommandPalette: 'Ctrl+Shift+P',
   pendingDiscard: null,
   setTheme: (theme) => set({ theme }),
+  setThemePreset: (themePreset) => set({ themePreset }),
   setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
   setShowCloneDialog: (show) => set({ showCloneDialog: show }),
   setShowTerminal: (show) => set({ showTerminal: show }),
@@ -208,6 +224,9 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
     set({ desktopNotifications }),
   setAutoRefreshOnChange: (autoRefreshOnChange) => set({ autoRefreshOnChange }),
   setOnboardingCompleted: (onboardingCompleted) => set({ onboardingCompleted }),
+  setHotkeyShowApp: (hotkeyShowApp) => set({ hotkeyShowApp }),
+  setHotkeyCommandPalette: (hotkeyCommandPalette) =>
+    set({ hotkeyCommandPalette }),
   setPendingDiscard: (pendingDiscard) => set({ pendingDiscard }),
   applyPanelSettings: (settings) =>
     set({
@@ -241,6 +260,13 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
         : {}),
       ...(typeof settings.onboardingCompleted === 'boolean'
         ? { onboardingCompleted: settings.onboardingCompleted }
+        : {}),
+      ...(settings.themePreset ? { themePreset: settings.themePreset } : {}),
+      ...(settings.hotkeyShowApp
+        ? { hotkeyShowApp: settings.hotkeyShowApp }
+        : {}),
+      ...(settings.hotkeyCommandPalette
+        ? { hotkeyCommandPalette: settings.hotkeyCommandPalette }
         : {}),
     }),
 });

@@ -10,6 +10,7 @@ mod commands;
 mod env_config;
 mod gh_service;
 mod git_service;
+mod hotkeys;
 mod mcp_server;
 mod plugin_host;
 mod protocol;
@@ -70,6 +71,8 @@ impl AppState {
 pub struct Settings {
     #[serde(default = "default_theme")]
     pub theme: String,
+    #[serde(default = "default_theme_preset")]
+    pub theme_preset: String,
     #[serde(default = "default_sidebar_width")]
     pub sidebar_width: u32,
     #[serde(default = "default_file_list_width")]
@@ -100,10 +103,17 @@ pub struct Settings {
     pub auto_refresh_on_change: bool,
     #[serde(default)]
     pub onboarding_completed: bool,
+    #[serde(default = "hotkeys::default_show_app")]
+    pub hotkey_show_app: String,
+    #[serde(default = "hotkeys::default_command_palette")]
+    pub hotkey_command_palette: String,
 }
 
 fn default_theme() -> String {
     "system".into()
+}
+fn default_theme_preset() -> String {
+    "github-dark".into()
 }
 fn default_sidebar_width() -> u32 {
     256
@@ -142,6 +152,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             theme: default_theme(),
+            theme_preset: default_theme_preset(),
             sidebar_width: default_sidebar_width(),
             file_list_width: default_file_list_width(),
             right_rail_width: default_right_rail_width(),
@@ -157,6 +168,8 @@ impl Default for Settings {
             desktop_notifications: true,
             auto_refresh_on_change: true,
             onboarding_completed: false,
+            hotkey_show_app: hotkeys::default_show_app(),
+            hotkey_command_palette: hotkeys::default_command_palette(),
         }
     }
 }
@@ -186,6 +199,15 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    if event.state() == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        tray::show_main(app);
+                    }
+                })
+                .build(),
+        )
         .on_window_event(|window, event| {
             match event {
                 tauri::WindowEvent::CloseRequested { api, .. } => {
@@ -294,6 +316,7 @@ pub fn run() {
             app.state::<AppState>().git.set_bundled_search_paths(bundled_paths);
 
             tray::setup_tray(app.handle())?;
+            hotkeys::register_show_app_hotkey(app.handle());
             if let Err(err) = registry::register_explorer_menu_if_enabled(app.handle()) {
                 eprintln!("Explorer context menu registration failed: {err}");
             }
@@ -372,6 +395,7 @@ pub fn run() {
             commands::github::github_list_feed,
             commands::github::github_search_repos,
             commands::github::github_trending,
+            commands::github::github_list_my_repos,
             commands::ai::ai_set_api_key,
             commands::ai::ai_has_api_key,
             commands::ai::ai_list_models,

@@ -16,6 +16,27 @@ struct WatcherHandle {
     stop_tx: mpsc::Sender<()>,
 }
 
+fn path_should_ignore(path: &Path) -> bool {
+    path.components().any(|component| match component {
+        std::path::Component::Normal(name) => {
+            let name = name.to_string_lossy();
+            name.eq_ignore_ascii_case(".git")
+                || name.eq_ignore_ascii_case("node_modules")
+                || name.eq_ignore_ascii_case("target")
+                || name.eq_ignore_ascii_case(".next")
+                || name.eq_ignore_ascii_case("dist")
+        }
+        _ => false,
+    })
+}
+
+fn event_should_ignore(event: &notify::Event) -> bool {
+    if event.paths.is_empty() {
+        return false;
+    }
+    event.paths.iter().all(|path| path_should_ignore(path))
+}
+
 impl RepoWatcher {
     pub fn new() -> Self {
         Self {
@@ -40,7 +61,8 @@ impl RepoWatcher {
             loop {
                 match event_rx.recv_timeout(Duration::from_millis(400)) {
                     Ok(()) => {
-                        if last_emit.elapsed() >= Duration::from_millis(750) {
+                        // Longer coalesce window to avoid stacking git ops.
+                        if last_emit.elapsed() >= Duration::from_millis(1500) {
                             let _ = app_for_events.emit("repo-changed", ());
                             last_emit = std::time::Instant::now();
                         }
@@ -63,6 +85,9 @@ impl RepoWatcher {
                         EventKind::Create(_)
                         | EventKind::Modify(_)
                         | EventKind::Remove(_) => {
+                            if event_should_ignore(&event) {
+                                return;
+                            }
                             let _ = event_tx_for_notify.send(());
                         }
                         _ => {}

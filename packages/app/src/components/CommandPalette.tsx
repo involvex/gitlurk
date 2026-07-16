@@ -22,6 +22,7 @@ function scoreMatch(query: string, item: CommandItem): number {
 
 export function CommandPalette() {
   const show = useAppStore((s) => s.showCommandPalette);
+  const hotkeyCommandPalette = useAppStore((s) => s.hotkeyCommandPalette);
   const repos = useAppStore((s) => s.repos);
   const branches = useAppStore((s) => s.branches);
   const [query, setQuery] = useState('');
@@ -199,6 +200,12 @@ export function CommandPalette() {
           placeholder="Type a command…"
           className="w-full border-b border-border bg-transparent px-4 py-3 text-sm outline-none"
         />
+        <p className="border-b border-border px-4 py-1.5 text-[10px] text-muted">
+          Ctrl+K
+          {hotkeyCommandPalette && hotkeyCommandPalette !== 'Ctrl+K'
+            ? ` · ${hotkeyCommandPalette}`
+            : ''}
+        </p>
         <ul className="max-h-80 overflow-y-auto py-2">
           {filtered.length === 0 ? (
             <li className="px-4 py-2 text-xs text-muted">

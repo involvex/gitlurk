@@ -35,6 +35,7 @@ export interface IpcChannels {
   'app:get-settings': Record<string, never>;
   'app:set-settings': {
     theme?: 'light' | 'dark' | 'system';
+    themePreset?: string;
     sidebarWidth?: number;
     fileListWidth?: number;
     rightRailWidth?: number;
@@ -50,6 +51,8 @@ export interface IpcChannels {
     desktopNotifications?: boolean;
     autoRefreshOnChange?: boolean;
     onboardingCompleted?: boolean;
+    hotkeyShowApp?: string;
+    hotkeyCommandPalette?: string;
   };
   'app:watch-repo': { path?: string | null };
   'app:get-explorer-menu': Record<string, never>;
@@ -101,6 +104,7 @@ export interface IpcChannels {
   'github:list-feed': Record<string, never>;
   'github:search-repos': { query: string };
   'github:trending': { language?: string };
+  'github:list-my-repos': Record<string, never>;
   'ai:set-api-key': { provider: 'opencode' | 'kilo'; key: string };
   'ai:has-api-key': { provider: 'opencode' | 'kilo' };
   'ai:list-models': Record<string, never>;
@@ -179,6 +183,7 @@ export interface IpcResponses {
   'app:set-theme': void;
   'app:get-settings': {
     theme: 'light' | 'dark' | 'system';
+    themePreset: string;
     sidebarWidth: number;
     fileListWidth: number;
     rightRailWidth: number;
@@ -194,6 +199,8 @@ export interface IpcResponses {
     desktopNotifications: boolean;
     autoRefreshOnChange: boolean;
     onboardingCompleted: boolean;
+    hotkeyShowApp: string;
+    hotkeyCommandPalette: string;
   };
   'app:set-settings': void;
   'app:watch-repo': void;
@@ -276,6 +283,8 @@ export interface IpcResponses {
       updatedAt: string;
       repo: string;
       url: string;
+      subjectType: string;
+      avatarUrl: string;
     }>;
     unreadCount: number;
   };
@@ -289,6 +298,7 @@ export interface IpcResponses {
       createdAt: string;
       summary: string;
       url: string;
+      avatarUrl: string;
     }>;
   };
   'github:search-repos': {
@@ -299,6 +309,10 @@ export interface IpcResponses {
       stars: number;
       forks: number;
       language: string;
+      avatarUrl: string;
+      cloneUrl: string;
+      private: boolean;
+      updatedAt: string;
     }>;
   };
   'github:trending': {
@@ -309,6 +323,24 @@ export interface IpcResponses {
       stars: number;
       forks: number;
       language: string;
+      avatarUrl: string;
+      cloneUrl: string;
+      private: boolean;
+      updatedAt: string;
+    }>;
+  };
+  'github:list-my-repos': {
+    repos: Array<{
+      fullName: string;
+      url: string;
+      description: string;
+      stars: number;
+      forks: number;
+      language: string;
+      avatarUrl: string;
+      cloneUrl: string;
+      private: boolean;
+      updatedAt: string;
     }>;
   };
   'ai:set-api-key': void;

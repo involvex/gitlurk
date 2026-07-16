@@ -18,7 +18,8 @@
   color-scheme: dark;
 }
 
-:root.light {
+:root.light,
+[data-theme='github-light'] {
   color-scheme: light;
   --color-surface: #ffffff;
   --color-surface-elevated: #f6f8fa;
@@ -29,6 +30,45 @@
   --color-accent-hover: #2da44e;
   --color-danger: #cf222e;
   --color-primary: #0969da;
+}
+
+[data-theme='github-dark'] {
+  color-scheme: dark;
+  --color-surface: #0d1117;
+  --color-surface-elevated: #161b22;
+  --color-border: #30363d;
+  --color-foreground: #e6edf3;
+  --color-muted: #8b949e;
+  --color-accent: #238636;
+  --color-accent-hover: #2ea043;
+  --color-danger: #f85149;
+  --color-primary: #58a6ff;
+}
+
+[data-theme='dim'] {
+  color-scheme: dark;
+  --color-surface: #1c2128;
+  --color-surface-elevated: #252c35;
+  --color-border: #3d444d;
+  --color-foreground: #d0d7de;
+  --color-muted: #9198a1;
+  --color-accent: #3fb950;
+  --color-accent-hover: #56d364;
+  --color-danger: #ff7b72;
+  --color-primary: #79c0ff;
+}
+
+[data-theme='high-contrast'] {
+  color-scheme: dark;
+  --color-surface: #000000;
+  --color-surface-elevated: #0a0a0a;
+  --color-border: #ffffff;
+  --color-foreground: #ffffff;
+  --color-muted: #c9d1d9;
+  --color-accent: #00ff6a;
+  --color-accent-hover: #3dff8a;
+  --color-danger: #ff5555;
+  --color-primary: #66b3ff;
 }
 
 body {

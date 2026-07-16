@@ -69,11 +69,18 @@ impl GitService {
 
     pub fn exec(&self, args: &[&str], cwd: &Path) -> Result<Output, String> {
         let git = self.resolve_git()?;
-        Command::new(git)
-            .args(args)
+        let mut cmd = Command::new(git);
+        cmd.args(args)
             .current_dir(cwd)
-            .env("GIT_TERMINAL_PROMPT", "0")
-            .output()
+            .env("GIT_TERMINAL_PROMPT", "0");
+        // Prevent console-window flashes that steal focus / bounce Windows Terminal.
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        cmd.output()
             .map_err(|e| format!("Failed to run git: {e}"))
     }
 
@@ -580,13 +587,21 @@ impl GitService {
         use std::process::{Command, Stdio};
 
         let git = self.resolve_git()?;
-        let mut child = Command::new(git)
+        let mut child_cmd = Command::new(git);
+        child_cmd
             .args(["apply", "--cached", "--"])
             .current_dir(dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .env("GIT_TERMINAL_PROMPT", "0")
+            .env("GIT_TERMINAL_PROMPT", "0");
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            child_cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        let mut child = child_cmd
             .spawn()
             .map_err(|e| format!("Failed to run git apply: {e}"))?;
 

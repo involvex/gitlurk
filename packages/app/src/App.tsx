@@ -29,9 +29,21 @@ export function App() {
   const rightRailWidth = useAppStore((s) => s.rightRailWidth);
   const unreadNotifications = useAppStore((s) => s.unreadNotifications);
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
+  const hotkeyCommandPalette = useAppStore((s) => s.hotkeyCommandPalette);
 
   useEffect(() => {
     void dispatcher.initialize();
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => {
+      if (useAppStore.getState().theme === 'system') {
+        void dispatcher.applyAppearance();
+      }
+    };
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
   }, []);
 
   useEffect(() => {
@@ -124,7 +136,7 @@ export function App() {
                   useAppStore.getState().setShowCommandPalette(true)
                 }
                 className="rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
-                title="Command palette (Ctrl+K)"
+                title={`Command palette (Ctrl+K / ${hotkeyCommandPalette || 'Ctrl+Shift+P'})`}
               >
                 ⌘K
               </button>

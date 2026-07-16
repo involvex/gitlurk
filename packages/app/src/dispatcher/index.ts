@@ -5,6 +5,7 @@ import {
   sendNotification,
 } from '@tauri-apps/plugin-notification';
 import { ipcInvoke, onEvent, runningInTauri } from '../ipc/client';
+import { matchesHotkey } from '../lib/hotkeys';
 import { useAppStore } from '../stores';
 import type { AiProvider } from '../stores/ui';
 import type { DiffKind } from '../stores/git-ops';
@@ -19,6 +20,8 @@ let fetchPollTimer: ReturnType<typeof setInterval> | null = null;
 let panelPersistTimer: ReturnType<typeof setTimeout> | null = null;
 let lastNotifiedUnread = 0;
 let repoChangeDebounce: ReturnType<typeof setTimeout> | null = null;
+let refreshInFlight = 0;
+let pendingRefreshAfterInFlight = false;
 
 async function persistRepos() {
   const repos = getStore().repos.map((r) => ({
@@ -101,6 +104,12 @@ export const dispatcher = {
       desktopNotifications: settings.desktopNotifications,
       autoRefreshOnChange: settings.autoRefreshOnChange,
       onboardingCompleted: settings.onboardingCompleted,
+      themePreset:
+        (settings.themePreset as
+          'github-dark' | 'github-light' | 'dim' | 'high-contrast') ??
+        'github-dark',
+      hotkeyShowApp: settings.hotkeyShowApp ?? 'Ctrl+Alt+G',
+      hotkeyCommandPalette: settings.hotkeyCommandPalette ?? 'Ctrl+Shift+P',
     });
     getStore().setAuth(auth.username);
     getStore().setExplorerMenuEnabled(explorerMenu.enabled);
@@ -117,7 +126,7 @@ export const dispatcher = {
       if (repoChangeDebounce) clearTimeout(repoChangeDebounce);
       repoChangeDebounce = setTimeout(() => {
         void dispatcher.refreshStatus();
-      }, 500);
+      }, 1200);
     });
 
     await onEvent('url-action', (action) => {
@@ -339,17 +348,50 @@ export const dispatcher = {
   },
 
   async applyTheme(theme: 'light' | 'dark' | 'system') {
+    getStore().setTheme(theme);
+    await dispatcher.applyAppearance();
+    await ipcInvoke('app:set-theme', { theme });
+  },
+
+  async applyThemePreset(
+    preset: 'github-dark' | 'github-light' | 'dim' | 'high-contrast',
+  ) {
+    const isLight = preset === 'github-light';
+    getStore().setThemePreset(preset);
+    getStore().setTheme(isLight ? 'light' : 'dark');
+    await ipcInvoke('app:set-settings', {
+      themePreset: preset,
+      theme: isLight ? 'light' : 'dark',
+    });
+    await dispatcher.applyAppearance();
+  },
+
+  resolveActivePreset():
+    'github-dark' | 'github-light' | 'dim' | 'high-contrast' {
+    const { theme, themePreset } = getStore();
+    const custom = themePreset === 'dim' || themePreset === 'high-contrast';
+    if (theme === 'system' && !custom) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'github-dark'
+        : 'github-light';
+    }
+    if (theme === 'light') return 'github-light';
+    if (theme === 'dark') {
+      if (themePreset === 'github-light') return 'github-dark';
+      return themePreset;
+    }
+    return themePreset;
+  },
+
+  async applyAppearance() {
+    const preset = dispatcher.resolveActivePreset();
     const resolved =
-      theme === 'system'
-        ? window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light'
-        : theme;
+      preset === 'github-light' ? ('light' as const) : ('dark' as const);
 
     getStore().setResolvedTheme(resolved);
+    document.documentElement.dataset.theme = preset;
     document.documentElement.classList.toggle('dark', resolved === 'dark');
     document.documentElement.classList.toggle('light', resolved === 'light');
-    await ipcInvoke('app:set-theme', { theme });
   },
 
   async toggleTheme() {
@@ -358,6 +400,22 @@ export const dispatcher = {
       current === 'system' ? 'dark' : current === 'dark' ? 'light' : 'system';
     getStore().setTheme(next);
     await dispatcher.applyTheme(next);
+  },
+
+  async setHotkeys(hotkeys: {
+    hotkeyShowApp?: string;
+    hotkeyCommandPalette?: string;
+  }) {
+    if (hotkeys.hotkeyShowApp) {
+      getStore().setHotkeyShowApp(hotkeys.hotkeyShowApp);
+    }
+    if (hotkeys.hotkeyCommandPalette) {
+      getStore().setHotkeyCommandPalette(hotkeys.hotkeyCommandPalette);
+    }
+    await ipcInvoke('app:set-settings', {
+      hotkeyShowApp: hotkeys.hotkeyShowApp,
+      hotkeyCommandPalette: hotkeys.hotkeyCommandPalette,
+    });
   },
 
   async openLocalRepo() {
@@ -426,6 +484,12 @@ export const dispatcher = {
     const path = getStore().activeRepoPath;
     if (!path) return;
 
+    if (refreshInFlight > 0) {
+      pendingRefreshAfterInFlight = true;
+      return;
+    }
+
+    refreshInFlight += 1;
     getStore().setGitOpLoading(true);
     try {
       const status = await ipcInvoke('git:status', { path });
@@ -435,7 +499,12 @@ export const dispatcher = {
         error instanceof Error ? error.message : 'Failed to get status',
       );
     } finally {
+      refreshInFlight -= 1;
       getStore().setGitOpLoading(false);
+      if (pendingRefreshAfterInFlight && refreshInFlight === 0) {
+        pendingRefreshAfterInFlight = false;
+        void dispatcher.refreshStatus();
+      }
     }
   },
 
@@ -1034,6 +1103,13 @@ export const dispatcher = {
       target?.isContentEditable;
 
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      getStore().setShowCommandPalette(true);
+      return;
+    }
+
+    const paletteHotkey = getStore().hotkeyCommandPalette || 'Ctrl+Shift+P';
+    if (matchesHotkey(event, paletteHotkey)) {
       event.preventDefault();
       getStore().setShowCommandPalette(true);
       return;

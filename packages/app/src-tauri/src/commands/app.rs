@@ -109,6 +109,7 @@ pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value,
     let settings = read_settings(&state);
     Ok(serde_json::json!({
         "theme": settings.theme,
+        "themePreset": settings.theme_preset,
         "sidebarWidth": settings.sidebar_width,
         "fileListWidth": settings.file_list_width,
         "rightRailWidth": settings.right_rail_width,
@@ -124,13 +125,17 @@ pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value,
         "desktopNotifications": settings.desktop_notifications,
         "autoRefreshOnChange": settings.auto_refresh_on_change,
         "onboardingCompleted": settings.onboarding_completed,
+        "hotkeyShowApp": settings.hotkey_show_app,
+        "hotkeyCommandPalette": settings.hotkey_command_palette,
     }))
 }
 
 #[tauri::command(rename_all = "camelCase")]
 pub fn app_set_settings(
+    app: AppHandle,
     state: State<'_, AppState>,
     theme: Option<String>,
+    theme_preset: Option<String>,
     sidebar_width: Option<u32>,
     file_list_width: Option<u32>,
     right_rail_width: Option<u32>,
@@ -146,10 +151,16 @@ pub fn app_set_settings(
     desktop_notifications: Option<bool>,
     auto_refresh_on_change: Option<bool>,
     onboarding_completed: Option<bool>,
+    hotkey_show_app: Option<String>,
+    hotkey_command_palette: Option<String>,
 ) -> Result<(), String> {
     let mut settings = read_settings(&state);
+    let mut hotkey_changed = false;
     if let Some(theme) = theme {
         settings.theme = theme;
+    }
+    if let Some(v) = theme_preset {
+        settings.theme_preset = v;
     }
     if let Some(v) = sidebar_width {
         settings.sidebar_width = v;
@@ -208,7 +219,30 @@ pub fn app_set_settings(
     if let Some(v) = onboarding_completed {
         settings.onboarding_completed = v;
     }
-    write_settings(&state, &settings)
+    if let Some(v) = hotkey_show_app {
+        let trimmed = v.trim().to_string();
+        if trimmed != settings.hotkey_show_app {
+            hotkey_changed = true;
+        }
+        settings.hotkey_show_app = if trimmed.is_empty() {
+            crate::hotkeys::default_show_app()
+        } else {
+            trimmed
+        };
+    }
+    if let Some(v) = hotkey_command_palette {
+        let trimmed = v.trim().to_string();
+        settings.hotkey_command_palette = if trimmed.is_empty() {
+            crate::hotkeys::default_command_palette()
+        } else {
+            trimmed
+        };
+    }
+    write_settings(&state, &settings)?;
+    if hotkey_changed {
+        crate::hotkeys::register_show_app_hotkey(&app);
+    }
+    Ok(())
 }
 
 #[tauri::command(rename_all = "camelCase")]
