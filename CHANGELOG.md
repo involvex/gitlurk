@@ -4,6 +4,12 @@ All notable changes to GitLurk Desktop.
 
 ## [Unreleased]
 
+- feat(app): add Overview file tree, multi-terminal, and shell path fix ([b881148](https://github.com/involvex/gitlurk/commit/b881148))
+- feat(app): themes, hotkeys, and Discover polish ([03118a7](https://github.com/involvex/gitlurk/commit/03118a7))
+
+## [v0.1.2](https://github.com/involvex/gitlurk/releases/tag/v0.1.2) - 2026-07-16
+
+- v0.1.2 ([c8b2f1f](https://github.com/involvex/gitlurk/commit/c8b2f1f))
 - docs: add feature suggestions overview ([f56e020](https://github.com/involvex/gitlurk/commit/f56e020))
 - feat: implement stash, discard, staging, history, and command palette ([c0cd21c](https://github.com/involvex/gitlurk/commit/c0cd21c))
 - # AGENTS.md — GitLurk Desktop ([4671111](https://github.com/involvex/gitlurk/commit/4671111))

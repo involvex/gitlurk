@@ -1,6 +1,6 @@
 {
   "name": "@involvex/gitlurk-desktop",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "GitLurk Desktop CLI — open repos, wrap gh, manage git config",
   "type": "module",
   "bin": {
