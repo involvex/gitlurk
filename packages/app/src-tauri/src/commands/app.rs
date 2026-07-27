@@ -104,9 +104,25 @@ pub fn app_save_repos(state: State<'_, AppState>, repos: Vec<RepoEntry>) -> Resu
     write_repos_file(&state, &repos)
 }
 
+fn migrate_terminal_paths(settings: &mut Settings) -> bool {
+    // Older builds reused terminal_shell_path as a pwsh override. Split them.
+    if settings.terminal_shell == "pwsh"
+        && !settings.terminal_shell_path.trim().is_empty()
+        && settings.terminal_pwsh_path.trim().is_empty()
+    {
+        settings.terminal_pwsh_path = settings.terminal_shell_path.clone();
+        settings.terminal_shell_path = String::new();
+        return true;
+    }
+    false
+}
+
 #[tauri::command(rename_all = "camelCase")]
 pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    let settings = read_settings(&state);
+    let mut settings = read_settings(&state);
+    if migrate_terminal_paths(&mut settings) {
+        let _ = write_settings(&state, &settings);
+    }
     Ok(serde_json::json!({
         "theme": settings.theme,
         "themePreset": settings.theme_preset,
@@ -120,6 +136,7 @@ pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value,
         "minimizeToTray": settings.minimize_to_tray,
         "terminalShell": settings.terminal_shell,
         "terminalShellPath": settings.terminal_shell_path,
+        "terminalPwshPath": settings.terminal_pwsh_path,
         "backgroundFetchEnabled": settings.background_fetch_enabled,
         "backgroundFetchIntervalMin": settings.background_fetch_interval_min,
         "desktopNotifications": settings.desktop_notifications,
@@ -146,6 +163,7 @@ pub fn app_set_settings(
     minimize_to_tray: Option<bool>,
     terminal_shell: Option<String>,
     terminal_shell_path: Option<String>,
+    terminal_pwsh_path: Option<String>,
     background_fetch_enabled: Option<bool>,
     background_fetch_interval_min: Option<u32>,
     desktop_notifications: Option<bool>,
@@ -204,6 +222,10 @@ pub fn app_set_settings(
     if let Some(v) = terminal_shell_path {
         settings.terminal_shell_path = v.trim().to_string();
     }
+    if let Some(v) = terminal_pwsh_path {
+        settings.terminal_pwsh_path = v.trim().to_string();
+    }
+    let _ = migrate_terminal_paths(&mut settings);
     if let Some(v) = background_fetch_enabled {
         settings.background_fetch_enabled = v;
     }

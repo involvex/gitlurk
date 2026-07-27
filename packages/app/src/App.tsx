@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
+import { OverviewView } from './components/OverviewView';
 import { ChangesView } from './components/ChangesView';
 import { HistoryPanel } from './components/HistoryPanel';
 import { DiscoverView } from './components/DiscoverView';
@@ -100,6 +101,19 @@ export function App() {
               </div>
               {appMode === 'workspace' ? (
                 <div className="flex rounded-md border border-border p-0.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      useAppStore.getState().setWorkspaceTab('overview')
+                    }
+                    className={`rounded px-2 py-1 text-xs ${
+                      workspaceTab === 'overview'
+                        ? 'bg-primary/20 text-primary'
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    Overview
+                  </button>
                   <button
                     type="button"
                     onClick={() =>
@@ -211,7 +225,13 @@ export function App() {
             <DiscoverView />
           ) : (
             <div className="flex min-h-0 flex-1">
-              {workspaceTab === 'history' ? <HistoryPanel /> : <ChangesView />}
+              {workspaceTab === 'overview' ? (
+                <OverviewView />
+              ) : workspaceTab === 'history' ? (
+                <HistoryPanel />
+              ) : (
+                <ChangesView />
+              )}
               <ResizeHandle
                 orientation="vertical"
                 onDrag={(delta) => dispatcher.resizeRightRail(delta)}

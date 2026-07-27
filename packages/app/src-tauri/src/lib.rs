@@ -93,6 +93,8 @@ pub struct Settings {
     pub terminal_shell: String,
     #[serde(default)]
     pub terminal_shell_path: String,
+    #[serde(default)]
+    pub terminal_pwsh_path: String,
     #[serde(default = "default_true")]
     pub background_fetch_enabled: bool,
     #[serde(default = "default_fetch_interval")]
@@ -163,6 +165,7 @@ impl Default for Settings {
             minimize_to_tray: false,
             terminal_shell: default_terminal_shell(),
             terminal_shell_path: String::new(),
+            terminal_pwsh_path: String::new(),
             background_fetch_enabled: true,
             background_fetch_interval_min: default_fetch_interval(),
             desktop_notifications: true,
@@ -404,6 +407,8 @@ pub fn run() {
             commands::shell::shell_open_external,
             commands::shell::shell_open_terminal,
             commands::shell::shell_reveal_in_explorer,
+            commands::fs::fs_list_dir,
+            commands::fs::fs_read_file,
             commands::terminal::terminal_spawn,
             commands::terminal::terminal_write,
             commands::terminal::terminal_resize,

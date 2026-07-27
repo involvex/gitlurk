@@ -104,6 +104,12 @@ export function CommandPalette() {
         run: () => useAppStore.getState().setWorkspaceTab('history'),
       },
       {
+        id: 'overview',
+        label: 'Show repository overview',
+        group: 'Git',
+        run: () => useAppStore.getState().setWorkspaceTab('overview'),
+      },
+      {
         id: 'changes',
         label: 'Show changes view',
         group: 'Git',

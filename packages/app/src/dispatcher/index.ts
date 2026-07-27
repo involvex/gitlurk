@@ -99,6 +99,7 @@ export const dispatcher = {
       minimizeToTray: settings.minimizeToTray,
       terminalShell: settings.terminalShell,
       terminalShellPath: settings.terminalShellPath,
+      terminalPwshPath: settings.terminalPwshPath,
       backgroundFetchEnabled: settings.backgroundFetchEnabled,
       backgroundFetchIntervalMin: settings.backgroundFetchIntervalMin,
       desktopNotifications: settings.desktopNotifications,
@@ -327,6 +328,41 @@ export const dispatcher = {
   async setTerminalShellPath(path: string) {
     getStore().setTerminalShellPath(path);
     await ipcInvoke('app:set-settings', { terminalShellPath: path });
+  },
+
+  async setTerminalPwshPath(path: string) {
+    getStore().setTerminalPwshPath(path);
+    await ipcInvoke('app:set-settings', { terminalPwshPath: path });
+  },
+
+  async listRepoDir(relativePath?: string) {
+    const repoPath = getStore().activeRepoPath;
+    if (!repoPath) return [];
+    try {
+      const { entries } = await ipcInvoke('fs:list-dir', {
+        repoPath,
+        relativePath,
+      });
+      return entries;
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Failed to list directory',
+      );
+      return [];
+    }
+  },
+
+  async readRepoFile(relativePath: string) {
+    const repoPath = getStore().activeRepoPath;
+    if (!repoPath) return null;
+    try {
+      return await ipcInvoke('fs:read-file', { repoPath, relativePath });
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Failed to read file',
+      );
+      return null;
+    }
   },
 
   async generateCommitMessage() {

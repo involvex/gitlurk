@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use portable_pty::{native_pty_system, Child, CommandBuilder, PtySize};
+use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
@@ -14,9 +14,8 @@ pub struct PtySessionManager {
 
 struct PtySessionHandle {
     writer: Box<dyn Write + Send>,
-    /// Must stay alive for the ConPTY session; dropping early can trigger
-    /// 0xc0000142 (STATUS_DLL_INIT_FAILED) while the shell is still starting.
-    _child: Box<dyn Child + Send + Sync>,
+    master: Box<dyn MasterPty + Send>,
+    child: Box<dyn Child + Send + Sync>,
 }
 
 #[derive(Clone, Serialize)]
@@ -98,7 +97,8 @@ impl PtySessionManager {
             session_id.clone(),
             PtySessionHandle {
                 writer,
-                _child: child,
+                master: pair.master,
+                child,
             },
         );
 
@@ -117,21 +117,40 @@ impl PtySessionManager {
     }
 
     pub fn resize(&self, session_id: &str, cols: u16, rows: u16) -> Result<(), String> {
-        let _ = (session_id, cols, rows);
-        Ok(())
+        let sessions = self.sessions.lock().unwrap();
+        let session = sessions
+            .get(session_id)
+            .ok_or_else(|| "Terminal session not found".to_string())?;
+        session
+            .master
+            .resize(PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
+            .map_err(|e| e.to_string())
     }
 
     pub fn kill(&self, session_id: &str) -> Result<(), String> {
-        self.sessions.lock().unwrap().remove(session_id);
+        let mut sessions = self.sessions.lock().unwrap();
+        if let Some(mut session) = sessions.remove(session_id) {
+            let _ = session.child.kill();
+            let _ = session.child.wait();
+        }
         Ok(())
     }
 }
 
 /// Resolve an absolute shell path. Prefer full paths to avoid WindowsApps
 /// stubs / broken shims that show Application Error 0xc0000142 under ConPTY.
+///
+/// `path_override` is only meaningful for `custom` (required) and `pwsh`
+/// (optional override). Callers must not pass a leftover custom path when
+/// preference is `pwsh`.
 pub fn resolve_shell(
     preference: &str,
-    custom_path: Option<&str>,
+    path_override: Option<&str>,
 ) -> Result<String, String> {
     let pref = preference.trim();
     if pref.is_empty() {
@@ -142,7 +161,7 @@ pub fn resolve_shell(
 
     let lower = pref.to_ascii_lowercase();
     if lower == "custom" {
-        let path = custom_path
+        let path = path_override
             .map(str::trim)
             .filter(|p| !p.is_empty())
             .ok_or_else(|| {
@@ -161,7 +180,7 @@ pub fn resolve_shell(
         "powershell" => resolve_windows_powershell()
             .ok_or_else(|| "Windows PowerShell not found".to_string()),
         "pwsh" => {
-            if let Some(path) = custom_path.map(str::trim).filter(|p| !p.is_empty()) {
+            if let Some(path) = path_override.map(str::trim).filter(|p| !p.is_empty()) {
                 return validate_shell_path(path);
             }
             resolve_pwsh()

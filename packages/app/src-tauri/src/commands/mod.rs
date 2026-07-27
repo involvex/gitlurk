@@ -3,6 +3,7 @@ pub mod app;
 pub mod auth;
 pub mod developer;
 pub mod dialog;
+pub mod fs;
 pub mod git;
 pub mod github;
 pub mod plugins;

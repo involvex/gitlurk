@@ -4,11 +4,16 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export type ThemePreset =
   'github-dark' | 'github-light' | 'dim' | 'high-contrast';
 export type AppMode = 'workspace' | 'discover';
-export type WorkspaceTab = 'changes' | 'history';
+export type WorkspaceTab = 'overview' | 'changes' | 'history';
 export type DiscoverTab =
   'notifications' | 'feed' | 'explore' | 'trending' | 'my-repos';
 export type AiProvider = 'opencode' | 'kilo';
 export type TerminalShell = 'pwsh' | 'powershell' | 'cmd' | 'custom';
+
+export interface TerminalSessionInfo {
+  id: string;
+  title: string;
+}
 
 export interface AuthDialogState {
   userCode: string;
@@ -43,6 +48,9 @@ export interface UiSlice {
   minimizeToTray: boolean;
   terminalShell: TerminalShell;
   terminalShellPath: string;
+  terminalPwshPath: string;
+  terminalSessions: TerminalSessionInfo[];
+  activeTerminalSessionId: string | null;
   unreadNotifications: number;
   workspaceTab: WorkspaceTab;
   showCommandPalette: boolean;
@@ -89,6 +97,9 @@ export interface UiSlice {
   setMinimizeToTray: (enabled: boolean) => void;
   setTerminalShell: (shell: TerminalShell) => void;
   setTerminalShellPath: (path: string) => void;
+  setTerminalPwshPath: (path: string) => void;
+  setTerminalSessions: (sessions: TerminalSessionInfo[]) => void;
+  setActiveTerminalSessionId: (id: string | null) => void;
   setUnreadNotifications: (count: number) => void;
   setWorkspaceTab: (tab: WorkspaceTab) => void;
   setShowCommandPalette: (show: boolean) => void;
@@ -123,6 +134,7 @@ export interface UiSlice {
     minimizeToTray?: boolean;
     terminalShell?: TerminalShell;
     terminalShellPath?: string;
+    terminalPwshPath?: string;
     backgroundFetchEnabled?: boolean;
     backgroundFetchIntervalMin?: number;
     desktopNotifications?: boolean;
@@ -164,6 +176,9 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   minimizeToTray: false,
   terminalShell: 'powershell',
   terminalShellPath: '',
+  terminalPwshPath: '',
+  terminalSessions: [],
+  activeTerminalSessionId: null,
   unreadNotifications: 0,
   workspaceTab: 'changes',
   showCommandPalette: false,
@@ -211,6 +226,10 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   setMinimizeToTray: (minimizeToTray) => set({ minimizeToTray }),
   setTerminalShell: (terminalShell) => set({ terminalShell }),
   setTerminalShellPath: (terminalShellPath) => set({ terminalShellPath }),
+  setTerminalPwshPath: (terminalPwshPath) => set({ terminalPwshPath }),
+  setTerminalSessions: (terminalSessions) => set({ terminalSessions }),
+  setActiveTerminalSessionId: (activeTerminalSessionId) =>
+    set({ activeTerminalSessionId }),
   setUnreadNotifications: (unreadNotifications) => set({ unreadNotifications }),
   setWorkspaceTab: (workspaceTab) => set({ workspaceTab }),
   setShowCommandPalette: (showCommandPalette) => set({ showCommandPalette }),
@@ -245,6 +264,9 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
         : {}),
       ...(typeof settings.terminalShellPath === 'string'
         ? { terminalShellPath: settings.terminalShellPath }
+        : {}),
+      ...(typeof settings.terminalPwshPath === 'string'
+        ? { terminalPwshPath: settings.terminalPwshPath }
         : {}),
       ...(typeof settings.backgroundFetchEnabled === 'boolean'
         ? { backgroundFetchEnabled: settings.backgroundFetchEnabled }

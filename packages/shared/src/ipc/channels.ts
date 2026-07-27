@@ -21,6 +21,8 @@ export interface IpcChannels {
   'shell:open-external': { url: string };
   'shell:open-terminal': { path: string };
   'shell:reveal-in-explorer': { path: string };
+  'fs:list-dir': { repoPath: string; relativePath?: string };
+  'fs:read-file': { repoPath: string; relativePath: string };
   'app:get-repos': Record<string, never>;
   'app:save-repos': {
     repos: Array<{
@@ -46,6 +48,7 @@ export interface IpcChannels {
     minimizeToTray?: boolean;
     terminalShell?: 'pwsh' | 'powershell' | 'cmd' | 'custom';
     terminalShellPath?: string;
+    terminalPwshPath?: string;
     backgroundFetchEnabled?: boolean;
     backgroundFetchIntervalMin?: number;
     desktopNotifications?: boolean;
@@ -169,6 +172,18 @@ export interface IpcResponses {
   'shell:open-external': void;
   'shell:open-terminal': void;
   'shell:reveal-in-explorer': void;
+  'fs:list-dir': {
+    entries: Array<{
+      name: string;
+      path: string;
+      kind: 'file' | 'dir';
+    }>;
+  };
+  'fs:read-file': {
+    content: string;
+    truncated: boolean;
+    binary: boolean;
+  };
   'app:get-repos': {
     repos: Array<{
       path: string;
@@ -194,6 +209,7 @@ export interface IpcResponses {
     minimizeToTray: boolean;
     terminalShell: 'pwsh' | 'powershell' | 'cmd' | 'custom';
     terminalShellPath: string;
+    terminalPwshPath: string;
     backgroundFetchEnabled: boolean;
     backgroundFetchIntervalMin: number;
     desktopNotifications: boolean;

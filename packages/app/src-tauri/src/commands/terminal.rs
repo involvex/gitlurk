@@ -15,6 +15,29 @@ fn read_settings(state: &AppState) -> Settings {
         .unwrap_or_default()
 }
 
+fn path_override_for_shell(preference: &str, settings: &Settings, shell_path: Option<String>) -> Option<String> {
+    let from_arg = shell_path.filter(|s| !s.trim().is_empty());
+    match preference {
+        "custom" => from_arg.or_else(|| {
+            let p = settings.terminal_shell_path.trim();
+            if p.is_empty() {
+                None
+            } else {
+                Some(p.to_string())
+            }
+        }),
+        "pwsh" => from_arg.or_else(|| {
+            let p = settings.terminal_pwsh_path.trim();
+            if p.is_empty() {
+                None
+            } else {
+                Some(p.to_string())
+            }
+        }),
+        _ => None,
+    }
+}
+
 #[tauri::command(rename_all = "camelCase")]
 pub fn terminal_spawn(
     app: AppHandle,
@@ -28,23 +51,15 @@ pub fn terminal_spawn(
     let settings = read_settings(&state);
     let preference = shell
         .filter(|s| !s.trim().is_empty())
-        .unwrap_or(settings.terminal_shell);
-    let custom = shell_path
-        .filter(|s| !s.trim().is_empty())
-        .or_else(|| {
-            if settings.terminal_shell_path.trim().is_empty() {
-                None
-            } else {
-                Some(settings.terminal_shell_path.clone())
-            }
-        });
+        .unwrap_or_else(|| settings.terminal_shell.clone());
+    let override_path = path_override_for_shell(&preference, &settings, shell_path);
     let session_id = state.pty_sessions.spawn(
         app,
         cwd,
         cols,
         rows,
         &preference,
-        custom.as_deref(),
+        override_path.as_deref(),
     )?;
     Ok(serde_json::json!({ "sessionId": session_id }))
 }

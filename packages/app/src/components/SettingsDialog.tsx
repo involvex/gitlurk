@@ -43,6 +43,7 @@ export function SettingsDialog() {
   const minimizeToTray = useAppStore((s) => s.minimizeToTray);
   const terminalShell = useAppStore((s) => s.terminalShell);
   const terminalShellPath = useAppStore((s) => s.terminalShellPath);
+  const terminalPwshPath = useAppStore((s) => s.terminalPwshPath);
   const backgroundFetchEnabled = useAppStore((s) => s.backgroundFetchEnabled);
   const backgroundFetchIntervalMin = useAppStore(
     (s) => s.backgroundFetchIntervalMin,
@@ -290,17 +291,15 @@ export function SettingsDialog() {
                 <option value="custom">Custom executable…</option>
               </select>
               <span className="mt-1 block font-normal text-muted">
-                Used by the in-app terminal pane. Re-open the pane after
-                changing. Prefer 5.1 or a custom path if PowerShell 7 fails
-                under ConPTY (error 0xc0000142).
+                Used by the in-app terminal pane. New terminal tabs pick up
+                changes; existing tabs keep their shell. Prefer 5.1 or a custom
+                path if PowerShell 7 fails under ConPTY (error 0xc0000142).
               </span>
             </label>
 
-            {terminalShell === 'custom' || terminalShell === 'pwsh' ? (
+            {terminalShell === 'custom' ? (
               <label className="block text-xs font-medium text-muted">
-                {terminalShell === 'custom'
-                  ? 'Custom shell path'
-                  : 'Optional pwsh path override'}
+                Custom shell path
                 <input
                   value={terminalShellPath}
                   onChange={(e) => {
@@ -309,17 +308,31 @@ export function SettingsDialog() {
                   onBlur={() => {
                     void dispatcher.setTerminalShellPath(terminalShellPath);
                   }}
-                  placeholder={
-                    terminalShell === 'custom'
-                      ? String.raw`C:\Program Files\Git\bin\bash.exe`
-                      : String.raw`C:\Program Files\PowerShell\7\pwsh.exe`
-                  }
+                  placeholder={String.raw`C:\Program Files\Git\bin\bash.exe`}
                   className="mt-1 w-full rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground"
                 />
                 <span className="mt-1 block font-normal text-muted">
-                  {terminalShell === 'custom'
-                    ? 'Full path to an .exe (Git bash, nu, etc.).'
-                    : 'Leave blank to use Program Files\\PowerShell\\7\\pwsh.exe.'}
+                  Full path to an .exe (Git bash, nu, etc.).
+                </span>
+              </label>
+            ) : null}
+
+            {terminalShell === 'pwsh' ? (
+              <label className="block text-xs font-medium text-muted">
+                Optional pwsh path override
+                <input
+                  value={terminalPwshPath}
+                  onChange={(e) => {
+                    useAppStore.getState().setTerminalPwshPath(e.target.value);
+                  }}
+                  onBlur={() => {
+                    void dispatcher.setTerminalPwshPath(terminalPwshPath);
+                  }}
+                  placeholder={String.raw`C:\Program Files\PowerShell\7\pwsh.exe`}
+                  className="mt-1 w-full rounded-md border border-border bg-surface-elevated px-3 py-2 text-sm text-foreground"
+                />
+                <span className="mt-1 block font-normal text-muted">
+                  Leave blank to auto-detect under Program Files\PowerShell.
                 </span>
               </label>
             ) : null}
