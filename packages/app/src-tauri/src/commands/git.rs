@@ -1,9 +1,8 @@
-
 use serde::Serialize;
 use tauri::State;
 
-use crate::git_service::GitStatusResult;
 use crate::git_service::DiffKind;
+use crate::git_service::GitStatusResult;
 use crate::{validate_repo_path, AppState};
 
 #[derive(Serialize)]
@@ -40,12 +39,9 @@ pub fn git_clone(
     depth: Option<u32>,
 ) -> Result<serde_json::Value, String> {
     let target = validate_repo_path(&dir)?;
-    state.git.clone_repo(
-        &url,
-        &target,
-        recurse_submodules.unwrap_or(false),
-        depth,
-    )?;
+    state
+        .git
+        .clone_repo(&url, &target, recurse_submodules.unwrap_or(false), depth)?;
     Ok(serde_json::json!({ "path": target.to_string_lossy() }))
 }
 
@@ -180,9 +176,7 @@ pub fn git_stash_push(
     message: Option<String>,
 ) -> Result<(), String> {
     let dir = validate_repo_path(&path)?;
-    state
-        .git
-        .stash_push(&dir, message.as_deref())
+    state.git.stash_push(&dir, message.as_deref())
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -277,6 +271,35 @@ pub fn git_show(
         "patch": result.patch,
         "isBinary": result.is_binary,
     }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_tag_list(state: State<'_, AppState>, path: String) -> Result<serde_json::Value, String> {
+    let dir = validate_repo_path(&path)?;
+    let entries = state.git.tag_list(&dir)?;
+    Ok(serde_json::json!({ "entries": entries }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_tag_create(
+    state: State<'_, AppState>,
+    path: String,
+    name: String,
+    message: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.tag_create(&dir, &name, message.as_deref())?;
+    Ok(serde_json::json!({ "name": name }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_tag_delete(
+    state: State<'_, AppState>,
+    path: String,
+    name: String,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.tag_delete(&dir, &name)
 }
 
 #[tauri::command(rename_all = "camelCase")]

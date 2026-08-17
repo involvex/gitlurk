@@ -78,6 +78,9 @@ export interface IpcChannels {
   'git:reset': { path: string; files: string[] };
   'git:log': { path: string; limit?: number };
   'git:show': { path: string; sha: string };
+  'git:tag-list': { path: string };
+  'git:tag-create': { path: string; name: string; message?: string };
+  'git:tag-delete': { path: string; name: string };
   'git:apply-cached': { path: string; patch: string };
   'terminal:spawn': {
     cwd: string;
@@ -247,6 +250,11 @@ export interface IpcResponses {
     }>;
   };
   'git:show': { patch: string; isBinary: boolean };
+  'git:tag-list': {
+    entries: Array<{ name: string; message?: string }>;
+  };
+  'git:tag-create': { name: string };
+  'git:tag-delete': void;
   'git:apply-cached': void;
   'terminal:spawn': { sessionId: string };
   'terminal:write': void;

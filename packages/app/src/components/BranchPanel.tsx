@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
+import { ConfirmDialog } from './ConfirmDialog';
 
 export function BranchPanel() {
   const branches = useAppStore((s) => s.branches);
   const currentBranch = useAppStore((s) => s.currentBranch);
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
+  const tags = useAppStore((s) => s.tags);
   const [newBranch, setNewBranch] = useState('');
+  const [newTag, setNewTag] = useState('');
+  const [tagMessage, setTagMessage] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   if (!activeRepoPath) return null;
 
@@ -30,7 +35,7 @@ export function BranchPanel() {
           </li>
         ))}
       </ul>
-      <div className="flex gap-2">
+      <div className="mb-6 flex gap-2">
         <input
           value={newBranch}
           onChange={(e) => setNewBranch(e.target.value)}
@@ -48,6 +53,70 @@ export function BranchPanel() {
           Add
         </button>
       </div>
+
+      <h3 className="mb-3 text-sm font-semibold">Tags</h3>
+      <ul className="mb-4 max-h-48 space-y-1 overflow-y-auto">
+        {tags.map((tag) => (
+          <li
+            key={tag.name}
+            className="flex items-center justify-between gap-1"
+          >
+            <span className="min-w-0 flex-1 truncate text-xs">
+              {tag.name}
+              {tag.message ? (
+                <span className="ml-1 text-muted">
+                  — {tag.message.split('\n')[0]}
+                </span>
+              ) : null}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPendingDelete(tag.name)}
+              className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] text-danger hover:bg-surface"
+            >
+              Delete
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="flex flex-col gap-2">
+        <input
+          value={newTag}
+          onChange={(e) => setNewTag(e.target.value)}
+          placeholder="tag-name"
+          className="rounded-md border border-border bg-surface px-2 py-1 text-xs outline-none focus:border-primary"
+        />
+        <input
+          value={tagMessage}
+          onChange={(e) => setTagMessage(e.target.value)}
+          placeholder="message (optional)"
+          className="rounded-md border border-border bg-surface px-2 py-1 text-xs outline-none focus:border-primary"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            void dispatcher.createTag(newTag, tagMessage);
+            setNewTag('');
+            setTagMessage('');
+          }}
+          className="rounded-md bg-accent px-2 py-1 text-xs text-white"
+        >
+          Create tag
+        </button>
+      </div>
+
+      {pendingDelete ? (
+        <ConfirmDialog
+          title="Delete tag?"
+          message={`Permanently delete tag ${pendingDelete}?`}
+          confirmLabel="Delete"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => {
+            void dispatcher.deleteTag(pendingDelete);
+            setPendingDelete(null);
+          }}
+        />
+      ) : null}
     </aside>
   );
 }

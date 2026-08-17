@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
 import type { DiffKind } from '../stores/git-ops';
@@ -104,11 +104,26 @@ export function ChangesView() {
   const loading = useAppStore((s) => s.loading);
   const error = useAppStore((s) => s.error);
   const commitMessage = useAppStore((s) => s.commitMessage);
+  const commitTemplate = useAppStore((s) => s.commitTemplate);
   const currentBranch = useAppStore((s) => s.currentBranch);
   const selectedFile = useAppStore((s) => s.selectedFile);
   const fileListWidth = useAppStore((s) => s.fileListWidth);
   const pendingDiscard = useAppStore((s) => s.pendingDiscard);
   const [aiLoading, setAiLoading] = useState(false);
+  const [templateLoaded, setTemplateLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!activeRepoPath) return;
+    setTemplateLoaded(false);
+    void dispatcher.loadCommitTemplate();
+  }, [activeRepoPath]);
+
+  useEffect(() => {
+    if (commitTemplate && !commitMessage) {
+      useAppStore.getState().setCommitMessage(commitTemplate);
+      setTemplateLoaded(true);
+    }
+  }, [commitTemplate, commitMessage]);
 
   if (!activeRepoPath) {
     return (
@@ -240,11 +255,25 @@ export function ChangesView() {
         <label className="mb-2 block text-xs font-medium text-muted">
           Commit summary
         </label>
+        {templateLoaded && commitTemplate ? (
+          <div className="mb-2 flex items-center gap-2">
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+              Template
+            </span>
+            <span className="text-[10px] text-muted">
+              Pre-filled from commit.template
+            </span>
+          </div>
+        ) : null}
         <textarea
           value={commitMessage}
-          onChange={(e) =>
-            useAppStore.getState().setCommitMessage(e.target.value)
-          }
+          onChange={(e) => {
+            useAppStore.getState().setCommitMessage(e.target.value);
+            if (templateLoaded) {
+              setTemplateLoaded(false);
+              useAppStore.getState().setCommitTemplate(null);
+            }
+          }}
           placeholder="Describe your changes"
           className="mb-3 h-20 w-full resize-none rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
         />

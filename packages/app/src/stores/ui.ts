@@ -59,10 +59,12 @@ export interface UiSlice {
   backgroundFetchEnabled: boolean;
   backgroundFetchIntervalMin: number;
   desktopNotifications: boolean;
+  notificationSoundEnabled: boolean;
   autoRefreshOnChange: boolean;
   onboardingCompleted: boolean;
   hotkeyShowApp: string;
   hotkeyCommandPalette: string;
+  commitTemplate: string | null;
   pendingDiscard:
     | { type: 'discard-file'; file: string; kind: import('./git-ops').DiffKind }
     | { type: 'discard-all-unstaged' }
@@ -108,10 +110,12 @@ export interface UiSlice {
   setBackgroundFetchEnabled: (enabled: boolean) => void;
   setBackgroundFetchIntervalMin: (minutes: number) => void;
   setDesktopNotifications: (enabled: boolean) => void;
+  setNotificationSoundEnabled: (enabled: boolean) => void;
   setAutoRefreshOnChange: (enabled: boolean) => void;
   setOnboardingCompleted: (completed: boolean) => void;
   setHotkeyShowApp: (hotkey: string) => void;
   setHotkeyCommandPalette: (hotkey: string) => void;
+  setCommitTemplate: (template: string | null) => void;
   setPendingDiscard: (
     pending:
       | {
@@ -138,6 +142,7 @@ export interface UiSlice {
     backgroundFetchEnabled?: boolean;
     backgroundFetchIntervalMin?: number;
     desktopNotifications?: boolean;
+    notificationSoundEnabled?: boolean;
     autoRefreshOnChange?: boolean;
     onboardingCompleted?: boolean;
     themePreset?: ThemePreset;
@@ -187,11 +192,13 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   backgroundFetchEnabled: true,
   backgroundFetchIntervalMin: 15,
   desktopNotifications: true,
+  notificationSoundEnabled: true,
   autoRefreshOnChange: true,
   onboardingCompleted: false,
   hotkeyShowApp: 'Ctrl+Alt+G',
   hotkeyCommandPalette: 'Ctrl+Shift+P',
   pendingDiscard: null,
+  commitTemplate: null,
   setTheme: (theme) => set({ theme }),
   setThemePreset: (themePreset) => set({ themePreset }),
   setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
@@ -241,11 +248,14 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
     set({ backgroundFetchIntervalMin }),
   setDesktopNotifications: (desktopNotifications) =>
     set({ desktopNotifications }),
+  setNotificationSoundEnabled: (notificationSoundEnabled) =>
+    set({ notificationSoundEnabled }),
   setAutoRefreshOnChange: (autoRefreshOnChange) => set({ autoRefreshOnChange }),
   setOnboardingCompleted: (onboardingCompleted) => set({ onboardingCompleted }),
   setHotkeyShowApp: (hotkeyShowApp) => set({ hotkeyShowApp }),
   setHotkeyCommandPalette: (hotkeyCommandPalette) =>
     set({ hotkeyCommandPalette }),
+  setCommitTemplate: (commitTemplate) => set({ commitTemplate }),
   setPendingDiscard: (pendingDiscard) => set({ pendingDiscard }),
   applyPanelSettings: (settings) =>
     set({
@@ -276,6 +286,9 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
         : {}),
       ...(typeof settings.desktopNotifications === 'boolean'
         ? { desktopNotifications: settings.desktopNotifications }
+        : {}),
+      ...(typeof settings.notificationSoundEnabled === 'boolean'
+        ? { notificationSoundEnabled: settings.notificationSoundEnabled }
         : {}),
       ...(typeof settings.autoRefreshOnChange === 'boolean'
         ? { autoRefreshOnChange: settings.autoRefreshOnChange }

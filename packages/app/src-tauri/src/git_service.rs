@@ -36,6 +36,13 @@ pub struct GitStatusResult {
     pub branch: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct TagEntry {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
 pub struct GitService {
     git_path: Mutex<Option<PathBuf>>,
     bundled_paths: Mutex<Vec<PathBuf>>,
@@ -80,14 +87,12 @@ impl GitService {
             const CREATE_NO_WINDOW: u32 = 0x0800_0000;
             cmd.creation_flags(CREATE_NO_WINDOW);
         }
-        cmd.output()
-            .map_err(|e| format!("Failed to run git: {e}"))
+        cmd.output().map_err(|e| format!("Failed to run git: {e}"))
     }
 
     pub fn is_repo(&self, dir: &Path) -> Result<bool, String> {
         let output = self.exec(&["rev-parse", "--is-inside-work-tree"], dir)?;
-        Ok(output.status.success()
-            && String::from_utf8_lossy(&output.stdout).trim() == "true")
+        Ok(output.status.success() && String::from_utf8_lossy(&output.stdout).trim() == "true")
     }
 
     pub fn status(&self, dir: &Path) -> Result<GitStatusResult, String> {
@@ -167,7 +172,12 @@ impl GitService {
         Ok(())
     }
 
-    pub fn commit(&self, dir: &Path, message: &str, files: Option<Vec<String>>) -> Result<String, String> {
+    pub fn commit(
+        &self,
+        dir: &Path,
+        message: &str,
+        files: Option<Vec<String>>,
+    ) -> Result<String, String> {
         if let Some(list) = files {
             if !list.is_empty() {
                 let mut args = vec!["add", "--"];
@@ -304,10 +314,7 @@ impl GitService {
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        Ok(stdout
-            .lines()
-            .filter_map(parse_config_line)
-            .collect())
+        Ok(stdout.lines().filter_map(parse_config_line).collect())
     }
 
     pub fn config_get(&self, key: &str, scope: &str, cwd: &Path) -> Result<Option<String>, String> {
@@ -332,10 +339,7 @@ impl GitService {
         cwd: &Path,
     ) -> Result<(), String> {
         let scope_flag = format!("--{scope}");
-        let output = self.exec(
-            &["config", scope_flag.as_str(), key, value],
-            cwd,
-        )?;
+        let output = self.exec(&["config", scope_flag.as_str(), key, value], cwd)?;
         if !output.status.success() {
             return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
         }
@@ -356,12 +360,7 @@ impl GitService {
         }
     }
 
-    pub fn restore_paths(
-        &self,
-        dir: &Path,
-        paths: &[String],
-        staged: bool,
-    ) -> Result<(), String> {
+    pub fn restore_paths(&self, dir: &Path, paths: &[String], staged: bool) -> Result<(), String> {
         if paths.is_empty() {
             return Ok(());
         }
@@ -477,14 +476,7 @@ impl GitService {
             return Ok(None);
         }
         let upstream = format!("origin/{branch}");
-        let output = self.exec(
-            &[
-                "rev-list",
-                "--count",
-                &format!("HEAD..{upstream}"),
-            ],
-            dir,
-        )?;
+        let output = self.exec(&["rev-list", "--count", &format!("HEAD..{upstream}")], dir)?;
         if !output.status.success() {
             return Ok(None);
         }
@@ -580,6 +572,56 @@ impl GitService {
         let patch = String::from_utf8_lossy(&output.stdout).to_string();
         let is_binary = patch.contains("Binary files");
         Ok(DiffResult { patch, is_binary })
+    }
+
+    pub fn tag_list(&self, dir: &Path) -> Result<Vec<TagEntry>, String> {
+        let output = self.exec(
+            &[
+                "for-each-ref",
+                "--format=%(refname:short)%00%(contents:subject)",
+                "refs/tags/",
+            ],
+            dir,
+        )?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+
+        let mut entries = Vec::new();
+        for line in String::from_utf8_lossy(&output.stdout).lines() {
+            if let Some((name, msg)) = line.split_once('\0') {
+                entries.push(TagEntry {
+                    name: name.to_string(),
+                    message: if msg.is_empty() {
+                        None
+                    } else {
+                        Some(msg.to_string())
+                    },
+                });
+            }
+        }
+        Ok(entries)
+    }
+
+    pub fn tag_create(&self, dir: &Path, name: &str, message: Option<&str>) -> Result<(), String> {
+        let output = match message {
+            Some(msg) if !msg.trim().is_empty() => {
+                self.exec(&["tag", "-a", name, "-m", msg], dir)?
+            }
+            _ => self.exec(&["tag", name], dir)?,
+        };
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
+    pub fn tag_delete(&self, dir: &Path, name: &str) -> Result<(), String> {
+        let output = self.exec(&["tag", "-d", name], dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
     }
 
     pub fn apply_cached_patch(&self, dir: &Path, patch: &str) -> Result<(), String> {

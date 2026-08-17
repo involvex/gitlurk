@@ -313,14 +313,23 @@ export function DiscoverView() {
         {tab === 'notifications' ? (
           <div className="mb-4 flex items-center justify-between gap-2">
             <p className="text-xs text-muted">GitHub notifications</p>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => void loadTab('notifications')}
-              className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
-            >
-              Refresh
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void dispatcher.markAllNotificationsRead()}
+                className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+              >
+                Mark all as read
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void loadTab('notifications')}
+                className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
         ) : null}
 

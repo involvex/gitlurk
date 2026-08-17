@@ -266,6 +266,28 @@ export const dispatcher = {
     getStore().setAppMode('discover');
   },
 
+  async markAllNotificationsRead() {
+    const username = getStore().username;
+    if (!username) return;
+    try {
+      const result = await ipcInvoke('github:list-notifications', {
+        all: false,
+      });
+      const unread = result.notifications.filter(
+        (n: { unread: boolean }) => n.unread,
+      );
+      for (const n of unread) {
+        await ipcInvoke('github:mark-notification-read', { id: n.id });
+      }
+      getStore().setUnreadNotifications(0);
+      useAppStore.getState().showToast('All notifications marked as read');
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Mark all read failed',
+      );
+    }
+  },
+
   openNotifications() {
     dispatcher.openDiscover('notifications');
   },
@@ -438,6 +460,38 @@ export const dispatcher = {
     await dispatcher.applyTheme(next);
   },
 
+  async loadCommitTemplate() {
+    const path = getStore().activeRepoPath;
+    if (!path) return;
+    try {
+      const result = await ipcInvoke('dev:git-config-get', {
+        key: 'commit.template',
+        path,
+      });
+      const templatePath = result.value;
+      if (!templatePath) {
+        getStore().setCommitTemplate(null);
+        return;
+      }
+      let relativePath = templatePath;
+      const repoPath = path.replace(/\\/g, '/');
+      const normalizedTemplate = templatePath.replace(/\\/g, '/');
+      if (normalizedTemplate.startsWith(repoPath)) {
+        relativePath = normalizedTemplate
+          .slice(repoPath.length)
+          .replace(/^\//, '');
+      }
+      const file = await dispatcher.readRepoFile(relativePath);
+      if (file?.content) {
+        getStore().setCommitTemplate(file.content);
+      } else {
+        getStore().setCommitTemplate(null);
+      }
+    } catch {
+      getStore().setCommitTemplate(null);
+    }
+  },
+
   async setHotkeys(hotkeys: {
     hotkeyShowApp?: string;
     hotkeyCommandPalette?: string;
@@ -513,6 +567,7 @@ export const dispatcher = {
     await dispatcher.refreshBranches();
     await dispatcher.refreshPullRequests();
     await dispatcher.refreshStashes();
+    await dispatcher.refreshTags();
     await dispatcher.refreshCommitLog();
   },
 
@@ -1040,6 +1095,48 @@ export const dispatcher = {
       getStore().setStashes(entries);
     } catch {
       getStore().setStashes([]);
+    }
+  },
+
+  async refreshTags() {
+    const path = getStore().activeRepoPath;
+    if (!path) return;
+    try {
+      const { entries } = await ipcInvoke('git:tag-list', { path });
+      getStore().setTags(entries);
+    } catch {
+      getStore().setTags([]);
+    }
+  },
+
+  async createTag(name: string, message?: string) {
+    const path = getStore().activeRepoPath;
+    if (!path || !name.trim()) return;
+    try {
+      await ipcInvoke('git:tag-create', { path, name: name.trim(), message });
+      await dispatcher.refreshTags();
+      getStore().showToast(`Tag ${name} created`);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Tag creation failed',
+      );
+    }
+  },
+
+  async deleteTag(name: string) {
+    const path = getStore().activeRepoPath;
+    if (!path) return;
+    getStore().setGitOpLoading(true);
+    try {
+      await ipcInvoke('git:tag-delete', { path, name });
+      await dispatcher.refreshTags();
+      getStore().showToast(`Tag ${name} deleted`);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Tag deletion failed',
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
     }
   },
 

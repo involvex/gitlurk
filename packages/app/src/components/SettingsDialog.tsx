@@ -49,6 +49,9 @@ export function SettingsDialog() {
     (s) => s.backgroundFetchIntervalMin,
   );
   const desktopNotifications = useAppStore((s) => s.desktopNotifications);
+  const notificationSoundEnabled = useAppStore(
+    (s) => s.notificationSoundEnabled,
+  );
   const autoRefreshOnChange = useAppStore((s) => s.autoRefreshOnChange);
   const theme = useAppStore((s) => s.theme);
   const themePreset = useAppStore((s) => s.themePreset);
@@ -392,6 +395,27 @@ export function SettingsDialog() {
                 <span className="mt-0.5 block text-xs text-muted">
                   Show OS notifications for new GitHub notifications and when
                   the remote branch is ahead after fetch.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={notificationSoundEnabled}
+                onChange={(e) => {
+                  useAppStore
+                    .getState()
+                    .setNotificationSoundEnabled(e.target.checked);
+                }}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block text-sm font-medium">
+                  Notification sound
+                </span>
+                <span className="mt-0.5 block text-xs text-muted">
+                  Play a sound when new GitHub notifications arrive.
                 </span>
               </span>
             </label>

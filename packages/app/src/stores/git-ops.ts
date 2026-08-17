@@ -35,6 +35,11 @@ export interface StashEntry {
   message: string;
 }
 
+export interface TagEntry {
+  name: string;
+  message?: string;
+}
+
 export interface GitOpsSlice {
   status: GitStatus | null;
   branches: string[];
@@ -48,6 +53,7 @@ export interface GitOpsSlice {
   fileDiff: FileDiff | null;
   diffLoading: boolean;
   stashes: StashEntry[];
+  tags: TagEntry[];
   commitLog: CommitLogEntry[];
   selectedCommitSha: string | null;
   commitDiff: FileDiff | null;
@@ -62,10 +68,11 @@ export interface GitOpsSlice {
   setFileDiff: (diff: FileDiff | null) => void;
   setDiffLoading: (loading: boolean) => void;
   setStashes: (stashes: StashEntry[]) => void;
+  setTags: (tags: TagEntry[]) => void;
   setCommitLog: (entries: CommitLogEntry[]) => void;
   setSelectedCommitSha: (sha: string | null) => void;
   setCommitDiff: (diff: FileDiff | null) => void;
-  setCommitDiffLoading: (loading: boolean) => void;
+  setCommitDiffLoading: (commitDiffLoading: boolean) => void;
 }
 
 export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
@@ -81,6 +88,7 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   fileDiff: null,
   diffLoading: false,
   stashes: [],
+  tags: [],
   commitLog: [],
   selectedCommitSha: null,
   commitDiff: null,
@@ -95,6 +103,7 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   setFileDiff: (diff) => set({ fileDiff: diff }),
   setDiffLoading: (loading) => set({ diffLoading: loading }),
   setStashes: (stashes) => set({ stashes }),
+  setTags: (tags) => set({ tags }),
   setCommitLog: (commitLog) => set({ commitLog }),
   setSelectedCommitSha: (selectedCommitSha) => set({ selectedCommitSha }),
   setCommitDiff: (commitDiff) => set({ commitDiff }),
