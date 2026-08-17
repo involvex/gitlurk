@@ -432,6 +432,7 @@ pub fn run() {
             commands::developer::dev_git_config_get,
             commands::developer::dev_git_config_set,
             commands::developer::dev_git_config_edit,
+            commands::screenshot::screenshot_capture,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

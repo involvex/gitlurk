@@ -7,5 +7,6 @@ pub mod fs;
 pub mod git;
 pub mod github;
 pub mod plugins;
+pub mod screenshot;
 pub mod shell;
 pub mod terminal;
