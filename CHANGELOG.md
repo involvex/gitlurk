@@ -4,6 +4,14 @@ All notable changes to GitLurk Desktop.
 
 ## [Unreleased]
 
+- feat(app): add fork & clone to Clone Dialog with remembered destination ([d14e362](https://github.com/involvex/gitlurk/commit/d14e362))
+- feat(app): add tag management, commit templates, and notification enhancements ([a6645cd](https://github.com/involvex/gitlurk/commit/a6645cd))
+- chore: update demo-repo submodule reference ([19a2a16](https://github.com/involvex/gitlurk/commit/19a2a16))
+- feat(app): add screenshot capture ([330b338](https://github.com/involvex/gitlurk/commit/330b338))
+
+## [v0.1.3](https://github.com/involvex/gitlurk/releases/tag/v0.1.3) - 2026-07-27
+
+- v0.1.3 ([9c3c3c6](https://github.com/involvex/gitlurk/commit/9c3c3c6))
 - feat(app): add Overview file tree, multi-terminal, and shell path fix ([b881148](https://github.com/involvex/gitlurk/commit/b881148))
 - feat(app): themes, hotkeys, and Discover polish ([03118a7](https://github.com/involvex/gitlurk/commit/03118a7))
 
