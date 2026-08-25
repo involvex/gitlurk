@@ -18,6 +18,7 @@ let githubSignInCancelled = false;
 let notificationPollTimer: ReturnType<typeof setInterval> | null = null;
 let fetchPollTimer: ReturnType<typeof setInterval> | null = null;
 let panelPersistTimer: ReturnType<typeof setTimeout> | null = null;
+let cloneDirPersistTimer: ReturnType<typeof setTimeout> | null = null;
 let lastNotifiedUnread = 0;
 let repoChangeDebounce: ReturnType<typeof setTimeout> | null = null;
 let refreshInFlight = 0;
@@ -60,6 +61,20 @@ function schedulePanelPersist() {
   if (panelPersistTimer) clearTimeout(panelPersistTimer);
   panelPersistTimer = setTimeout(() => {
     void dispatcher.persistPanelSettings();
+  }, 250);
+}
+
+function persistDefaultCloneDir(dir: string) {
+  const parent = dir.replace(/[\\/]+$/, '');
+  if (!parent) return;
+  getStore().setDefaultCloneDir(parent);
+  if (cloneDirPersistTimer) clearTimeout(cloneDirPersistTimer);
+  cloneDirPersistTimer = setTimeout(() => {
+    void ipcInvoke('app:set-settings', {
+      defaultCloneDir: getStore().defaultCloneDir,
+    }).catch(() => {
+      // Remembering the clone directory is best-effort.
+    });
   }, 250);
 }
 
@@ -111,6 +126,7 @@ export const dispatcher = {
         'github-dark',
       hotkeyShowApp: settings.hotkeyShowApp ?? 'Ctrl+Alt+G',
       hotkeyCommandPalette: settings.hotkeyCommandPalette ?? 'Ctrl+Shift+P',
+      defaultCloneDir: settings.defaultCloneDir ?? '',
     });
     getStore().setAuth(auth.username);
     getStore().setExplorerMenuEnabled(explorerMenu.enabled);
@@ -533,6 +549,71 @@ export const dispatcher = {
     dir: string,
     options?: { recurseSubmodules?: boolean; depth?: number },
   ) {
+    await dispatcher.doClone(url, dir, options);
+  },
+
+  rememberCloneDir(targetPath: string) {
+    const cut = Math.max(
+      targetPath.lastIndexOf('\\'),
+      targetPath.lastIndexOf('/'),
+    );
+    if (cut <= 0) return;
+    persistDefaultCloneDir(targetPath.slice(0, cut));
+  },
+
+  async forkAndClone(
+    url: string,
+    dir: string,
+    options?: { recurseSubmodules?: boolean; depth?: number },
+  ) {
+    const parsed = parseGitHubRemoteUrl(url.trim());
+    if (!parsed) {
+      getStore().setError('Could not parse a GitHub repository URL');
+      return;
+    }
+
+    const username = getStore().username;
+    if (!username) {
+      getStore().setError('Sign in to GitHub before forking');
+      return;
+    }
+
+    // Forking your own repository is not possible on GitHub — skip the
+    // fork call and just clone the repo as-is.
+    if (parsed.owner.toLowerCase() !== username.toLowerCase()) {
+      getStore().setGitOpLoading(true);
+      getStore().setError(null);
+      try {
+        await ipcInvoke('dev:gh-repo-fork', {
+          repo: `${parsed.owner}/${parsed.repo}`,
+          clone: false,
+        });
+      } catch (error) {
+        getStore().setGitOpLoading(false);
+        getStore().setError(
+          error instanceof Error ? error.message : 'Fork failed',
+        );
+        return;
+      }
+      getStore().setGitOpLoading(false);
+    }
+
+    let forkUrl: string;
+    if (url.trim().startsWith('git@')) {
+      forkUrl = `git@github.com:${username}/${parsed.repo}.git`;
+    } else {
+      forkUrl = `https://github.com/${username}/${parsed.repo}.git`;
+    }
+
+    await dispatcher.doClone(forkUrl, dir, options, url.trim());
+  },
+
+  async doClone(
+    url: string,
+    dir: string,
+    options?: { recurseSubmodules?: boolean; depth?: number },
+    upstreamUrl?: string,
+  ) {
     getStore().setGitOpLoading(true);
     getStore().setError(null);
     try {
@@ -542,6 +623,18 @@ export const dispatcher = {
         recurseSubmodules: options?.recurseSubmodules,
         depth: options?.depth,
       });
+      persistDefaultCloneDir(path);
+      if (upstreamUrl) {
+        try {
+          await ipcInvoke('git:remote-add', {
+            path,
+            name: 'upstream',
+            url: upstreamUrl,
+          });
+        } catch {
+          // Upstream remote is a convenience — never fail the clone over it.
+        }
+      }
       getStore().addRepo(path);
       await persistRepos();
       getStore().setShowCloneDialog(false);

@@ -172,6 +172,19 @@ impl GitService {
         Ok(())
     }
 
+    pub fn add_remote(&self, dir: &Path, name: &str, url: &str) -> Result<(), String> {
+        let output = self.exec(&["remote", "add", name, url], dir)?;
+        if output.status.success() {
+            return Ok(());
+        }
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Idempotent: adding an existing remote is not an error.
+        if stderr.contains("already exists") {
+            return Ok(());
+        }
+        Err(stderr.trim().to_string())
+    }
+
     pub fn commit(
         &self,
         dir: &Path,

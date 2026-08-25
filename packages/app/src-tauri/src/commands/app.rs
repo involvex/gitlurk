@@ -84,9 +84,7 @@ fn write_settings(state: &AppState, settings: &Settings) -> Result<(), String> {
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn app_take_pending_action(
-    state: State<'_, AppState>,
-) -> Result<serde_json::Value, String> {
+pub fn app_take_pending_action(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     match state.take_cli_action() {
         Some(action) => Ok(serde_json::to_value(action).map_err(|e| e.to_string())?),
         None => Ok(serde_json::Value::Null),
@@ -144,6 +142,7 @@ pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value,
         "onboardingCompleted": settings.onboarding_completed,
         "hotkeyShowApp": settings.hotkey_show_app,
         "hotkeyCommandPalette": settings.hotkey_command_palette,
+        "defaultCloneDir": settings.default_clone_dir,
     }))
 }
 
@@ -171,6 +170,7 @@ pub fn app_set_settings(
     onboarding_completed: Option<bool>,
     hotkey_show_app: Option<String>,
     hotkey_command_palette: Option<String>,
+    default_clone_dir: Option<String>,
 ) -> Result<(), String> {
     let mut settings = read_settings(&state);
     let mut hotkey_changed = false;
@@ -259,6 +259,9 @@ pub fn app_set_settings(
         } else {
             trimmed
         };
+    }
+    if let Some(v) = default_clone_dir {
+        settings.default_clone_dir = v.trim().to_string();
     }
     write_settings(&state, &settings)?;
     if hotkey_changed {

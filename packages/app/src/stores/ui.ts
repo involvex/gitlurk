@@ -64,6 +64,7 @@ export interface UiSlice {
   onboardingCompleted: boolean;
   hotkeyShowApp: string;
   hotkeyCommandPalette: string;
+  defaultCloneDir: string;
   commitTemplate: string | null;
   pendingDiscard:
     | { type: 'discard-file'; file: string; kind: import('./git-ops').DiffKind }
@@ -115,6 +116,7 @@ export interface UiSlice {
   setOnboardingCompleted: (completed: boolean) => void;
   setHotkeyShowApp: (hotkey: string) => void;
   setHotkeyCommandPalette: (hotkey: string) => void;
+  setDefaultCloneDir: (dir: string) => void;
   setCommitTemplate: (template: string | null) => void;
   setPendingDiscard: (
     pending:
@@ -148,6 +150,7 @@ export interface UiSlice {
     themePreset?: ThemePreset;
     hotkeyShowApp?: string;
     hotkeyCommandPalette?: string;
+    defaultCloneDir?: string;
   }) => void;
 }
 
@@ -197,6 +200,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   onboardingCompleted: false,
   hotkeyShowApp: 'Ctrl+Alt+G',
   hotkeyCommandPalette: 'Ctrl+Shift+P',
+  defaultCloneDir: '',
   pendingDiscard: null,
   commitTemplate: null,
   setTheme: (theme) => set({ theme }),
@@ -255,6 +259,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   setHotkeyShowApp: (hotkeyShowApp) => set({ hotkeyShowApp }),
   setHotkeyCommandPalette: (hotkeyCommandPalette) =>
     set({ hotkeyCommandPalette }),
+  setDefaultCloneDir: (defaultCloneDir) => set({ defaultCloneDir }),
   setCommitTemplate: (commitTemplate) => set({ commitTemplate }),
   setPendingDiscard: (pendingDiscard) => set({ pendingDiscard }),
   applyPanelSettings: (settings) =>
@@ -302,6 +307,9 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
         : {}),
       ...(settings.hotkeyCommandPalette
         ? { hotkeyCommandPalette: settings.hotkeyCommandPalette }
+        : {}),
+      ...(typeof settings.defaultCloneDir === 'string'
+        ? { defaultCloneDir: settings.defaultCloneDir }
         : {}),
     }),
 });

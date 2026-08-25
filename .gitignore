@@ -14,3 +14,4 @@ packages/app/src-tauri/resources/oauth.env
 !packages/app/src-tauri/resources/git/**
 .tauri/
 packages/app/src-tauri/gen/
+.kilo/

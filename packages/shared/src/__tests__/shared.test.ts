@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { parseAppUrl, buildOpenRepoUrl } from '../protocol/parse-app-url.js';
+import {
+  parseAppUrl,
+  buildOpenRepoUrl,
+  parseGitHubRemoteUrl,
+} from '../protocol/parse-app-url.js';
 import {
   validateRepoPath,
   PathValidationError,
@@ -32,6 +36,42 @@ describe('parseAppUrl', () => {
       expect(action.url).toBe('https://github.com/a/b');
       expect(action.branch).toBe('main');
     }
+  });
+});
+
+describe('parseGitHubRemoteUrl', () => {
+  test('parses https url with .git suffix', () => {
+    expect(parseGitHubRemoteUrl('https://github.com/owner/repo.git')).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+    });
+  });
+
+  test('parses https url without .git suffix', () => {
+    expect(parseGitHubRemoteUrl('https://github.com/owner/repo')).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+    });
+  });
+
+  test('parses ssh url', () => {
+    expect(parseGitHubRemoteUrl('git@github.com:owner/repo.git')).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+    });
+  });
+
+  test('parses owner/repo shorthand', () => {
+    expect(parseGitHubRemoteUrl('owner/repo')).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+    });
+  });
+
+  test('rejects non-github urls and garbage', () => {
+    expect(parseGitHubRemoteUrl('https://gitlab.com/owner/repo')).toBeNull();
+    expect(parseGitHubRemoteUrl('not a url')).toBeNull();
+    expect(parseGitHubRemoteUrl('')).toBeNull();
   });
 });
 

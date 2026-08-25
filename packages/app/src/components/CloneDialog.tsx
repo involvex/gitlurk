@@ -1,19 +1,43 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { parseGitHubRemoteUrl } from '@gitlurk/shared';
 import { ipcInvoke } from '../ipc/client';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
 
 type CloneTab = 'https' | 'ssh' | 'cli';
 
+function suggestClonePath(dir: string, url: string): string {
+  const parsed = parseGitHubRemoteUrl(url.trim());
+  const name = parsed?.repo;
+  if (!dir || !name) return '';
+  const sep = dir.includes('/') && !dir.includes('\\') ? '/' : '\\';
+  return `${dir.replace(/[\\/]+$/, '')}${sep}${name}`;
+}
+
 export function CloneDialog() {
   const show = useAppStore((s) => s.showCloneDialog);
   const loading = useAppStore((s) => s.loading);
+  const defaultCloneDir = useAppStore((s) => s.defaultCloneDir);
+  const username = useAppStore((s) => s.username);
   const [tab, setTab] = useState<CloneTab>('https');
   const [url, setUrl] = useState('https://github.com/owner/repo.git');
   const [localPath, setLocalPath] = useState('');
   const [recurseSubmodules, setRecurseSubmodules] = useState(false);
   const [shallowClone, setShallowClone] = useState(false);
   const [depth, setDepth] = useState('1');
+  const [forkFirst, setForkFirst] = useState(false);
+  const pathTouchedRef = useRef(false);
+
+  useEffect(() => {
+    if (!show) {
+      pathTouchedRef.current = false;
+      return;
+    }
+    // While the destination hasn't been manually chosen, follow the repo
+    // name from the URL so pasting a new link updates the folder name.
+    if (pathTouchedRef.current) return;
+    setLocalPath(suggestClonePath(defaultCloneDir, url));
+  }, [show, defaultCloneDir, url]);
 
   if (!show) return null;
 
@@ -26,13 +50,17 @@ export function CloneDialog() {
       title: 'Clone into folder',
       defaultPath: url.split('/').pop()?.replace('.git', ''),
     });
-    if (dir) setLocalPath(dir);
+    if (dir) {
+      setLocalPath(dir);
+      pathTouchedRef.current = true;
+      dispatcher.rememberCloneDir(dir);
+    }
   }
 
   async function handleClone() {
     if (!url.trim() || !localPath.trim()) return;
     const parsedDepth = shallowClone ? Number.parseInt(depth, 10) : undefined;
-    await dispatcher.cloneRepo(url.trim(), localPath.trim(), {
+    const options = {
       recurseSubmodules,
       depth:
         typeof parsedDepth === 'number' &&
@@ -40,7 +68,12 @@ export function CloneDialog() {
         parsedDepth > 0
           ? parsedDepth
           : undefined,
-    });
+    };
+    if (forkFirst) {
+      await dispatcher.forkAndClone(url.trim(), localPath.trim(), options);
+    } else {
+      await dispatcher.cloneRepo(url.trim(), localPath.trim(), options);
+    }
   }
 
   return (
@@ -170,6 +203,26 @@ export function CloneDialog() {
                   ) : null}
                 </span>
               </label>
+
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={forkFirst && !!username}
+                  disabled={!username}
+                  onChange={(e) => setForkFirst(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-medium">
+                    Fork repository under my account
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    {username
+                      ? 'Creates a fork via GitHub CLI, then clones your fork and adds the original repository as the upstream remote.'
+                      : 'Sign in to GitHub to enable forking.'}
+                  </span>
+                </span>
+              </label>
             </div>
           ) : null}
         </div>
@@ -189,7 +242,13 @@ export function CloneDialog() {
               disabled={loading || !url || !localPath}
               className="rounded-md bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover disabled:opacity-50"
             >
-              {loading ? 'Cloning…' : 'Clone'}
+              {loading
+                ? forkFirst
+                  ? 'Forking & cloning…'
+                  : 'Cloning…'
+                : forkFirst && username
+                  ? 'Fork & Clone'
+                  : 'Clone'}
             </button>
           ) : null}
         </footer>

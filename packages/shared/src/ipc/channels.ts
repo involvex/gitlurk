@@ -16,6 +16,7 @@ export interface IpcChannels {
   'git:branch-checkout': { path: string; name: string };
   'git:is-repo': { path: string };
   'git:get-remote-origin': { path: string };
+  'git:remote-add': { path: string; name: string; url: string };
   'dialog:open-directory': { title?: string };
   'dialog:save-directory': { title?: string; defaultPath?: string };
   'shell:open-external': { url: string };
@@ -56,6 +57,7 @@ export interface IpcChannels {
     onboardingCompleted?: boolean;
     hotkeyShowApp?: string;
     hotkeyCommandPalette?: string;
+    defaultCloneDir?: string;
   };
   'app:watch-repo': { path?: string | null };
   'app:get-explorer-menu': Record<string, never>;
@@ -171,6 +173,7 @@ export interface IpcResponses {
   'git:branch-checkout': { name: string };
   'git:is-repo': { isRepo: boolean };
   'git:get-remote-origin': { url: string | null };
+  'git:remote-add': void;
   'dialog:open-directory': string | null;
   'dialog:save-directory': string | null;
   'shell:open-external': void;
@@ -221,6 +224,7 @@ export interface IpcResponses {
     onboardingCompleted: boolean;
     hotkeyShowApp: string;
     hotkeyCommandPalette: string;
+    defaultCloneDir: string;
   };
   'app:set-settings': void;
   'app:watch-repo': void;

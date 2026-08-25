@@ -109,6 +109,8 @@ pub struct Settings {
     pub hotkey_show_app: String,
     #[serde(default = "hotkeys::default_command_palette")]
     pub hotkey_command_palette: String,
+    #[serde(default)]
+    pub default_clone_dir: String,
 }
 
 fn default_theme() -> String {
@@ -173,6 +175,7 @@ impl Default for Settings {
             onboarding_completed: false,
             hotkey_show_app: hotkeys::default_show_app(),
             hotkey_command_palette: hotkeys::default_command_palette(),
+            default_clone_dir: String::new(),
         }
     }
 }
@@ -353,6 +356,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::git::git_status,
             commands::git::git_clone,
+            commands::git::git_remote_add,
             commands::git::git_commit,
             commands::git::git_pull,
             commands::git::git_push,

@@ -46,6 +46,17 @@ pub fn git_clone(
 }
 
 #[tauri::command(rename_all = "camelCase")]
+pub fn git_remote_add(
+    state: State<'_, AppState>,
+    path: String,
+    name: String,
+    url: String,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.add_remote(&dir, &name, &url)
+}
+
+#[tauri::command(rename_all = "camelCase")]
 pub fn git_commit(
     state: State<'_, AppState>,
     path: String,
