@@ -1,6 +1,7 @@
 use serde::Serialize;
 use tauri::State;
 
+use crate::git_service::ApplyPatchMode;
 use crate::git_service::DiffKind;
 use crate::git_service::GitStatusResult;
 use crate::{validate_repo_path, AppState};
@@ -221,6 +222,16 @@ pub fn git_stash_drop(
 }
 
 #[tauri::command(rename_all = "camelCase")]
+pub fn git_stash_apply(
+    state: State<'_, AppState>,
+    path: String,
+    index: Option<usize>,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.stash_apply(&dir, index)
+}
+
+#[tauri::command(rename_all = "camelCase")]
 pub fn git_fetch(state: State<'_, AppState>, path: String) -> Result<(), String> {
     let dir = validate_repo_path(&path)?;
     state.git.fetch(&dir)
@@ -318,7 +329,30 @@ pub fn git_apply_cached(
     state: State<'_, AppState>,
     path: String,
     patch: String,
+    mode: Option<String>,
 ) -> Result<(), String> {
     let dir = validate_repo_path(&path)?;
-    state.git.apply_cached_patch(&dir, &patch)
+    let patch_mode = ApplyPatchMode::from_optional(mode.as_deref())?;
+    state.git.apply_cached_patch(&dir, &patch, patch_mode)
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_commit_amend(
+    state: State<'_, AppState>,
+    path: String,
+    message: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let dir = validate_repo_path(&path)?;
+    let hash = state.git.commit_amend(&dir, message.as_deref())?;
+    Ok(serde_json::json!({ "hash": hash }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_cherry_pick(
+    state: State<'_, AppState>,
+    path: String,
+    sha: String,
+) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.cherry_pick(&dir, &sha)
 }

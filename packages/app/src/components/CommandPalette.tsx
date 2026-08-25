@@ -121,6 +121,13 @@ export function CommandPalette() {
         group: 'App',
         run: () => dispatcher.openDiscover('feed'),
       },
+      {
+        id: 'whats-new',
+        label: "Show what's new",
+        group: 'App',
+        keywords: 'changelog release notes',
+        run: () => dispatcher.openWhatsNew(),
+      },
     ];
 
     for (const repo of repos) {

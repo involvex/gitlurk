@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { DiffView, DiffModeEnum } from '@git-diff-view/react';
 import '@git-diff-view/react/styles/diff-view.css';
 import { dispatcher } from '../dispatcher';
 import { useAppStore } from '../stores';
+import { ConfirmDialog } from './ConfirmDialog';
 
 function splitDiffHunks(patch: string): string[] {
   const lines = patch.split('\n');
@@ -48,6 +49,9 @@ export function DiffPanel() {
   const fileDiff = useAppStore((s) => s.fileDiff);
   const diffLoading = useAppStore((s) => s.diffLoading);
   const resolvedTheme = useAppStore((s) => s.resolvedTheme);
+  const [pendingDiscardHunk, setPendingDiscardHunk] = useState<string | null>(
+    null,
+  );
 
   const hunks = useMemo(
     () => (fileDiff?.patch ? splitDiffHunks(fileDiff.patch) : []),
@@ -102,35 +106,58 @@ export function DiffPanel() {
         <p className="text-xs text-muted capitalize">{diffKind}</p>
       </header>
       <div className="min-h-0 flex-1 overflow-auto p-2">
-        {canStageHunks && hunks.length > 1 ? (
+        {canStageHunks ? (
           <div className="space-y-4">
-            {hunks.map((hunk, index) => (
-              <div
-                key={`${selectedFile}-hunk-${index}`}
-                className="rounded-md border border-border"
-              >
-                <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
-                  <span className="text-[10px] text-muted">
-                    Hunk {index + 1}
-                  </span>
-                  {diffKind !== 'staged' ? (
-                    <button
-                      type="button"
-                      onClick={() => void dispatcher.stageHunk(hunk)}
-                      className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-surface-elevated"
-                    >
-                      Stage hunk
-                    </button>
-                  ) : null}
+            {hunks.map((hunk, index) => {
+              const hunkHeader = hunk
+                .split('\n')
+                .find((line) => line.startsWith('@@'));
+              const hunkKey = hunkHeader ?? `${selectedFile}-hunk`;
+              return (
+                <div key={hunkKey} className="rounded-md border border-border">
+                  <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
+                    <span className="text-[10px] text-muted">
+                      Hunk {index + 1}
+                    </span>
+                    <div className="flex gap-1">
+                      {diffKind === 'staged' ? (
+                        <button
+                          type="button"
+                          onClick={() => void dispatcher.unstageHunk(hunk)}
+                          className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-surface-elevated"
+                        >
+                          Unstage hunk
+                        </button>
+                      ) : null}
+                      {diffKind !== 'staged' ? (
+                        <button
+                          type="button"
+                          onClick={() => void dispatcher.stageHunk(hunk)}
+                          className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-surface-elevated"
+                        >
+                          Stage hunk
+                        </button>
+                      ) : null}
+                      {diffKind === 'unstaged' ? (
+                        <button
+                          type="button"
+                          onClick={() => setPendingDiscardHunk(hunk)}
+                          className="rounded border border-border px-2 py-0.5 text-[10px] text-danger hover:bg-surface-elevated"
+                        >
+                          Discard hunk
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                  <DiffView
+                    data={{ hunks: [hunk] }}
+                    diffViewMode={DiffModeEnum.Split}
+                    diffViewHighlight
+                    diffViewTheme={resolvedTheme}
+                  />
                 </div>
-                <DiffView
-                  data={{ hunks: [hunk] }}
-                  diffViewMode={DiffModeEnum.Split}
-                  diffViewHighlight
-                  diffViewTheme={resolvedTheme}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <DiffView
@@ -141,6 +168,19 @@ export function DiffPanel() {
           />
         )}
       </div>
+
+      {pendingDiscardHunk ? (
+        <ConfirmDialog
+          title="Discard hunk?"
+          message={`Permanently discard this hunk in ${selectedFile}? This cannot be undone.`}
+          confirmLabel="Discard"
+          onCancel={() => setPendingDiscardHunk(null)}
+          onConfirm={() => {
+            void dispatcher.discardHunk(pendingDiscardHunk);
+            setPendingDiscardHunk(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -110,7 +110,9 @@ export function ChangesView() {
   const fileListWidth = useAppStore((s) => s.fileListWidth);
   const pendingDiscard = useAppStore((s) => s.pendingDiscard);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiStyle, setAiStyle] = useState('concise conventional commit');
   const [templateLoaded, setTemplateLoaded] = useState(false);
+  const [pendingAmend, setPendingAmend] = useState(false);
 
   useEffect(() => {
     if (!activeRepoPath) return;
@@ -252,7 +254,10 @@ export function ChangesView() {
       </div>
 
       <footer className="border-t border-border p-6">
-        <label className="mb-2 block text-xs font-medium text-muted">
+        <label
+          htmlFor="commit-summary"
+          className="mb-2 block text-xs font-medium text-muted"
+        >
           Commit summary
         </label>
         {templateLoaded && commitTemplate ? (
@@ -266,6 +271,7 @@ export function ChangesView() {
           </div>
         ) : null}
         <textarea
+          id="commit-summary"
           value={commitMessage}
           onChange={(e) => {
             useAppStore.getState().setCommitMessage(e.target.value);
@@ -274,17 +280,36 @@ export function ChangesView() {
               useAppStore.getState().setCommitTemplate(null);
             }
           }}
-          placeholder="Describe your changes"
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+              e.preventDefault();
+              if (commitMessage.trim() && !loading) {
+                void dispatcher.commit();
+              }
+            }
+          }}
+          placeholder="Describe your changes (Ctrl+Enter to commit)"
           className="mb-3 h-20 w-full resize-none rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
         />
         <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={aiStyle}
+            onChange={(e) => setAiStyle(e.target.value)}
+            className="rounded-md border border-border bg-surface-elevated px-2 py-2 text-xs outline-none focus:border-primary"
+            title="AI commit message style"
+          >
+            <option value="concise conventional commit">Auto</option>
+            <option value="conventional commit with scope">Conventional</option>
+            <option value="detailed with body">Detailed</option>
+            <option value="single line">Single line</option>
+          </select>
           <button
             type="button"
             disabled={aiLoading || loading}
             onClick={() => {
               setAiLoading(true);
               void dispatcher
-                .generateCommitMessage()
+                .generateCommitMessage(aiStyle)
                 .finally(() => setAiLoading(false));
             }}
             className="rounded-md border border-border px-4 py-2 text-sm hover:bg-surface-elevated disabled:opacity-50"
@@ -299,9 +324,34 @@ export function ChangesView() {
           >
             Commit to {currentBranch || status?.branch || 'branch'}
           </button>
+          <button
+            type="button"
+            onClick={() => setPendingAmend(true)}
+            disabled={loading}
+            title="Fold staged changes into the last commit (or reword it)"
+            className="rounded-md border border-border px-4 py-2 text-sm hover:bg-surface-elevated disabled:opacity-50"
+          >
+            Amend last commit
+          </button>
         </div>
       </footer>
 
+      {pendingAmend ? (
+        <ConfirmDialog
+          title="Amend last commit?"
+          message={
+            status?.staged.length
+              ? `This folds ${status.staged.length} staged file(s) into the last commit${commitMessage.trim() ? ' and replaces its message' : ', keeping its message'}. Only amend commits that have not been pushed.`
+              : `This rewrites the last commit${commitMessage.trim() ? ' with the message you entered' : ' (no message change — it will be kept)'}. Only amend commits that have not been pushed.`
+          }
+          confirmLabel="Amend"
+          onCancel={() => setPendingAmend(false)}
+          onConfirm={() => {
+            void dispatcher.amendCommit(commitMessage.trim() || undefined);
+            setPendingAmend(false);
+          }}
+        />
+      ) : null}
       {pendingDiscard?.type === 'discard-file' ? (
         <ConfirmDialog
           title="Discard changes?"

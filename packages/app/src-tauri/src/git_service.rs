@@ -22,6 +22,24 @@ impl DiffKind {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum ApplyPatchMode {
+    Stage,
+    Unstage,
+    Discard,
+}
+
+impl ApplyPatchMode {
+    pub fn from_optional(value: Option<&str>) -> Result<Self, String> {
+        match value.unwrap_or("stage") {
+            "stage" => Ok(Self::Stage),
+            "unstage" => Ok(Self::Unstage),
+            "discard" => Ok(Self::Discard),
+            other => Err(format!("Unknown patch mode: {other}")),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct DiffResult {
     pub patch: String,
@@ -216,6 +234,32 @@ impl GitService {
 
         let hash = self.exec(&["rev-parse", "HEAD"], dir)?;
         Ok(String::from_utf8_lossy(&hash.stdout).trim().to_string())
+    }
+
+    pub fn commit_amend(&self, dir: &Path, message: Option<&str>) -> Result<String, String> {
+        let amend = match message {
+            Some(msg) if !msg.trim().is_empty() => {
+                self.exec(&["commit", "--amend", "-m", msg], dir)?
+            }
+            _ => self.exec(&["commit", "--amend", "--no-edit"], dir)?,
+        };
+        if !amend.status.success() {
+            return Err(String::from_utf8_lossy(&amend.stderr).trim().to_string());
+        }
+
+        let hash = self.exec(&["rev-parse", "HEAD"], dir)?;
+        Ok(String::from_utf8_lossy(&hash.stdout).trim().to_string())
+    }
+
+    pub fn cherry_pick(&self, dir: &Path, sha: &str) -> Result<(), String> {
+        if !sha.chars().all(|c| c.is_ascii_hexdigit()) || sha.len() < 4 {
+            return Err("Invalid commit SHA".into());
+        }
+        let output = self.exec(&["cherry-pick", sha], dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
     }
 
     pub fn pull(&self, dir: &Path) -> Result<String, String> {
@@ -463,6 +507,17 @@ impl GitService {
         Ok(())
     }
 
+    pub fn stash_apply(&self, dir: &Path, index: Option<usize>) -> Result<(), String> {
+        let ref_name = index
+            .map(|i| format!("stash@{{{i}}}"))
+            .unwrap_or_else(|| "stash@{0}".into());
+        let output = self.exec(&["stash", "apply", &ref_name], dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
     pub fn stash_drop(&self, dir: &Path, index: usize) -> Result<(), String> {
         let ref_name = format!("stash@{{{index}}}");
         let output = self.exec(&["stash", "drop", &ref_name], dir)?;
@@ -637,14 +692,25 @@ impl GitService {
         Ok(())
     }
 
-    pub fn apply_cached_patch(&self, dir: &Path, patch: &str) -> Result<(), String> {
+    pub fn apply_cached_patch(
+        &self,
+        dir: &Path,
+        patch: &str,
+        mode: ApplyPatchMode,
+    ) -> Result<(), String> {
         use std::io::Write;
         use std::process::{Command, Stdio};
 
         let git = self.resolve_git()?;
+        let mut args = match mode {
+            ApplyPatchMode::Stage => vec!["apply", "--cached"],
+            ApplyPatchMode::Unstage => vec!["apply", "--cached", "--reverse"],
+            ApplyPatchMode::Discard => vec!["apply", "--reverse"],
+        };
+        args.push("--");
         let mut child_cmd = Command::new(git);
         child_cmd
-            .args(["apply", "--cached", "--"])
+            .args(&args)
             .current_dir(dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

@@ -27,6 +27,7 @@ export function Sidebar() {
   const sidebarWidth = useAppStore((s) => s.sidebarWidth);
   const appMode = useAppStore((s) => s.appMode);
   const [menu, setMenu] = useState<ContextMenuState | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +46,16 @@ export function Sidebar() {
       window.removeEventListener('keydown', onKey);
     };
   }, [menu]);
+
+  const visibleRepos = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return sortedRepos;
+    return sortedRepos.filter(
+      (repo) =>
+        repo.name.toLowerCase().includes(query) ||
+        repo.path.toLowerCase().includes(query),
+    );
+  }, [sortedRepos, searchQuery]);
 
   return (
     <aside
@@ -102,13 +113,27 @@ export function Sidebar() {
         <p className="px-2 py-1 text-xs font-medium uppercase text-muted">
           Repositories
         </p>
-        {sortedRepos.length === 0 ? (
+        {sortedRepos.length > 0 ? (
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setSearchQuery('');
+            }}
+            placeholder="Search repositories"
+            className="mb-2 w-full rounded-md border border-border bg-surface px-2 py-1 text-xs outline-none focus:border-primary"
+          />
+        ) : null}
+        {visibleRepos.length === 0 ? (
           <p className="px-2 py-4 text-xs text-muted">
-            No repositories yet. Open or clone one to get started.
+            {sortedRepos.length === 0
+              ? 'No repositories yet. Open or clone one to get started.'
+              : 'No repositories match your search.'}
           </p>
         ) : (
           <ul className="space-y-1">
-            {sortedRepos.map((repo) => (
+            {visibleRepos.map((repo) => (
               <li key={repo.path}>
                 <div className="flex items-center gap-1">
                   <button

@@ -9,6 +9,7 @@ import { matchesHotkey } from '../lib/hotkeys';
 import { useAppStore } from '../stores';
 import type { AiProvider } from '../stores/ui';
 import type { DiffKind } from '../stores/git-ops';
+import { bundledLatestChangelog } from '../lib/whats-new';
 
 function getStore() {
   return useAppStore.getState();
@@ -49,6 +50,35 @@ async function maybeNotify(title: string, body: string) {
   }
 }
 
+function playNotificationSound() {
+  try {
+    const Ctx =
+      window.AudioContext ??
+      (
+        window as unknown as {
+          webkitAudioContext?: typeof AudioContext;
+        }
+      ).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1174.7, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+    osc.onended = () => void ctx.close().catch(() => undefined);
+  } catch {
+    // Sound is optional.
+  }
+}
+
 async function syncRepoWatcher(path: string | null) {
   if (!getStore().autoRefreshOnChange) {
     await ipcInvoke('app:watch-repo', { path: null });
@@ -78,6 +108,84 @@ function persistDefaultCloneDir(dir: string) {
   }, 250);
 }
 
+interface PersistedReposPayload {
+  repos: Array<{
+    path: string;
+    pinned?: boolean;
+    lastOpenedAt?: string | null;
+  }>;
+}
+
+interface PersistedSettingsPayload {
+  theme: 'light' | 'dark' | 'system';
+  themePreset?: string;
+  sidebarWidth: number;
+  fileListWidth: number;
+  rightRailWidth: number;
+  terminalHeight: number;
+  aiProvider: AiProvider;
+  aiModel: string;
+  kiloBaseUrl: string;
+  minimizeToTray: boolean;
+  terminalShell: 'pwsh' | 'powershell' | 'cmd' | 'custom';
+  terminalShellPath: string;
+  terminalPwshPath: string;
+  backgroundFetchEnabled: boolean;
+  backgroundFetchIntervalMin: number;
+  desktopNotifications: boolean;
+  notificationSoundEnabled?: boolean;
+  autoRefreshOnChange: boolean;
+  onboardingCompleted: boolean;
+  hotkeyShowApp?: string;
+  hotkeyCommandPalette?: string;
+  defaultCloneDir?: string;
+  lastSeenWhatsNewVersion?: string;
+}
+
+function applyPersistedState(
+  repoEntries: PersistedReposPayload['repos'],
+  settings: PersistedSettingsPayload,
+  explorerMenuEnabled: boolean,
+) {
+  const store = getStore();
+  store.setRepos(
+    repoEntries.map((entry) => ({
+      path: entry.path,
+      name: entry.path.split(/[/\\]/).pop() ?? entry.path,
+      pinned: entry.pinned ?? false,
+      lastOpenedAt: entry.lastOpenedAt ?? null,
+    })),
+  );
+  store.setTheme(settings.theme);
+  store.applyPanelSettings({
+    sidebarWidth: settings.sidebarWidth,
+    fileListWidth: settings.fileListWidth,
+    rightRailWidth: settings.rightRailWidth,
+    terminalHeight: settings.terminalHeight,
+    aiProvider: settings.aiProvider,
+    aiModel: settings.aiModel,
+    kiloBaseUrl: settings.kiloBaseUrl,
+    minimizeToTray: settings.minimizeToTray,
+    terminalShell: settings.terminalShell,
+    terminalShellPath: settings.terminalShellPath,
+    terminalPwshPath: settings.terminalPwshPath,
+    backgroundFetchEnabled: settings.backgroundFetchEnabled,
+    backgroundFetchIntervalMin: settings.backgroundFetchIntervalMin,
+    desktopNotifications: settings.desktopNotifications,
+    notificationSoundEnabled: settings.notificationSoundEnabled ?? true,
+    autoRefreshOnChange: settings.autoRefreshOnChange,
+    onboardingCompleted: settings.onboardingCompleted,
+    themePreset:
+      (settings.themePreset as
+        'github-dark' | 'github-light' | 'dim' | 'high-contrast') ??
+      'github-dark',
+    hotkeyShowApp: settings.hotkeyShowApp ?? 'Ctrl+Alt+G',
+    hotkeyCommandPalette: settings.hotkeyCommandPalette ?? 'Ctrl+Shift+P',
+    defaultCloneDir: settings.defaultCloneDir ?? '',
+  });
+  store.setExplorerMenuEnabled(explorerMenuEnabled);
+}
+
 export const dispatcher = {
   async initialize() {
     if (!runningInTauri()) {
@@ -94,48 +202,22 @@ export const dispatcher = {
       ipcInvoke('app:get-explorer-menu', {}),
     ]);
 
-    getStore().setRepos(
-      repos.map((entry) => ({
-        path: entry.path,
-        name: entry.path.split(/[/\\]/).pop() ?? entry.path,
-        pinned: entry.pinned ?? false,
-        lastOpenedAt: entry.lastOpenedAt ?? null,
-      })),
-    );
-    getStore().setTheme(settings.theme);
-    getStore().applyPanelSettings({
-      sidebarWidth: settings.sidebarWidth,
-      fileListWidth: settings.fileListWidth,
-      rightRailWidth: settings.rightRailWidth,
-      terminalHeight: settings.terminalHeight,
-      aiProvider: settings.aiProvider,
-      aiModel: settings.aiModel,
-      kiloBaseUrl: settings.kiloBaseUrl,
-      minimizeToTray: settings.minimizeToTray,
-      terminalShell: settings.terminalShell,
-      terminalShellPath: settings.terminalShellPath,
-      terminalPwshPath: settings.terminalPwshPath,
-      backgroundFetchEnabled: settings.backgroundFetchEnabled,
-      backgroundFetchIntervalMin: settings.backgroundFetchIntervalMin,
-      desktopNotifications: settings.desktopNotifications,
-      autoRefreshOnChange: settings.autoRefreshOnChange,
-      onboardingCompleted: settings.onboardingCompleted,
-      themePreset:
-        (settings.themePreset as
-          'github-dark' | 'github-light' | 'dim' | 'high-contrast') ??
-        'github-dark',
-      hotkeyShowApp: settings.hotkeyShowApp ?? 'Ctrl+Alt+G',
-      hotkeyCommandPalette: settings.hotkeyCommandPalette ?? 'Ctrl+Shift+P',
-      defaultCloneDir: settings.defaultCloneDir ?? '',
-    });
+    applyPersistedState(repos, settings, explorerMenu.enabled);
     getStore().setAuth(auth.username);
-    getStore().setExplorerMenuEnabled(explorerMenu.enabled);
     await dispatcher.applyTheme(settings.theme);
     dispatcher.startNotificationPolling();
     dispatcher.startBackgroundFetch();
 
     if (!settings.onboardingCompleted && repos.length === 0) {
       getStore().setShowOnboarding(true);
+    } else {
+      const whatsNew = bundledLatestChangelog();
+      if (
+        whatsNew &&
+        (settings.lastSeenWhatsNewVersion ?? '') !== whatsNew.version
+      ) {
+        getStore().setShowWhatsNew(true);
+      }
     }
 
     await onEvent('repo-changed', () => {
@@ -199,6 +281,9 @@ export const dispatcher = {
             'GitLurk',
             `${result.unreadCount} unread GitHub notification${result.unreadCount === 1 ? '' : 's'}`,
           );
+          if (getStore().notificationSoundEnabled) {
+            playNotificationSound();
+          }
         }
       } catch {
         // Ignore poll failures (missing scope until re-auth, offline, etc.)
@@ -257,6 +342,11 @@ export const dispatcher = {
     await ipcInvoke('app:set-settings', { desktopNotifications: enabled });
   },
 
+  async setNotificationSoundEnabled(enabled: boolean) {
+    getStore().setNotificationSoundEnabled(enabled);
+    await ipcInvoke('app:set-settings', { notificationSoundEnabled: enabled });
+  },
+
   async setAutoRefreshOnChange(enabled: boolean) {
     getStore().setAutoRefreshOnChange(enabled);
     await ipcInvoke('app:set-settings', { autoRefreshOnChange: enabled });
@@ -267,6 +357,59 @@ export const dispatcher = {
     getStore().setOnboardingCompleted(true);
     getStore().setShowOnboarding(false);
     await ipcInvoke('app:set-settings', { onboardingCompleted: true });
+  },
+
+  openWhatsNew() {
+    getStore().setShowWhatsNew(true);
+  },
+
+  async markWhatsNewSeen(version: string) {
+    getStore().setShowWhatsNew(false);
+    await ipcInvoke('app:set-settings', { lastSeenWhatsNewVersion: version });
+  },
+
+  async exportSettings() {
+    try {
+      const dir = await ipcInvoke('dialog:save-directory', {
+        title: 'Choose folder for settings backup',
+      });
+      if (!dir) return;
+      const { path } = await ipcInvoke('app:export-settings', { dir });
+      getStore().showToast(`Settings exported to ${path}`);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Export failed',
+      );
+    }
+  },
+
+  async importSettings() {
+    try {
+      const filePath = await ipcInvoke('dialog:open-file', {
+        title: 'Import GitLurk settings backup',
+        extensions: ['json'],
+      });
+      if (!filePath) return;
+      await ipcInvoke('app:import-settings', { filePath });
+      const [repos, settings, explorerMenu] = await Promise.all([
+        ipcInvoke('app:get-repos', {}),
+        ipcInvoke('app:get-settings', {}),
+        ipcInvoke('app:get-explorer-menu', {}),
+      ]);
+      applyPersistedState(repos.repos, settings, explorerMenu.enabled);
+      await dispatcher.applyTheme(settings.theme);
+      const activePath = getStore().activeRepoPath;
+      if (activePath && !getStore().repos.some((r) => r.path === activePath)) {
+        getStore().setActiveRepo(null);
+      }
+      await syncRepoWatcher(getStore().activeRepoPath);
+      await dispatcher.refreshStatus();
+      getStore().showToast('Settings imported');
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Import failed',
+      );
+    }
   },
 
   setPendingDiscard(pending: import('../stores/ui').UiSlice['pendingDiscard']) {
@@ -403,12 +546,13 @@ export const dispatcher = {
     }
   },
 
-  async generateCommitMessage() {
+  async generateCommitMessage(style?: string) {
     const path = getStore().activeRepoPath;
     if (!path) return;
     try {
       const { message } = await ipcInvoke('ai:generate-commit-message', {
         path,
+        style,
       });
       getStore().setCommitMessage(message);
       getStore().showToast('Commit message generated');
@@ -1251,6 +1395,23 @@ export const dispatcher = {
     }
   },
 
+  async stashApply(index?: number) {
+    const path = getStore().activeRepoPath;
+    if (!path) return;
+    getStore().setGitOpLoading(true);
+    try {
+      await ipcInvoke('git:stash-apply', { path, index });
+      await dispatcher.refreshStatus();
+      getStore().showToast(`Stash applied (kept in list)`);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Stash apply failed',
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
+    }
+  },
+
   async stashDrop(index: number) {
     const path = getStore().activeRepoPath;
     if (!path) return;
@@ -1297,22 +1458,83 @@ export const dispatcher = {
     }
   },
 
-  async stageHunk(patch: string) {
+  async applyPatch(
+    patch: string,
+    mode: 'stage' | 'unstage' | 'discard',
+  ): Promise<boolean> {
     const path = getStore().activeRepoPath;
-    if (!path) return;
+    if (!path) return false;
     getStore().setGitOpLoading(true);
     try {
-      await ipcInvoke('git:apply-cached', { path, patch });
+      await ipcInvoke('git:apply-cached', { path, patch, mode });
       await dispatcher.refreshStatus();
       const selectedFile = getStore().selectedFile;
       const diffKind = getStore().diffKind;
       if (selectedFile && diffKind) {
         await dispatcher.loadFileDiff(selectedFile, diffKind);
       }
-      getStore().showToast('Hunk staged');
+      return true;
     } catch (error) {
       getStore().setError(
-        error instanceof Error ? error.message : 'Stage hunk failed',
+        error instanceof Error ? error.message : `Hunk ${mode} failed`,
+      );
+      return false;
+    } finally {
+      getStore().setGitOpLoading(false);
+    }
+  },
+
+  async stageHunk(patch: string) {
+    if (await dispatcher.applyPatch(patch, 'stage')) {
+      getStore().showToast('Hunk staged');
+    }
+  },
+
+  async unstageHunk(patch: string) {
+    if (await dispatcher.applyPatch(patch, 'unstage')) {
+      getStore().showToast('Hunk unstaged');
+    }
+  },
+
+  async discardHunk(patch: string) {
+    if (await dispatcher.applyPatch(patch, 'discard')) {
+      getStore().showToast('Hunk discarded');
+    }
+  },
+
+  async amendCommit(message?: string) {
+    const path = getStore().activeRepoPath;
+    if (!path) return;
+    getStore().setGitOpLoading(true);
+    try {
+      await ipcInvoke('git:commit-amend', { path, message });
+      getStore().setCommitMessage('');
+      await dispatcher.refreshStatus();
+      await dispatcher.refreshCommitLog();
+      getStore().showToast('Last commit amended');
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Amend failed',
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
+    }
+  },
+
+  async cherryPick(sha: string) {
+    const path = getStore().activeRepoPath;
+    if (!path) return;
+    getStore().setGitOpLoading(true);
+    try {
+      await ipcInvoke('git:cherry-pick', { path, sha });
+      await dispatcher.refreshStatus();
+      await dispatcher.refreshCommitLog();
+      getStore().showToast(`Cherry-picked ${sha.slice(0, 7)}`);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error
+          ? error.message
+          : 'Cherry-pick failed (conflicts may need manual resolution)',
       );
     } finally {
       getStore().setGitOpLoading(false);

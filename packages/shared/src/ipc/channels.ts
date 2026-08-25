@@ -19,6 +19,7 @@ export interface IpcChannels {
   'git:remote-add': { path: string; name: string; url: string };
   'dialog:open-directory': { title?: string };
   'dialog:save-directory': { title?: string; defaultPath?: string };
+  'dialog:open-file': { title?: string; extensions?: string[] };
   'shell:open-external': { url: string };
   'shell:open-terminal': { path: string };
   'shell:reveal-in-explorer': { path: string };
@@ -53,15 +54,19 @@ export interface IpcChannels {
     backgroundFetchEnabled?: boolean;
     backgroundFetchIntervalMin?: number;
     desktopNotifications?: boolean;
+    notificationSoundEnabled?: boolean;
     autoRefreshOnChange?: boolean;
     onboardingCompleted?: boolean;
     hotkeyShowApp?: string;
     hotkeyCommandPalette?: string;
     defaultCloneDir?: string;
+    lastSeenWhatsNewVersion?: string;
   };
   'app:watch-repo': { path?: string | null };
   'app:get-explorer-menu': Record<string, never>;
   'app:set-explorer-menu': { enabled: boolean };
+  'app:export-settings': { dir: string };
+  'app:import-settings': { filePath: string };
   'git:diff': {
     path: string;
     file: string;
@@ -74,6 +79,7 @@ export interface IpcChannels {
   'git:stash-list': { path: string };
   'git:stash-pop': { path: string; index?: number };
   'git:stash-drop': { path: string; index: number };
+  'git:stash-apply': { path: string; index?: number };
   'git:fetch': { path: string };
   'git:remote-ahead': { path: string };
   'git:add': { path: string; files?: string[] };
@@ -83,7 +89,13 @@ export interface IpcChannels {
   'git:tag-list': { path: string };
   'git:tag-create': { path: string; name: string; message?: string };
   'git:tag-delete': { path: string; name: string };
-  'git:apply-cached': { path: string; patch: string };
+  'git:apply-cached': {
+    path: string;
+    patch: string;
+    mode?: 'stage' | 'unstage' | 'discard';
+  };
+  'git:commit-amend': { path: string; message?: string };
+  'git:cherry-pick': { path: string; sha: string };
   'terminal:spawn': {
     cwd: string;
     cols: number;
@@ -176,6 +188,7 @@ export interface IpcResponses {
   'git:remote-add': void;
   'dialog:open-directory': string | null;
   'dialog:save-directory': string | null;
+  'dialog:open-file': string | null;
   'shell:open-external': void;
   'shell:open-terminal': void;
   'shell:reveal-in-explorer': void;
@@ -220,16 +233,20 @@ export interface IpcResponses {
     backgroundFetchEnabled: boolean;
     backgroundFetchIntervalMin: number;
     desktopNotifications: boolean;
+    notificationSoundEnabled: boolean;
     autoRefreshOnChange: boolean;
     onboardingCompleted: boolean;
     hotkeyShowApp: string;
     hotkeyCommandPalette: string;
     defaultCloneDir: string;
+    lastSeenWhatsNewVersion: string;
   };
   'app:set-settings': void;
   'app:watch-repo': void;
   'app:get-explorer-menu': { enabled: boolean };
   'app:set-explorer-menu': void;
+  'app:export-settings': { path: string };
+  'app:import-settings': void;
   'git:diff': { patch: string; isBinary: boolean };
   'git:restore': void;
   'git:restore-all': void;
@@ -240,6 +257,7 @@ export interface IpcResponses {
   };
   'git:stash-pop': void;
   'git:stash-drop': void;
+  'git:stash-apply': void;
   'git:fetch': void;
   'git:remote-ahead': { ahead: number | null };
   'git:add': void;
@@ -260,6 +278,8 @@ export interface IpcResponses {
   'git:tag-create': { name: string };
   'git:tag-delete': void;
   'git:apply-cached': void;
+  'git:commit-amend': { hash: string };
+  'git:cherry-pick': void;
   'terminal:spawn': { sessionId: string };
   'terminal:write': void;
   'terminal:resize': void;

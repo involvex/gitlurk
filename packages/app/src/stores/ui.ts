@@ -55,6 +55,7 @@ export interface UiSlice {
   workspaceTab: WorkspaceTab;
   showCommandPalette: boolean;
   showOnboarding: boolean;
+  showWhatsNew: boolean;
   sidebarCollapsed: boolean;
   backgroundFetchEnabled: boolean;
   backgroundFetchIntervalMin: number;
@@ -107,6 +108,7 @@ export interface UiSlice {
   setWorkspaceTab: (tab: WorkspaceTab) => void;
   setShowCommandPalette: (show: boolean) => void;
   setShowOnboarding: (show: boolean) => void;
+  setShowWhatsNew: (show: boolean) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setBackgroundFetchEnabled: (enabled: boolean) => void;
   setBackgroundFetchIntervalMin: (minutes: number) => void;
@@ -191,6 +193,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   workspaceTab: 'changes',
   showCommandPalette: false,
   showOnboarding: false,
+  showWhatsNew: false,
   sidebarCollapsed: false,
   backgroundFetchEnabled: true,
   backgroundFetchIntervalMin: 15,
@@ -245,6 +248,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   setWorkspaceTab: (workspaceTab) => set({ workspaceTab }),
   setShowCommandPalette: (showCommandPalette) => set({ showCommandPalette }),
   setShowOnboarding: (showOnboarding) => set({ showOnboarding }),
+  setShowWhatsNew: (showWhatsNew) => set({ showWhatsNew }),
   setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
   setBackgroundFetchEnabled: (backgroundFetchEnabled) =>
     set({ backgroundFetchEnabled }),

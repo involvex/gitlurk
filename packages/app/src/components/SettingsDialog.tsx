@@ -404,9 +404,7 @@ export function SettingsDialog() {
                 type="checkbox"
                 checked={notificationSoundEnabled}
                 onChange={(e) => {
-                  useAppStore
-                    .getState()
-                    .setNotificationSoundEnabled(e.target.checked);
+                  void dispatcher.setNotificationSoundEnabled(e.target.checked);
                 }}
                 className="mt-0.5"
               />
@@ -438,6 +436,30 @@ export function SettingsDialog() {
                 </span>
               </span>
             </label>
+
+            <div className="rounded-md border border-border p-3">
+              <p className="text-sm font-medium">Backup &amp; restore</p>
+              <p className="mt-0.5 text-xs text-muted">
+                Export settings and your repository list to a JSON file, or
+                restore them from a previous backup.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void dispatcher.exportSettings()}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated"
+                >
+                  Export settings
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void dispatcher.importSettings()}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated"
+                >
+                  Import settings
+                </button>
+              </div>
+            </div>
           </div>
         ) : tab === 'theme' ? (
           <div className="space-y-4">

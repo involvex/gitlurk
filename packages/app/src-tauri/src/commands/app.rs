@@ -83,6 +83,13 @@ fn write_settings(state: &AppState, settings: &Settings) -> Result<(), String> {
     fs::write(state.settings_file(), content).map_err(|e| e.to_string())
 }
 
+#[derive(Serialize, Deserialize)]
+struct SettingsBackup {
+    version: u32,
+    settings: Settings,
+    repos: Vec<RepoEntry>,
+}
+
 #[tauri::command(rename_all = "camelCase")]
 pub fn app_take_pending_action(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     match state.take_cli_action() {
@@ -138,11 +145,13 @@ pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value,
         "backgroundFetchEnabled": settings.background_fetch_enabled,
         "backgroundFetchIntervalMin": settings.background_fetch_interval_min,
         "desktopNotifications": settings.desktop_notifications,
+        "notificationSoundEnabled": settings.notification_sound_enabled,
         "autoRefreshOnChange": settings.auto_refresh_on_change,
         "onboardingCompleted": settings.onboarding_completed,
         "hotkeyShowApp": settings.hotkey_show_app,
         "hotkeyCommandPalette": settings.hotkey_command_palette,
         "defaultCloneDir": settings.default_clone_dir,
+        "lastSeenWhatsNewVersion": settings.last_seen_whats_new_version,
     }))
 }
 
@@ -166,11 +175,13 @@ pub fn app_set_settings(
     background_fetch_enabled: Option<bool>,
     background_fetch_interval_min: Option<u32>,
     desktop_notifications: Option<bool>,
+    notification_sound_enabled: Option<bool>,
     auto_refresh_on_change: Option<bool>,
     onboarding_completed: Option<bool>,
     hotkey_show_app: Option<String>,
     hotkey_command_palette: Option<String>,
     default_clone_dir: Option<String>,
+    last_seen_whats_new_version: Option<String>,
 ) -> Result<(), String> {
     let mut settings = read_settings(&state);
     let mut hotkey_changed = false;
@@ -235,6 +246,9 @@ pub fn app_set_settings(
     if let Some(v) = desktop_notifications {
         settings.desktop_notifications = v;
     }
+    if let Some(v) = notification_sound_enabled {
+        settings.notification_sound_enabled = v;
+    }
     if let Some(v) = auto_refresh_on_change {
         settings.auto_refresh_on_change = v;
     }
@@ -262,6 +276,9 @@ pub fn app_set_settings(
     }
     if let Some(v) = default_clone_dir {
         settings.default_clone_dir = v.trim().to_string();
+    }
+    if let Some(v) = last_seen_whats_new_version {
+        settings.last_seen_whats_new_version = v;
     }
     write_settings(&state, &settings)?;
     if hotkey_changed {
@@ -310,5 +327,41 @@ pub fn app_watch_repo(
     };
     let dir = validate_repo_path(&path)?;
     repo_watcher::watch_repo(app, &state.repo_watcher, &dir);
+    Ok(())
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn app_export_settings(
+    state: State<'_, AppState>,
+    dir: String,
+) -> Result<serde_json::Value, String> {
+    let target_dir = validate_repo_path(&dir)?;
+    if !target_dir.is_dir() {
+        return Err("Selected export folder does not exist".into());
+    }
+    let settings = read_settings(&state);
+    let repos = read_repos_file(&state);
+    let backup = SettingsBackup {
+        version: 1,
+        settings,
+        repos: repos.repos,
+    };
+    let content = serde_json::to_string_pretty(&backup).map_err(|e| e.to_string())?;
+    let file_path = target_dir.join("gitlurk-settings-backup.json");
+    fs::write(&file_path, content).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({ "path": file_path.to_string_lossy() }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn app_import_settings(state: State<'_, AppState>, file_path: String) -> Result<(), String> {
+    let source = validate_repo_path(&file_path)?;
+    if !source.is_file() {
+        return Err("Selected backup file does not exist".into());
+    }
+    let content = fs::read_to_string(&source).map_err(|e| e.to_string())?;
+    let backup: SettingsBackup = serde_json::from_str(&content)
+        .map_err(|_| "File is not a valid GitLurk settings backup".to_string())?;
+    write_settings(&state, &backup.settings)?;
+    write_repos_file(&state, &backup.repos)?;
     Ok(())
 }

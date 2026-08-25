@@ -2,11 +2,15 @@
 
 A collection of features that can be implemented to enhance GitLurk Desktop.
 
+**Legend:** ✅ DONE · 🟡 PARTIAL · ❌ NOT STARTED
+
+_Audited against codebase on 2026-08-25._
+
 ---
 
 ## Git Operations
 
-### 1. Interactive Staging / Unstaging
+### 1. Interactive Staging / Unstaging — 🟡 PARTIAL
 
 **Priority: High** | **Complexity: Medium**
 
@@ -16,7 +20,10 @@ Currently, files are listed as staged/unstaged/untracked but there's no way to s
 - Stage specific lines (like `git add -p`)
 - Discard changes per-file or per-hunk
 
-### 2. Git Stash Support
+> **Have:** hunk-level stage via `git apply --cached` (`DiffPanel.tsx`, `git:apply-cached`); file-level staging/unstaging complete.
+> **Missing:** hunk unstage (`--reverse`), per-hunk discard, line-level staging; hunk UI hidden when a file has only one hunk.
+
+### 2. Git Stash Support — 🟡 PARTIAL
 
 **Priority: High** | **Complexity: Low**
 
@@ -27,7 +34,10 @@ Add stash operations to the UI:
 - `git stash list` — show stash entries in a panel
 - `git stash drop` — remove a specific stash entry
 
-### 3. Git Rebase / Merge UI
+> **Have:** push/list/pop/drop full CRUD in `StashPanel.tsx`.
+> **Missing:** apply-without-pop (`git stash apply`).
+
+### 3. Git Rebase / Merge UI — ❌ NOT STARTED
 
 **Priority: High** | **Complexity: Medium**
 
@@ -37,7 +47,7 @@ Provide a visual rebase/merge workflow:
 - Show conflict resolution UI with 3-way merge view
 - Abort rebase/merge on conflict
 
-### 4. Git Log / History View
+### 4. Git Log / History View — 🟡 PARTIAL
 
 **Priority: High** | **Complexity: Medium**
 
@@ -48,7 +58,10 @@ Add a commit history viewer:
 - Click a commit to view its diff
 - Filter by author, date range, or message
 
-### 5. Discard Changes (git checkout / git restore)
+> **Have:** linear log + click-to-diff (`HistoryPanel.tsx`, `git:log`/`git:show`).
+> **Missing:** real topology rendering (graph is ASCII text), author/date/message filters, pagination beyond fixed limit of 80.
+
+### 5. Discard Changes (git checkout / git restore) — ✅ DONE
 
 **Priority: Medium** | **Complexity: Low**
 
@@ -58,7 +71,9 @@ Allow users to discard unstaged changes:
 - Discard all unstaged changes
 - Remove untracked files
 
-### 6. Cherry-Pick Support
+> Implemented via `git:restore`, `git:restore-all`, `git:clean` with ConfirmDialog guards.
+
+### 6. Cherry-Pick Support — ❌ NOT STARTED
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -67,7 +82,7 @@ Add ability to cherry-pick commits from the history view:
 - Select commits from log view
 - Cherry-pick with option to auto-commit or stage
 
-### 7. Tag Management
+### 7. Tag Management — ✅ DONE
 
 **Priority: Medium** | **Complexity: Low**
 
@@ -77,11 +92,13 @@ Add tag creation and listing:
 - List existing tags
 - Delete tags
 
+> Implemented via `git:tag-list/create/delete` in `BranchPanel.tsx`.
+
 ---
 
 ## GitHub Integration
 
-### 8. Create Pull Request from UI
+### 8. Create Pull Request from UI — ❌ NOT STARTED
 
 **Priority: High** | **Complexity: Medium**
 
@@ -92,7 +109,9 @@ Currently PRs are only listed. Add a "Create PR" flow:
 - Draft PR option
 - Reviewers and labels assignment
 
-### 9. Issue Management
+> `PullRequestPanel.tsx` is list-only; no `gh pr create` anywhere. **Queued as Phase 4.1.**
+
+### 9. Issue Management — ❌ NOT STARTED
 
 **Priority: High** | **Complexity: Medium**
 
@@ -103,7 +122,7 @@ Add issue tracking integration:
 - Assign labels, milestones, and assignees
 - Close/reopen issues
 
-### 10. GitHub Actions Workflow Viewer
+### 10. GitHub Actions Workflow Viewer — 🟡 PARTIAL
 
 **Priority: High** | **Complexity: Medium**
 
@@ -114,7 +133,10 @@ A dedicated CI/CD panel beyond the current "watch run" feature:
 - Re-run failed workflows
 - View workflow file content
 
-### 11. Code Review in App
+> **Have:** run list + raw `gh run watch` stream (`GhRunWatchDialog.tsx`, `dev:gh-run-*`).
+> **Missing:** job/step breakdown, re-run failed, workflow YAML viewer, filters.
+
+### 11. Code Review in App — ❌ NOT STARTED
 
 **Priority: High** | **Complexity: High**
 
@@ -125,7 +147,9 @@ Full PR review experience:
 - Approve / request changes / comment
 - View existing review comments
 
-### 12. Fork Management
+> Blocked by #41 (PR Detail View).
+
+### 12. Fork Management — 🟡 PARTIAL
 
 **Priority: Medium** | **Complexity: Low**
 
@@ -135,11 +159,14 @@ Extend the existing fork feature:
 - Sync fork with upstream
 - Create PR from fork
 
+> **Have:** `gh repo fork` + fork-and-clone flow that adds `upstream` remote.
+> **Missing:** sync fork from upstream, PR from fork, listing existing forks.
+
 ---
 
 ## UI/UX Improvements
 
-### 13. Keyboard Shortcuts
+### 13. Keyboard Shortcuts — 🟡 PARTIAL
 
 **Priority: High** | **Complexity: Medium**
 
@@ -152,7 +179,10 @@ Add customizable keyboard shortcuts:
 - `F5` — Refresh status
 - `Ctrl+K` — Quick file search
 
-### 14. Command Palette
+> **Have:** F5 refresh, Ctrl+B sidebar, Ctrl+Shift+C focus commit box, Ctrl+Shift+G pull, Ctrl+K/Ctrl+Shift+P palette (customizable), global Ctrl+Alt+G show-app.
+> **Missing:** true quick-commit action (Ctrl+Enter), palette file-search entries.
+
+### 14. Command Palette — ✅ DONE
 
 **Priority: High** | **Complexity: Medium**
 
@@ -162,7 +192,9 @@ A Spotlight-style command palette for quick access:
 - Recently used repos
 - Quick actions (commit, pull, push, checkout)
 
-### 15. Multi-Repository Workspace
+> Implemented in `CommandPalette.tsx` — ~14 commands + dynamic repo/branch entries, token scoring, arrow-key nav.
+
+### 15. Multi-Repository Workspace — ❌ NOT STARTED
 
 **Priority: High** | **Complexity: Medium**
 
@@ -172,7 +204,7 @@ Support viewing multiple repos simultaneously:
 - Cross-repo search
 - Aggregate status view across repos
 
-### 16. File Tree / Explorer View
+### 16. File Tree / Explorer View — 🟡 PARTIAL
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -183,7 +215,10 @@ Add a file explorer panel:
 - Quick file search by name
 - Show file icons based on extension
 
-### 17. Visual Branch Graph
+> **Have:** lazy-loaded tree + README/text preview in `OverviewView.tsx` (`fs:list-dir`/`fs:read-file`).
+> **Missing:** file-type icons, open-in-system-editor.
+
+### 17. Visual Branch Graph — ❌ NOT STARTED
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -193,7 +228,7 @@ Enhance branch panel with visual graph:
 - Color-coded branches
 - Drag-and-drop merge/rebase
 
-### 18. Dark Mode Improvements
+### 18. Dark Mode Improvements — 🟡 PARTIAL
 
 **Priority: Low** | **Complexity: Low**
 
@@ -203,11 +238,14 @@ Enhance the dark/light theme system:
 - High contrast mode for accessibility
 - Per-repo theme override
 
+> **Have:** light/dark/system + 4 presets including high-contrast.
+> **Missing:** custom theme builder, per-repo override (arguably fine as-is).
+
 ---
 
 ## AI Features
 
-### 19. AI-Powered Code Review
+### 19. AI-Powered Code Review — ❌ NOT STARTED
 
 **Priority: High** | **Complexity: High**
 
@@ -217,7 +255,7 @@ Use AI to review staged changes before commit:
 - Detect potential bugs
 - Check for security issues
 
-### 20. AI Commit Message Enhancement
+### 20. AI Commit Message Enhancement — 🟡 PARTIAL
 
 **Priority: Medium** | **Complexity: Low**
 
@@ -227,7 +265,10 @@ Extend the existing AI commit feature:
 - Generate PR descriptions from diff
 - Summarize changes across multiple commits
 
-### 21. AI-Powered Git Help
+> **Have:** working commit generation across opencode/kilo providers.
+> **Missing:** `style` param accepted by backend but never passed from UI; no conventional-commit validation; no PR description gen; no multi-commit summarization.
+
+### 21. AI-Powered Git Help — ❌ NOT STARTED
 
 **Priority: Low** | **Complexity: Low**
 
@@ -241,7 +282,7 @@ In-app AI assistant for git commands:
 
 ## Developer Experience
 
-### 22. Git Hooks Management
+### 22. Git Hooks Management — ❌ NOT STARTED
 
 **Priority: High** | **Complexity: Medium**
 
@@ -252,7 +293,7 @@ Visual management of git hooks:
 - Create/edit hook scripts
 - Show hook execution logs
 
-### 23. Submodule Management
+### 23. Submodule Management — 🟡 PARTIAL
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -262,7 +303,9 @@ Submodule operations in the UI:
 - View submodule status
 - Clone with submodules
 
-### 24. Git LFS Support
+> **Have:** clone-time `--recurse-submodules` flag only.
+
+### 24. Git LFS Support — ❌ NOT STARTED
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -272,7 +315,7 @@ Large File Storage integration:
 - Install/uninstall LFS
 - Migrate files to/from LFS
 
-### 25. Interactive Git Rebase Editor
+### 25. Interactive Git Rebase Editor — ❌ NOT STARTED
 
 **Priority: Medium** | **Complexity: High**
 
@@ -286,7 +329,7 @@ A visual rebase editor:
 
 ## Performance & Reliability
 
-### 26. Offline Support
+### 26. Offline Support — ❌ NOT STARTED
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -296,7 +339,7 @@ Cache data for offline use:
 - Show cached data when offline
 - Queue operations for when connection returns
 
-### 27. Background Fetch
+### 27. Background Fetch — ✅ DONE
 
 **Priority: Medium** | **Complexity: Low**
 
@@ -306,7 +349,9 @@ Auto-fetch remote changes:
 - Show notification when new commits available
 - Configurable fetch interval
 
-### 28. Repository Watcher
+> Renderer-side interval + OS notification when ahead; interval persisted & clamped 5–120 min.
+
+### 28. Repository Watcher — ✅ DONE
 
 **Priority: Low** | **Complexity: Low**
 
@@ -316,11 +361,13 @@ Watch file system changes:
 - Debounced updates
 - Show file change indicators
 
+> Rust-side `notify` watcher with 1500 ms debounce emitting `repo-changed`; frontend refresh debounce 1200 ms.
+
 ---
 
 ## Security & Privacy
 
-### 29. GPG Signing Support
+### 29. GPG Signing Support — ❌ NOT STARTED
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -330,7 +377,7 @@ Sign commits and tags with GPG keys:
 - Sign commits automatically
 - Verify signatures on incoming commits
 
-### 30. Secret Scanning
+### 30. Secret Scanning — ❌ NOT STARTED
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -344,7 +391,7 @@ Scan for accidentally committed secrets:
 
 ## Integration & Extensibility
 
-### 31. Custom Webhook Support
+### 31. Custom Webhook Support — ❌ NOT STARTED
 
 **Priority: Low** | **Complexity: Medium**
 
@@ -354,7 +401,7 @@ Configure webhooks for repo events:
 - Custom webhook URLs
 - Event filtering
 
-### 32. Git Worktree Support
+### 32. Git Worktree Support — ❌ NOT STARTED
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -364,7 +411,7 @@ Manage git worktrees:
 - List active worktrees
 - Remove worktrees
 
-### 33. External Diff Tool Integration
+### 33. External Diff Tool Integration — ❌ NOT STARTED
 
 **Priority: Low** | **Complexity: Low**
 
@@ -374,7 +421,7 @@ Launch external diff tools:
 - Configure custom merge tool
 - Open in external editor
 
-### 34. SSH Key Management
+### 34. SSH Key Management — ❌ NOT STARTED
 
 **Priority: Low** | **Complexity: Medium**
 
@@ -389,7 +436,7 @@ Manage SSH keys within the app:
 
 ## Polish & Quality of Life
 
-### 35. Search Across Repos
+### 35. Search Across Repos — ❌ NOT STARTED
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -400,7 +447,9 @@ Global search functionality:
 - File name search
 - Commit message search
 
-### 36. Recent Repositories
+> Note: GitHub remote repo search exists in DiscoverView; local cross-repo search does not.
+
+### 36. Recent Repositories — ✅ DONE
 
 **Priority: Low** | **Complexity: Low**
 
@@ -410,7 +459,9 @@ Quick access to recently opened repos:
 - Pinned/favorite repos
 - Search recent repos
 
-### 37. Notification Improvements
+> Pins + recents sort + context menu done; sidebar search input is the remaining gap (queued).
+
+### 37. Notification Improvements — 🟡 PARTIAL
 
 **Priority: Medium** | **Complexity: Low**
 
@@ -420,7 +471,10 @@ Enhance the notification system:
 - Custom notification sounds
 - Notification preferences per repo
 
-### 38. Export/Import Settings
+> **Have:** OS notifications on new unread notifications, tray menu.
+> **Missing/Bug:** sound checkbox is dead — value never persisted (absent from Rust `Settings`) and no playback code; no per-repo prefs.
+
+### 38. Export/Import Settings — ❌ NOT STARTED
 
 **Priority: Low** | **Complexity: Low**
 
@@ -430,7 +484,7 @@ Backup and restore configuration:
 - Import settings from file
 - Sync settings across devices
 
-### 39. Changelog / What's New Panel
+### 39. Changelog / What's New Panel — ❌ NOT STARTED
 
 **Priority: Low** | **Complexity: Low**
 
@@ -440,7 +494,7 @@ Show release notes in-app:
 - Link to full release notes
 - Mark items as read
 
-### 40. Onboarding Flow
+### 40. Onboarding Flow — ✅ DONE
 
 **Priority: Medium** | **Complexity: Low**
 
@@ -450,23 +504,111 @@ First-run experience:
 - Initial setup wizard (sign in, select default shell)
 - Quick start guide
 
+> `OnboardingDialog.tsx`: welcome → optional GitHub sign-in → terminal shell picker → first-repo actions; gated by persisted `onboardingCompleted`.
+
+---
+
+## Recently Added
+
+### 41. PR Detail View — ❌ NOT STARTED
+
+**Priority: High** | **Complexity: Medium**
+
+View a PR's metadata, description, and diff inside the app using `gh pr view --json` + `gh pr diff`. Prerequisite for #11 (Code Review).
+
+### 42. Commit Amend & Fixup — ❌ NOT STARTED
+
+**Priority: High** | **Complexity: Low**
+
+Amend last commit (reuse or replace message), create fixup commits targeting recent SHAs.
+
+### 43. Blame View — ❌ NOT STARTED
+
+**Priority: Medium** | **Complexity: Medium**
+
+`git blame` gutter view per file, click a line's commit to open it in history.
+
+### 44. Per-file History — ❌ NOT STARTED
+
+**Priority: Medium** | **Complexity: Low**
+
+Log filtered to a single file, launched from explorer/changes view.
+
+### 45. Branch Cleanup — ❌ NOT STARTED
+
+**Priority: Medium** | **Complexity: Low**
+
+Detect branches merged into HEAD/upstream; delete stale local branches with confirmation.
+
+### 46. Compare Branches — ❌ NOT STARTED
+
+**Priority: Medium** | **Complexity: Medium**
+
+Pick any two branches and see their diff before merging.
+
+### 47. Reflog Undo — ❌ NOT STARTED
+
+**Priority: Medium** | **Complexity: Medium**
+
+"Undo" affordance after destructive ops (amend, reset) driven by reflog lookup.
+
+### 48. .gitignore Editor + Templates — ❌ NOT STARTED
+
+**Priority: Low** | **Complexity: Low**
+
+Edit `.gitignore` in-app with template gallery (Node, Python, VS, macOS…).
+
+### 49. Drag & Drop Folder Open — ❌ NOT STARTED
+
+**Priority: Medium** | **Complexity: Low**
+
+Drop a folder onto the window to open it as a repository.
+
+### 50. Repos Dashboard — ❌ NOT STARTED
+
+**Priority: High** | **Complexity: Medium**
+
+Aggregate ahead/behind/dirty status badges across all pinned repos in the sidebar footer.
+
+### 51. Clickable Notifications Deep Links — ❌ NOT STARTED
+
+**Priority: Medium** | **Complexity: Low**
+
+Clicking an OS notification or tray item focuses the relevant run/PR/repo (extends `tray-action` event pattern).
+
+### 52. Plugin-contributed Commands — ❌ NOT STARTED
+
+**Priority: Low** | **Complexity: Medium**
+
+Plugins register entries into the Command Palette via manifest declarations.
+
+---
+
+## Known Bugs
+
+| Bug                                | Detail                                                                                                                                                                             |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🔴 Dead `notificationSoundEnabled` | Checkbox renders in Settings but the field is absent from the Rust `Settings` struct and `app:get-settings` response, so it resets every launch; no playback code exists anywhere. |
+| 🔴 Unreachable AI `style` param    | Backend accepts `{ path, style }` but the frontend always sends `{ path }` only, so style hints are dead code.                                                                     |
+
 ---
 
 ## Statistics
 
-| Category                    | Count  |
-| --------------------------- | ------ |
-| Git Operations              | 7      |
-| GitHub Integration          | 5      |
-| UI/UX Improvements          | 6      |
-| AI Features                 | 3      |
-| Developer Experience        | 4      |
-| Performance & Reliability   | 3      |
-| Security & Privacy          | 2      |
-| Integration & Extensibility | 4      |
-| Polish & Quality of Life    | 6      |
-| **Total**                   | **40** |
+| Category                    | Total  | Done  | Partial | Not started |
+| --------------------------- | ------ | ----- | ------- | ----------- |
+| Git Operations              | 7      | 2     | 3       | 2           |
+| GitHub Integration          | 5      | 0     | 2       | 3           |
+| UI/UX Improvements          | 6      | 1     | 3       | 2           |
+| AI Features                 | 3      | 0     | 1       | 2           |
+| Developer Experience        | 4      | 0     | 1       | 3           |
+| Performance & Reliability   | 3      | 2     | 0       | 1           |
+| Security & Privacy          | 2      | 0     | 0       | 2           |
+| Integration & Extensibility | 4      | 0     | 0       | 4           |
+| Polish & Quality of Life    | 6      | 2     | 1       | 3           |
+| Recently Added              | 12     | 0     | 0       | 12          |
+| **Total**                   | **52** | **7** | **11**  | **34**      |
 
 ---
 
-_Last updated: 2026-07-16_
+_Last updated: 2026-08-25_

@@ -102,6 +102,8 @@ pub struct Settings {
     #[serde(default = "default_true")]
     pub desktop_notifications: bool,
     #[serde(default = "default_true")]
+    pub notification_sound_enabled: bool,
+    #[serde(default = "default_true")]
     pub auto_refresh_on_change: bool,
     #[serde(default)]
     pub onboarding_completed: bool,
@@ -111,6 +113,8 @@ pub struct Settings {
     pub hotkey_command_palette: String,
     #[serde(default)]
     pub default_clone_dir: String,
+    #[serde(default)]
+    pub last_seen_whats_new_version: String,
 }
 
 fn default_theme() -> String {
@@ -171,11 +175,13 @@ impl Default for Settings {
             background_fetch_enabled: true,
             background_fetch_interval_min: default_fetch_interval(),
             desktop_notifications: true,
+            notification_sound_enabled: true,
             auto_refresh_on_change: true,
             onboarding_completed: false,
             hotkey_show_app: hotkeys::default_show_app(),
             hotkey_command_palette: hotkeys::default_command_palette(),
             default_clone_dir: String::new(),
+            last_seen_whats_new_version: String::new(),
         }
     }
 }
@@ -373,6 +379,7 @@ pub fn run() {
             commands::git::git_stash_list,
             commands::git::git_stash_pop,
             commands::git::git_stash_drop,
+            commands::git::git_stash_apply,
             commands::git::git_fetch,
             commands::git::git_remote_ahead,
             commands::git::git_add,
@@ -383,8 +390,11 @@ pub fn run() {
             commands::git::git_tag_create,
             commands::git::git_tag_delete,
             commands::git::git_apply_cached,
+            commands::git::git_commit_amend,
+            commands::git::git_cherry_pick,
             commands::dialog::dialog_open_directory,
             commands::dialog::dialog_save_directory,
+            commands::dialog::dialog_open_file,
             commands::app::app_get_repos,
             commands::app::app_save_repos,
             commands::app::app_get_settings,
@@ -395,6 +405,8 @@ pub fn run() {
             commands::app::app_get_explorer_menu,
             commands::app::app_set_explorer_menu,
             commands::app::app_watch_repo,
+            commands::app::app_export_settings,
+            commands::app::app_import_settings,
             commands::auth::auth_github_device_start,
             commands::auth::auth_github_device_poll,
             commands::auth::auth_get_token,

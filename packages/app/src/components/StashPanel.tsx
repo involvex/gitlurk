@@ -59,6 +59,19 @@ export function StashPanel() {
                   onClick={() => {
                     setBusy(true);
                     void dispatcher
+                      .stashApply(entry.index)
+                      .finally(() => setBusy(false));
+                  }}
+                  className="rounded border border-border px-1.5 py-0.5 text-[10px] hover:bg-surface"
+                >
+                  Apply
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setBusy(true);
+                    void dispatcher
                       .stashPop(entry.index)
                       .finally(() => setBusy(false));
                   }}
