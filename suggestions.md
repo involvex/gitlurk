@@ -4,7 +4,7 @@ A collection of features that can be implemented to enhance GitLurk Desktop.
 
 **Legend:** ✅ DONE · 🟡 PARTIAL · ❌ NOT STARTED
 
-_Audited against codebase on 2026-08-25._
+_Audited against codebase on 2026-08-26._
 
 ---
 
@@ -20,10 +20,10 @@ Currently, files are listed as staged/unstaged/untracked but there's no way to s
 - Stage specific lines (like `git add -p`)
 - Discard changes per-file or per-hunk
 
-> **Have:** hunk-level stage via `git apply --cached` (`DiffPanel.tsx`, `git:apply-cached`); file-level staging/unstaging complete.
-> **Missing:** hunk unstage (`--reverse`), per-hunk discard, line-level staging; hunk UI hidden when a file has only one hunk.
+> **Have:** hunk-level stage/unstage/discard (`DiffPanel.tsx`, `git:apply-cached` with stage/unstage/discard modes); file-level staging/unstaging complete.
+> **Missing:** line-level staging within a hunk.
 
-### 2. Git Stash Support — 🟡 PARTIAL
+### 2. Git Stash Support — ✅ DONE
 
 **Priority: High** | **Complexity: Low**
 
@@ -34,8 +34,7 @@ Add stash operations to the UI:
 - `git stash list` — show stash entries in a panel
 - `git stash drop` — remove a specific stash entry
 
-> **Have:** push/list/pop/drop full CRUD in `StashPanel.tsx`.
-> **Missing:** apply-without-pop (`git stash apply`).
+> Implemented push/list/apply/pop/drop full CRUD in `StashPanel.tsx` (`git:stash-push/list/apply/pop/drop`).
 
 ### 3. Git Rebase / Merge UI — ❌ NOT STARTED
 
@@ -58,8 +57,8 @@ Add a commit history viewer:
 - Click a commit to view its diff
 - Filter by author, date range, or message
 
-> **Have:** linear log + click-to-diff (`HistoryPanel.tsx`, `git:log`/`git:show`).
-> **Missing:** real topology rendering (graph is ASCII text), author/date/message filters, pagination beyond fixed limit of 80.
+> **Have:** linear log + click-to-diff (`HistoryPanel.tsx`, `git:log`/`git:show`) and real SVG topology rendering (`CommitGraphRow.tsx` + `lib/graph-layout`).
+> **Missing:** author/date/message filters, pagination beyond fixed limit of 80.
 
 ### 5. Discard Changes (git checkout / git restore) — ✅ DONE
 
@@ -73,7 +72,7 @@ Allow users to discard unstaged changes:
 
 > Implemented via `git:restore`, `git:restore-all`, `git:clean` with ConfirmDialog guards.
 
-### 6. Cherry-Pick Support — ❌ NOT STARTED
+### 6. Cherry-Pick Support — ✅ DONE
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -81,6 +80,8 @@ Add ability to cherry-pick commits from the history view:
 
 - Select commits from log view
 - Cherry-pick with option to auto-commit or stage
+
+> Implemented via `git:cherry-pick` context action in `HistoryPanel.tsx`.
 
 ### 7. Tag Management — ✅ DONE
 
@@ -133,8 +134,8 @@ A dedicated CI/CD panel beyond the current "watch run" feature:
 - Re-run failed workflows
 - View workflow file content
 
-> **Have:** run list + raw `gh run watch` stream (`GhRunWatchDialog.tsx`, `dev:gh-run-*`).
-> **Missing:** job/step breakdown, re-run failed, workflow YAML viewer, filters.
+> **Have:** run list, structured job/step breakdown with timing, live log tab, and re-run failed jobs (`GhRunWatchDialog.tsx`, `dev:gh-run-view`, `dev:gh-run-rerun --failed`).
+> **Missing:** workflow YAML viewer, workflow/run filters.
 
 ### 11. Code Review in App — ❌ NOT STARTED
 
@@ -159,8 +160,8 @@ Extend the existing fork feature:
 - Sync fork with upstream
 - Create PR from fork
 
-> **Have:** `gh repo fork` + fork-and-clone flow that adds `upstream` remote.
-> **Missing:** sync fork from upstream, PR from fork, listing existing forks.
+> **Have:** `gh repo fork` + fork-and-clone flow that adds `upstream` remote; sync fork with upstream (`dev:gh-repo-sync`).
+> **Missing:** PR from fork, listing existing forks.
 
 ---
 
@@ -471,10 +472,10 @@ Enhance the notification system:
 - Custom notification sounds
 - Notification preferences per repo
 
-> **Have:** OS notifications on new unread notifications, tray menu.
-> **Missing/Bug:** sound checkbox is dead — value never persisted (absent from Rust `Settings`) and no playback code; no per-repo prefs.
+> **Have:** OS notifications on new unread notifications, tray menu; sound preference persisted in Rust `Settings` with WebAudio playback (`playNotificationSound`).
+> **Missing:** per-repo notification preferences.
 
-### 38. Export/Import Settings — ❌ NOT STARTED
+### 38. Export/Import Settings — ✅ DONE
 
 **Priority: Low** | **Complexity: Low**
 
@@ -484,7 +485,9 @@ Backup and restore configuration:
 - Import settings from file
 - Sync settings across devices
 
-### 39. Changelog / What's New Panel — ❌ NOT STARTED
+> Implemented export/import via `app:export-settings` / `app:import-settings` with Settings dialog actions.
+
+### 39. Changelog / What's New Panel — ✅ DONE
 
 **Priority: Low** | **Complexity: Low**
 
@@ -493,6 +496,8 @@ Show release notes in-app:
 - Display changelog on update
 - Link to full release notes
 - Mark items as read
+
+> Implemented in `WhatsNewDialog.tsx` — version-gated auto-show via `lastSeenWhatsNewVersion`, palette command, mark-as-seen.
 
 ### 40. Onboarding Flow — ✅ DONE
 
@@ -516,11 +521,14 @@ First-run experience:
 
 View a PR's metadata, description, and diff inside the app using `gh pr view --json` + `gh pr diff`. Prerequisite for #11 (Code Review).
 
-### 42. Commit Amend & Fixup — ❌ NOT STARTED
+### 42. Commit Amend & Fixup — 🟡 PARTIAL
 
 **Priority: High** | **Complexity: Low**
 
 Amend last commit (reuse or replace message), create fixup commits targeting recent SHAs.
+
+> **Have:** amend last commit (keep or replace message) in `ChangesView.tsx` (`git:commit-amend`).
+> **Missing:** fixup commits targeting recent SHAs.
 
 ### 43. Blame View — ❌ NOT STARTED
 
@@ -582,33 +590,82 @@ Clicking an OS notification or tray item focuses the relevant run/PR/repo (exten
 
 Plugins register entries into the Command Palette via manifest declarations.
 
+### 53. Commit Revert + Copy SHA — ❌ NOT STARTED
+
+**Priority: High** | **Complexity: Medium**
+
+Revert commits from the history view (`git revert --no-edit <sha>`), plus context-menu QoL:
+
+- Revert single commit with confirmation
+- Copy commit SHA / message to clipboard
+- Refresh log + status after revert
+
+> Sits alongside the existing cherry-pick plumbing in `HistoryPanel.tsx` and `git.rs`.
+
+### 54. In-App Update Check UI — ❌ NOT STARTED
+
+**Priority: High** | **Complexity: Medium**
+
+`tauri-plugin-updater` is fully wired on the Rust side (Cargo.toml, capabilities, tauri.conf.json) but unused by the frontend. Add:
+
+- "Check for updates" action in Settings + What's New dialog
+- Release notes display and download/install progress
+- Restart-to-install affordance
+
+### 55. Image/Binary Diff Preview — ❌ NOT STARTED
+
+**Priority: Medium** | **Complexity: Medium**
+
+DiffPanel currently dead-ends at "Binary file changed." Add:
+
+- Before/after image comparison for png/jpg/gif/webp/bmp/svg
+- Size-delta info panel for other binaries
+- Graceful fallback for oversized blobs
+
+### 56. Whitespace/EOL Controls — ❌ NOT STARTED
+
+**Priority: Medium** | **Complexity: Low**
+
+Windows-first app deserves first-class EOL handling:
+
+- Ignore-whitespace diff toggle (`git diff -w --ignore-cr-at-eol`)
+- CRLF/LF autocrlf advisory banner (reuse `dev:git-config-get`)
+
+### 57. Diagnostics Export — ❌ NOT STARTED
+
+**Priority: Low** | **Complexity: Low**
+
+One-click bundle in DeveloperPanel for bug reports:
+
+- App/git/gh versions, auth summary, sanitized settings JSON
+- Saved via save dialog, path surfaced as toast
+
 ---
 
 ## Known Bugs
 
-| Bug                                | Detail                                                                                                                                                                             |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🔴 Dead `notificationSoundEnabled` | Checkbox renders in Settings but the field is absent from the Rust `Settings` struct and `app:get-settings` response, so it resets every launch; no playback code exists anywhere. |
-| 🔴 Unreachable AI `style` param    | Backend accepts `{ path, style }` but the frontend always sends `{ path }` only, so style hints are dead code.                                                                     |
+_No known bugs currently tracked._
+
+> Previously tracked, both fixed: dead `notificationSoundEnabled` (now persisted in Rust `Settings` with WebAudio playback) and unreachable AI `style` param (now selectable in ChangesView and passed to `ai:generate-commit-message`).
 
 ---
 
 ## Statistics
 
-| Category                    | Total  | Done  | Partial | Not started |
-| --------------------------- | ------ | ----- | ------- | ----------- |
-| Git Operations              | 7      | 2     | 3       | 2           |
-| GitHub Integration          | 5      | 0     | 2       | 3           |
-| UI/UX Improvements          | 6      | 1     | 3       | 2           |
-| AI Features                 | 3      | 0     | 1       | 2           |
-| Developer Experience        | 4      | 0     | 1       | 3           |
-| Performance & Reliability   | 3      | 2     | 0       | 1           |
-| Security & Privacy          | 2      | 0     | 0       | 2           |
-| Integration & Extensibility | 4      | 0     | 0       | 4           |
-| Polish & Quality of Life    | 6      | 2     | 1       | 3           |
-| Recently Added              | 12     | 0     | 0       | 12          |
-| **Total**                   | **52** | **7** | **11**  | **34**      |
+| Category                    | Total  | Done   | Partial | Not started |
+| --------------------------- | ------ | ------ | ------- | ----------- |
+| Git Operations              | 7      | 4      | 2       | 1           |
+| GitHub Integration          | 5      | 0      | 2       | 3           |
+| UI/UX Improvements          | 6      | 1      | 3       | 2           |
+| AI Features                 | 3      | 0      | 1       | 2           |
+| Developer Experience        | 4      | 0      | 1       | 3           |
+| Performance & Reliability   | 3      | 2      | 0       | 1           |
+| Security & Privacy          | 2      | 0      | 0       | 2           |
+| Integration & Extensibility | 4      | 0      | 0       | 4           |
+| Polish & Quality of Life    | 6      | 4      | 1       | 1           |
+| Recently Added              | 17     | 0      | 1       | 16          |
+| **Total**                   | **57** | **11** | **11**  | **35**      |
 
 ---
 
-_Last updated: 2026-08-25_
+_Last updated: 2026-08-26_
