@@ -392,6 +392,7 @@ pub fn run() {
             commands::git::git_apply_cached,
             commands::git::git_commit_amend,
             commands::git::git_cherry_pick,
+            commands::git::git_revert,
             commands::dialog::dialog_open_directory,
             commands::dialog::dialog_save_directory,
             commands::dialog::dialog_open_file,

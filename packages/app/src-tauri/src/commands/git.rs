@@ -356,3 +356,9 @@ pub fn git_cherry_pick(
     let dir = validate_repo_path(&path)?;
     state.git.cherry_pick(&dir, &sha)
 }
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_revert(state: State<'_, AppState>, path: String, sha: String) -> Result<(), String> {
+    let dir = validate_repo_path(&path)?;
+    state.git.revert_commit(&dir, &sha)
+}

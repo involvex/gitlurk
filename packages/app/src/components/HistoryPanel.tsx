@@ -18,6 +18,7 @@ export function HistoryPanel() {
   const [pendingCherryPickSha, setPendingCherryPickSha] = useState<
     string | null
   >(null);
+  const [pendingRevertSha, setPendingRevertSha] = useState<string | null>(null);
 
   useEffect(() => {
     setFilter('');
@@ -124,15 +125,60 @@ export function HistoryPanel() {
                 <span className="font-mono text-xs text-muted">
                   Commit {selectedCommitSha.slice(0, 7)}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setPendingCherryPickSha(selectedCommitSha)}
-                  disabled={commitDiffLoading || !commitDiff}
-                  title="Copy this commit onto the current branch"
-                  className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-surface disabled:opacity-50"
-                >
-                  Cherry-pick
-                </button>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const entry = commitLog.find(
+                        (e) => e.sha === selectedCommitSha,
+                      );
+                      if (entry) {
+                        void navigator.clipboard.writeText(entry.sha);
+                        useAppStore.getState().showToast('Commit SHA copied');
+                      }
+                    }}
+                    title="Copy full commit SHA"
+                    className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-surface"
+                  >
+                    Copy SHA
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const entry = commitLog.find(
+                        (e) => e.sha === selectedCommitSha,
+                      );
+                      if (entry) {
+                        void navigator.clipboard.writeText(entry.subject);
+                        useAppStore
+                          .getState()
+                          .showToast('Commit message copied');
+                      }
+                    }}
+                    title="Copy commit message"
+                    className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-surface"
+                  >
+                    Copy message
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingRevertSha(selectedCommitSha)}
+                    disabled={commitDiffLoading || !commitDiff}
+                    title="Create a commit that undoes this one"
+                    className="rounded border border-border px-2 py-0.5 text-[10px] text-danger hover:bg-surface disabled:opacity-50"
+                  >
+                    Revert
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingCherryPickSha(selectedCommitSha)}
+                    disabled={commitDiffLoading || !commitDiff}
+                    title="Copy this commit onto the current branch"
+                    className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-surface disabled:opacity-50"
+                  >
+                    Cherry-pick
+                  </button>
+                </div>
               </div>
               {commitDiffLoading ? (
                 <div className="flex h-full items-center justify-center text-sm text-muted">
@@ -168,6 +214,19 @@ export function HistoryPanel() {
           onConfirm={() => {
             void dispatcher.cherryPick(pendingCherryPickSha);
             setPendingCherryPickSha(null);
+          }}
+        />
+      ) : null}
+
+      {pendingRevertSha ? (
+        <ConfirmDialog
+          title="Revert this commit?"
+          message={`Create a new commit that undoes ${pendingRevertSha.slice(0, 7)}? This is safe for shared history, unlike rewriting it.`}
+          confirmLabel="Revert"
+          onCancel={() => setPendingRevertSha(null)}
+          onConfirm={() => {
+            void dispatcher.revertCommit(pendingRevertSha);
+            setPendingRevertSha(null);
           }}
         />
       ) : null}

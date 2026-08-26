@@ -262,6 +262,17 @@ impl GitService {
         Ok(())
     }
 
+    pub fn revert_commit(&self, dir: &Path, sha: &str) -> Result<(), String> {
+        if !sha.chars().all(|c| c.is_ascii_hexdigit()) || sha.len() < 4 {
+            return Err("Invalid commit SHA".into());
+        }
+        let output = self.exec(&["revert", "--no-edit", sha], dir)?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    }
+
     pub fn pull(&self, dir: &Path) -> Result<String, String> {
         let output = self.exec(&["pull"], dir)?;
         if !output.status.success() {

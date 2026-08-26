@@ -1592,6 +1592,26 @@ export const dispatcher = {
     }
   },
 
+  async revertCommit(sha: string) {
+    const path = getStore().activeRepoPath;
+    if (!path) return;
+    getStore().setGitOpLoading(true);
+    try {
+      await ipcInvoke('git:revert', { path, sha });
+      await dispatcher.refreshStatus();
+      await dispatcher.refreshCommitLog();
+      getStore().showToast(`Reverted ${sha.slice(0, 7)}`);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error
+          ? error.message
+          : 'Revert failed (conflicts may need manual resolution)',
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
+    }
+  },
+
   handleKeyboardShortcut(event: KeyboardEvent) {
     const target = event.target as HTMLElement | null;
     const tag = target?.tagName?.toLowerCase();

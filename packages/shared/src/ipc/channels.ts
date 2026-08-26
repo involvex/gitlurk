@@ -96,6 +96,7 @@ export interface IpcChannels {
   };
   'git:commit-amend': { path: string; message?: string };
   'git:cherry-pick': { path: string; sha: string };
+  'git:revert': { path: string; sha: string };
   'terminal:spawn': {
     cwd: string;
     cols: number;
@@ -284,6 +285,7 @@ export interface IpcResponses {
   'git:apply-cached': void;
   'git:commit-amend': { hash: string };
   'git:cherry-pick': void;
+  'git:revert': void;
   'terminal:spawn': { sessionId: string };
   'terminal:write': void;
   'terminal:resize': void;
