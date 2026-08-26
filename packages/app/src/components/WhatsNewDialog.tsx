@@ -34,17 +34,26 @@ export function WhatsNewDialog() {
           )}
         </div>
         <div className="mt-4 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              void dispatcher.openExternal(
-                'https://github.com/involvex/gitlurk/releases',
-              );
-            }}
-            className="text-xs text-primary hover:underline"
-          >
-            Full changelog on GitHub
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                void dispatcher.openExternal(
+                  'https://github.com/involvex/gitlurk/releases',
+                );
+              }}
+              className="text-xs text-primary hover:underline"
+            >
+              Full changelog on GitHub
+            </button>
+            <button
+              type="button"
+              onClick={() => void dispatcher.checkForUpdates()}
+              className="text-xs text-muted hover:text-primary hover:underline"
+            >
+              Check for updates
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => {

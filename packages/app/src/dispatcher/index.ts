@@ -5,6 +5,7 @@ import {
   sendNotification,
 } from '@tauri-apps/plugin-notification';
 import { ipcInvoke, onEvent, runningInTauri } from '../ipc/client';
+import { checkForUpdate, downloadAndInstallUpdate } from '../ipc/updater';
 import { matchesHotkey } from '../lib/hotkeys';
 import { useAppStore } from '../stores';
 import type { AiProvider } from '../stores/ui';
@@ -366,6 +367,53 @@ export const dispatcher = {
   async markWhatsNewSeen(version: string) {
     getStore().setShowWhatsNew(false);
     await ipcInvoke('app:set-settings', { lastSeenWhatsNewVersion: version });
+  },
+
+  async checkForUpdates(openDialog = true) {
+    const store = getStore();
+    if (openDialog) store.setShowUpdateDialog(true);
+    store.setUpdateCheck({ phase: 'checking', error: undefined });
+    try {
+      const info = await checkForUpdate();
+      if (!info) {
+        getStore().setUpdateCheck({ phase: 'up-to-date' });
+        if (!openDialog) getStore().showToast("You're up to date");
+        return;
+      }
+      getStore().setUpdateCheck({
+        phase: 'available',
+        version: info.version,
+        currentVersion: info.currentVersion,
+        notes: info.notes,
+        received: 0,
+        total: null,
+        error: undefined,
+      });
+    } catch (error) {
+      getStore().setUpdateCheck({
+        phase: 'error',
+        error: error instanceof Error ? error.message : 'Update check failed',
+      });
+    }
+  },
+
+  async installQueuedUpdate() {
+    getStore().setUpdateCheck({ phase: 'downloading', received: 0 });
+    try {
+      await downloadAndInstallUpdate(({ received, total }) => {
+        useAppStore.getState().setUpdateCheck({ received, total });
+      });
+      useAppStore
+        .getState()
+        .setUpdateCheck({ phase: 'installed', received: undefined });
+      getStore().showToast('Update installed — restart GitLurk to apply');
+    } catch (error) {
+      getStore().setUpdateCheck({
+        phase: 'error',
+        error:
+          error instanceof Error ? error.message : 'Update download failed',
+      });
+    }
   },
 
   async exportSettings() {

@@ -438,6 +438,22 @@ export function SettingsDialog() {
             </label>
 
             <div className="rounded-md border border-border p-3">
+              <p className="text-sm font-medium">Updates</p>
+              <p className="mt-0.5 text-xs text-muted">
+                Check releases.gitlurk.dev for signed GitLurk updates.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void dispatcher.checkForUpdates()}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated"
+                >
+                  Check for updates
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-border p-3">
               <p className="text-sm font-medium">Backup &amp; restore</p>
               <p className="mt-0.5 text-xs text-muted">
                 Export settings and your repository list to a JSON file, or

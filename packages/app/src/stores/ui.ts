@@ -21,6 +21,25 @@ export interface AuthDialogState {
   status: string;
 }
 
+export type UpdatePhase =
+  | 'idle'
+  | 'checking'
+  | 'up-to-date'
+  | 'available'
+  | 'downloading'
+  | 'installed'
+  | 'error';
+
+export interface UpdateState {
+  phase: UpdatePhase;
+  version?: string;
+  currentVersion?: string;
+  notes?: string | null;
+  received?: number;
+  total?: number | null;
+  error?: string;
+}
+
 export interface UiSlice {
   theme: ThemeMode;
   themePreset: ThemePreset;
@@ -58,6 +77,8 @@ export interface UiSlice {
   showCommandPalette: boolean;
   showOnboarding: boolean;
   showWhatsNew: boolean;
+  showUpdateDialog: boolean;
+  updateCheck: UpdateState;
   sidebarCollapsed: boolean;
   backgroundFetchEnabled: boolean;
   backgroundFetchIntervalMin: number;
@@ -115,6 +136,8 @@ export interface UiSlice {
   setShowCommandPalette: (show: boolean) => void;
   setShowOnboarding: (show: boolean) => void;
   setShowWhatsNew: (show: boolean) => void;
+  setShowUpdateDialog: (show: boolean) => void;
+  setUpdateCheck: (partial: Partial<UpdateState>) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setBackgroundFetchEnabled: (enabled: boolean) => void;
   setBackgroundFetchIntervalMin: (minutes: number) => void;
@@ -202,6 +225,8 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   showCommandPalette: false,
   showOnboarding: false,
   showWhatsNew: false,
+  showUpdateDialog: false,
+  updateCheck: { phase: 'idle' },
   sidebarCollapsed: false,
   backgroundFetchEnabled: true,
   backgroundFetchIntervalMin: 15,
@@ -259,6 +284,9 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   setShowCommandPalette: (showCommandPalette) => set({ showCommandPalette }),
   setShowOnboarding: (showOnboarding) => set({ showOnboarding }),
   setShowWhatsNew: (showWhatsNew) => set({ showWhatsNew }),
+  setShowUpdateDialog: (showUpdateDialog) => set({ showUpdateDialog }),
+  setUpdateCheck: (partial) =>
+    set((state) => ({ updateCheck: { ...state.updateCheck, ...partial } })),
   setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
   setBackgroundFetchEnabled: (backgroundFetchEnabled) =>
     set({ backgroundFetchEnabled }),

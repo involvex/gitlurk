@@ -602,17 +602,18 @@ Revert commits from the history view (`git revert --no-edit <sha>`), plus contex
 
 > Implemented via `git:revert` (`git_revert` command) with Revert / Copy SHA / Copy message actions in `HistoryPanel.tsx`.
 
-### 54. In-App Update Check UI — ❌ NOT STARTED
+### 54. In-App Update Check UI — 🟡 PARTIAL
 
 **Priority: High** | **Complexity: Medium**
 
-`tauri-plugin-updater` is fully wired on the Rust side (Cargo.toml, capabilities, tauri.conf.json) but unused by the frontend. Add:
+`tauri-plugin-updater` is fully wired on the Rust side (Cargo.toml, capabilities, tauri.conf.json). Add:
 
 - "Check for updates" action in Settings + What's New dialog
 - Release notes display and download/install progress
 - Restart-to-install affordance
 
-> **Blocked:** `tauri.conf.json` still ships the placeholder updater pubkey (`REPLACE_WITH_PUBLIC_KEY`). Generate a minisign keypair and wire signing into the release pipeline before building this UI.
+> **Have:** minisign keypair generated; real pubkey embedded in `tauri.conf.json`; `UpdateDialog.tsx` with check/notes/progress/installed states via the plugin's JS API (`ipc/updater.ts`), wired into Settings + What's New.
+> **Missing:** end-to-end updates — `https://releases.gitlurk.dev/latest.json` must be published with signed artifacts by the release pipeline; no auto-relaunch (needs `tauri-plugin-process`).
 
 ### 55. Image/Binary Diff Preview — ✅ DONE
 
@@ -671,8 +672,8 @@ _No known bugs currently tracked._
 | Security & Privacy          | 2      | 0      | 0       | 2           |
 | Integration & Extensibility | 4      | 0      | 0       | 4           |
 | Polish & Quality of Life    | 6      | 4      | 1       | 1           |
-| Recently Added              | 17     | 4      | 1       | 12          |
-| **Total**                   | **57** | **15** | **11**  | **31**      |
+| Recently Added              | 17     | 4      | 2       | 11          |
+| **Total**                   | **57** | **15** | **12**  | **30**      |
 
 ---
 

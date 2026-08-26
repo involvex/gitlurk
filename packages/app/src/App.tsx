@@ -16,6 +16,7 @@ import { GhRunWatchDialog } from './components/GhRunWatchDialog';
 import { CommandPalette } from './components/CommandPalette';
 import { OnboardingDialog } from './components/OnboardingDialog';
 import { WhatsNewDialog } from './components/WhatsNewDialog';
+import { UpdateDialog } from './components/UpdateDialog';
 import { ResizeHandle } from './components/ResizeHandle';
 import { Toast } from './components/Toast';
 import { dispatcher } from './dispatcher';
@@ -258,6 +259,7 @@ export function App() {
       <CommandPalette />
       <OnboardingDialog />
       <WhatsNewDialog />
+      <UpdateDialog />
       <Toast />
     </div>
   );
