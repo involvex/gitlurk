@@ -53,6 +53,7 @@ export interface GitOpsSlice {
   diffKind: DiffKind | null;
   fileDiff: FileDiff | null;
   diffLoading: boolean;
+  diffIgnoreWhitespace: boolean;
   stashes: StashEntry[];
   tags: TagEntry[];
   commitLog: CommitLogEntry[];
@@ -68,6 +69,7 @@ export interface GitOpsSlice {
   setSelectedFile: (file: string | null, kind: DiffKind | null) => void;
   setFileDiff: (diff: FileDiff | null) => void;
   setDiffLoading: (loading: boolean) => void;
+  setDiffIgnoreWhitespace: (ignore: boolean) => void;
   setStashes: (stashes: StashEntry[]) => void;
   setTags: (tags: TagEntry[]) => void;
   setCommitLog: (entries: CommitLogEntry[]) => void;
@@ -88,6 +90,7 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   diffKind: null,
   fileDiff: null,
   diffLoading: false,
+  diffIgnoreWhitespace: false,
   stashes: [],
   tags: [],
   commitLog: [],
@@ -103,6 +106,8 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   setSelectedFile: (file, kind) => set({ selectedFile: file, diffKind: kind }),
   setFileDiff: (diff) => set({ fileDiff: diff }),
   setDiffLoading: (loading) => set({ diffLoading: loading }),
+  setDiffIgnoreWhitespace: (diffIgnoreWhitespace) =>
+    set({ diffIgnoreWhitespace }),
   setStashes: (stashes) => set({ stashes }),
   setTags: (tags) => set({ tags }),
   setCommitLog: (commitLog) => set({ commitLog }),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
+import { ipcInvoke } from '../ipc/client';
 import type { DiffKind } from '../stores/git-ops';
 import { DiffPanel } from './DiffPanel';
 import { ResizeHandle } from './ResizeHandle';
@@ -113,11 +114,41 @@ export function ChangesView() {
   const [aiStyle, setAiStyle] = useState('concise conventional commit');
   const [templateLoaded, setTemplateLoaded] = useState(false);
   const [pendingAmend, setPendingAmend] = useState(false);
+  const [autocrlfUnset, setAutocrlfUnset] = useState(false);
+  const [autocrlfDismissed, setAutocrlfDismissed] = useState(false);
 
   useEffect(() => {
     if (!activeRepoPath) return;
     setTemplateLoaded(false);
+    setAutocrlfDismissed(false);
     void dispatcher.loadCommitTemplate();
+    let cancelled = false;
+    void (async () => {
+      try {
+        const local = await ipcInvoke('dev:git-config-get', {
+          key: 'core.autocrlf',
+          scope: 'local',
+          path: activeRepoPath,
+        });
+        if (cancelled) return;
+        if (local.value != null && local.value !== '') {
+          setAutocrlfUnset(false);
+          return;
+        }
+        const global = await ipcInvoke('dev:git-config-get', {
+          key: 'core.autocrlf',
+          scope: 'global',
+        });
+        if (!cancelled) {
+          setAutocrlfUnset(global.value == null || global.value === '');
+        }
+      } catch {
+        if (!cancelled) setAutocrlfUnset(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [activeRepoPath]);
 
   useEffect(() => {
@@ -210,6 +241,26 @@ export function ChangesView() {
             type="button"
             onClick={() => useAppStore.getState().setError(null)}
             className="ml-3 text-xs underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+
+      {autocrlfUnset && !autocrlfDismissed ? (
+        <div className="mx-6 mt-2 flex items-center justify-between gap-3 rounded-md border border-border bg-surface-elevated px-4 py-2 text-xs text-muted">
+          <span>
+            <code className="font-mono">core.autocrlf</code> is not configured.
+            On Windows,{' '}
+            <code className="font-mono">
+              git config --global core.autocrlf true
+            </code>{' '}
+            prevents CRLF/LF line-ending churn across teammates.
+          </span>
+          <button
+            type="button"
+            onClick={() => setAutocrlfDismissed(true)}
+            className="shrink-0 underline"
           >
             Dismiss
           </button>

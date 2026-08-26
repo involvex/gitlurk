@@ -330,10 +330,32 @@ impl GitService {
         ))
     }
 
-    pub fn diff_file(&self, dir: &Path, file: &str, kind: DiffKind) -> Result<DiffResult, String> {
+    pub fn diff_file(
+        &self,
+        dir: &Path,
+        file: &str,
+        kind: DiffKind,
+        ignore_whitespace: bool,
+    ) -> Result<DiffResult, String> {
+        let mut base_args: Vec<&str> = vec!["diff"];
+        if ignore_whitespace {
+            base_args.push("-w");
+            base_args.push("--ignore-cr-at-eol");
+        }
         let output = match kind {
-            DiffKind::Unstaged => self.exec(&["diff", "--", file], dir)?,
-            DiffKind::Staged => self.exec(&["diff", "--cached", "--", file], dir)?,
+            DiffKind::Unstaged => {
+                let mut args = base_args.clone();
+                args.push("--");
+                args.push(file);
+                self.exec(&args, dir)?
+            }
+            DiffKind::Staged => {
+                let mut args = base_args.clone();
+                args.push("--cached");
+                args.push("--");
+                args.push(file);
+                self.exec(&args, dir)?
+            }
             DiffKind::Untracked => {
                 let file_path = dir.join(file);
                 let file_str = file_path
@@ -343,7 +365,11 @@ impl GitService {
                 let null_dev = "NUL";
                 #[cfg(not(windows))]
                 let null_dev = "/dev/null";
-                self.exec(&["diff", "--no-index", null_dev, file_str], dir)?
+                let mut args = base_args.clone();
+                args.push("--no-index");
+                args.push(null_dev);
+                args.push(file_str);
+                self.exec(&args, dir)?
             }
         };
 

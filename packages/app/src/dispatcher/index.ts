@@ -1054,7 +1054,12 @@ export const dispatcher = {
     getStore().setDiffLoading(true);
     getStore().setFileDiff(null);
     try {
-      const diff = await ipcInvoke('git:diff', { path, file, kind });
+      const diff = await ipcInvoke('git:diff', {
+        path,
+        file,
+        kind,
+        ignoreWhitespace: getStore().diffIgnoreWhitespace,
+      });
       getStore().setFileDiff(diff);
     } catch (error) {
       getStore().setError(
@@ -1062,6 +1067,14 @@ export const dispatcher = {
       );
     } finally {
       getStore().setDiffLoading(false);
+    }
+  },
+
+  async setDiffIgnoreWhitespace(ignore: boolean) {
+    const { selectedFile, diffKind } = getStore();
+    getStore().setDiffIgnoreWhitespace(ignore);
+    if (selectedFile && diffKind) {
+      await dispatcher.loadFileDiff(selectedFile, diffKind);
     }
   },
 

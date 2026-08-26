@@ -138,10 +138,13 @@ pub fn git_diff(
     path: String,
     file: String,
     kind: String,
+    ignore_whitespace: Option<bool>,
 ) -> Result<serde_json::Value, String> {
     let dir = validate_repo_path(&path)?;
     let diff_kind = DiffKind::from_str(&kind)?;
-    let result = state.git.diff_file(&dir, &file, diff_kind)?;
+    let result = state
+        .git
+        .diff_file(&dir, &file, diff_kind, ignore_whitespace.unwrap_or(false))?;
     Ok(serde_json::json!({
         "patch": result.patch,
         "isBinary": result.is_binary,

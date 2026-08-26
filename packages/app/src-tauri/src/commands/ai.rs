@@ -151,9 +151,8 @@ pub fn ai_generate_commit_message(
         "You write git commit messages. Reply with only the commit message text \
          (subject + optional body). Prefer {style_hint} style. No quotes or markdown fences."
     );
-    let user = format!(
-        "Repository changes:\n\n{summary}\n\nWrite a commit message for these changes."
-    );
+    let user =
+        format!("Repository changes:\n\n{summary}\n\nWrite a commit message for these changes.");
 
     let (base_url, model) = if provider == "kilo" {
         let base = if settings.kilo_base_url.trim().is_empty() {
@@ -257,7 +256,10 @@ fn build_diff_summary(state: &AppState, repo_path: &Path) -> Result<String, Stri
     ));
 
     if !status.staged.is_empty() {
-        parts.push(format!("Staged files:\n  - {}", status.staged.join("\n  - ")));
+        parts.push(format!(
+            "Staged files:\n  - {}",
+            status.staged.join("\n  - ")
+        ));
     }
     if !status.unstaged.is_empty() {
         parts.push(format!(
@@ -298,7 +300,7 @@ fn build_diff_summary(state: &AppState, repo_path: &Path) -> Result<String, Stri
         if remaining == 0 {
             break;
         }
-        match state.git.diff_file(repo_path, &file, kind) {
+        match state.git.diff_file(repo_path, &file, kind, false) {
             Ok(diff) if !diff.is_binary && !diff.patch.is_empty() => {
                 let chunk = if diff.patch.len() > remaining {
                     &diff.patch[..remaining]

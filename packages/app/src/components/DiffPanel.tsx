@@ -48,6 +48,7 @@ export function DiffPanel() {
   const diffKind = useAppStore((s) => s.diffKind);
   const fileDiff = useAppStore((s) => s.fileDiff);
   const diffLoading = useAppStore((s) => s.diffLoading);
+  const diffIgnoreWhitespace = useAppStore((s) => s.diffIgnoreWhitespace);
   const resolvedTheme = useAppStore((s) => s.resolvedTheme);
   const [pendingDiscardHunk, setPendingDiscardHunk] = useState<string | null>(
     null,
@@ -101,9 +102,22 @@ export function DiffPanel() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <header className="border-b border-border px-4 py-2">
-        <h3 className="font-mono text-sm">{selectedFile}</h3>
-        <p className="text-xs text-muted capitalize">{diffKind}</p>
+      <header className="flex items-center justify-between border-b border-border px-4 py-2">
+        <div>
+          <h3 className="font-mono text-sm">{selectedFile}</h3>
+          <p className="text-xs text-muted capitalize">{diffKind}</p>
+        </div>
+        <label className="flex cursor-pointer items-center gap-1.5 text-[10px] text-muted">
+          <input
+            type="checkbox"
+            checked={diffIgnoreWhitespace}
+            onChange={(e) =>
+              void dispatcher.setDiffIgnoreWhitespace(e.target.checked)
+            }
+            className="h-3 w-3"
+          />
+          Ignore whitespace
+        </label>
       </header>
       <div className="min-h-0 flex-1 overflow-auto p-2">
         {canStageHunks ? (

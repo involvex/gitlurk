@@ -71,6 +71,7 @@ export interface IpcChannels {
     path: string;
     file: string;
     kind: 'staged' | 'unstaged' | 'untracked';
+    ignoreWhitespace?: boolean;
   };
   'git:restore': { path: string; files: string[]; staged?: boolean };
   'git:restore-all': { path: string; staged?: boolean };
