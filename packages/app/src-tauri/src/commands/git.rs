@@ -365,3 +365,43 @@ pub fn git_revert(state: State<'_, AppState>, path: String, sha: String) -> Resu
     let dir = validate_repo_path(&path)?;
     state.git.revert_commit(&dir, &sha)
 }
+
+const MAX_BLOB_BYTES: u64 = 10 * 1024 * 1024;
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_blob_content(
+    state: State<'_, AppState>,
+    path: String,
+    file: String,
+    rev: String,
+) -> Result<serde_json::Value, String> {
+    if rev == "worktree" {
+        let target = crate::commands::fs::resolve_under_repo(&path, Some(&file))?;
+        let meta = match std::fs::metadata(&target) {
+            Ok(meta) if meta.is_file() => meta,
+            _ => {
+                return Ok(serde_json::json!({
+                    "base64": serde_json::Value::Null,
+                    "sizeBytes": serde_json::Value::Null,
+                }))
+            }
+        };
+        let size = meta.len();
+        if size > MAX_BLOB_BYTES {
+            return Ok(serde_json::json!({ "base64": serde_json::Value::Null, "sizeBytes": size }));
+        }
+        let bytes = std::fs::read(&target).map_err(|e| e.to_string())?;
+        use base64::{engine::general_purpose::STANDARD, Engine as _};
+        return Ok(serde_json::json!({
+            "base64": STANDARD.encode(bytes),
+            "sizeBytes": size,
+        }));
+    }
+
+    let dir = validate_repo_path(&path)?;
+    let blob = state.git.blob_content(&dir, &file, &rev, MAX_BLOB_BYTES)?;
+    Ok(serde_json::json!({
+        "base64": blob.base64,
+        "sizeBytes": blob.size_bytes,
+    }))
+}

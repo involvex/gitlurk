@@ -66,7 +66,63 @@ pub struct GitService {
     bundled_paths: Mutex<Vec<PathBuf>>,
 }
 
+#[derive(Debug)]
+pub struct BlobContent {
+    pub base64: Option<String>,
+    pub size_bytes: Option<u64>,
+}
+
 impl GitService {
+    /// Raw bytes of a file from a git object (`HEAD` or `:0`), base64-encoded.
+    /// Oversized blobs return `base64: None` with the size intact.
+    pub fn blob_content(
+        &self,
+        dir: &Path,
+        file: &str,
+        rev: &str,
+        max_bytes: u64,
+    ) -> Result<BlobContent, String> {
+        if !matches!(rev, "HEAD" | ":0") {
+            return Err("Unsupported rev".into());
+        }
+        if file.is_empty() || file.starts_with('/') || file.split('/').any(|part| part == "..") {
+            return Err("Invalid file path".into());
+        }
+        let spec = format!("{rev}:{file}");
+
+        let size = {
+            let output = self.exec(&["cat-file", "-s", &spec], dir)?;
+            if !output.status.success() {
+                None
+            } else {
+                String::from_utf8_lossy(&output.stdout)
+                    .trim()
+                    .parse::<u64>()
+                    .ok()
+            }
+        };
+
+        if size.is_some_and(|s| s > max_bytes) {
+            return Ok(BlobContent {
+                base64: None,
+                size_bytes: size,
+            });
+        }
+
+        let shown = self.exec(&["show", &spec], dir)?;
+        if !shown.status.success() {
+            return Ok(BlobContent {
+                base64: None,
+                size_bytes: size,
+            });
+        }
+        use base64::{engine::general_purpose::STANDARD, Engine as _};
+        Ok(BlobContent {
+            base64: Some(STANDARD.encode(&shown.stdout)),
+            size_bytes: size.or(Some(shown.stdout.len() as u64)),
+        })
+    }
+
     pub fn new() -> Self {
         Self {
             git_path: Mutex::new(None),

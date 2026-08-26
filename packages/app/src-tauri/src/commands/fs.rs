@@ -24,7 +24,10 @@ struct ReadFileDto {
     binary: bool,
 }
 
-fn resolve_under_repo(repo_path: &str, relative_path: Option<&str>) -> Result<PathBuf, String> {
+pub(crate) fn resolve_under_repo(
+    repo_path: &str,
+    relative_path: Option<&str>,
+) -> Result<PathBuf, String> {
     let repo = validate_repo_path(repo_path)?;
     let repo_canon = fs::canonicalize(&repo).unwrap_or(repo.clone());
 
@@ -117,22 +120,20 @@ pub fn fs_list_dir(
         }
     }
 
-    entries.sort_by(|a, b| {
-        match (a.kind, b.kind) {
-            ("dir", "file") => std::cmp::Ordering::Less,
-            ("file", "dir") => std::cmp::Ordering::Greater,
-            _ => a.name.to_ascii_lowercase().cmp(&b.name.to_ascii_lowercase()),
-        }
+    entries.sort_by(|a, b| match (a.kind, b.kind) {
+        ("dir", "file") => std::cmp::Ordering::Less,
+        ("file", "dir") => std::cmp::Ordering::Greater,
+        _ => a
+            .name
+            .to_ascii_lowercase()
+            .cmp(&b.name.to_ascii_lowercase()),
     });
 
     Ok(serde_json::json!({ "entries": entries }))
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn fs_read_file(
-    repo_path: String,
-    relative_path: String,
-) -> Result<serde_json::Value, String> {
+pub fn fs_read_file(repo_path: String, relative_path: String) -> Result<serde_json::Value, String> {
     let file = resolve_under_repo(&repo_path, Some(&relative_path))?;
     if !file.is_file() {
         return Err("Not a file".into());

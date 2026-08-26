@@ -4,6 +4,7 @@ import '@git-diff-view/react/styles/diff-view.css';
 import { dispatcher } from '../dispatcher';
 import { useAppStore } from '../stores';
 import { ConfirmDialog } from './ConfirmDialog';
+import { BinaryDiffView } from './BinaryDiffView';
 
 function splitDiffHunks(patch: string): string[] {
   const lines = patch.split('\n');
@@ -44,6 +45,7 @@ function splitDiffHunks(patch: string): string[] {
 }
 
 export function DiffPanel() {
+  const activeRepoPath = useAppStore((s) => s.activeRepoPath);
   const selectedFile = useAppStore((s) => s.selectedFile);
   const diffKind = useAppStore((s) => s.diffKind);
   const fileDiff = useAppStore((s) => s.fileDiff);
@@ -90,7 +92,17 @@ export function DiffPanel() {
           <h3 className="font-mono text-sm">{selectedFile}</h3>
           <p className="text-xs text-muted capitalize">{diffKind} · binary</p>
         </header>
-        <p className="text-sm text-muted">Binary file changed</p>
+        {activeRepoPath ? (
+          <div className="min-h-0 flex-1 overflow-auto">
+            <BinaryDiffView
+              path={activeRepoPath}
+              file={selectedFile}
+              kind={diffKind}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-muted">Binary file changed</p>
+        )}
       </div>
     );
   }

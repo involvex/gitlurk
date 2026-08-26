@@ -98,6 +98,12 @@ export interface IpcChannels {
   'git:commit-amend': { path: string; message?: string };
   'git:cherry-pick': { path: string; sha: string };
   'git:revert': { path: string; sha: string };
+  'git:blob-content': {
+    path: string;
+    /** 'HEAD' or ':0' read from git objects; 'worktree' reads from disk. */
+    rev: 'HEAD' | ':0' | 'worktree';
+    file: string;
+  };
   'terminal:spawn': {
     cwd: string;
     cols: number;
@@ -287,6 +293,7 @@ export interface IpcResponses {
   'git:commit-amend': { hash: string };
   'git:cherry-pick': void;
   'git:revert': void;
+  'git:blob-content': { base64: string | null; sizeBytes: number | null };
   'terminal:spawn': { sessionId: string };
   'terminal:write': void;
   'terminal:resize': void;
