@@ -590,7 +590,7 @@ Clicking an OS notification or tray item focuses the relevant run/PR/repo (exten
 
 Plugins register entries into the Command Palette via manifest declarations.
 
-### 53. Commit Revert + Copy SHA — ❌ NOT STARTED
+### 53. Commit Revert + Copy SHA — ✅ DONE
 
 **Priority: High** | **Complexity: Medium**
 
@@ -600,7 +600,7 @@ Revert commits from the history view (`git revert --no-edit <sha>`), plus contex
 - Copy commit SHA / message to clipboard
 - Refresh log + status after revert
 
-> Sits alongside the existing cherry-pick plumbing in `HistoryPanel.tsx` and `git.rs`.
+> Implemented via `git:revert` (`git_revert` command) with Revert / Copy SHA / Copy message actions in `HistoryPanel.tsx`.
 
 ### 54. In-App Update Check UI — ❌ NOT STARTED
 
@@ -612,7 +612,9 @@ Revert commits from the history view (`git revert --no-edit <sha>`), plus contex
 - Release notes display and download/install progress
 - Restart-to-install affordance
 
-### 55. Image/Binary Diff Preview — ❌ NOT STARTED
+> **Blocked:** `tauri.conf.json` still ships the placeholder updater pubkey (`REPLACE_WITH_PUBLIC_KEY`). Generate a minisign keypair and wire signing into the release pipeline before building this UI.
+
+### 55. Image/Binary Diff Preview — ✅ DONE
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -622,7 +624,9 @@ DiffPanel currently dead-ends at "Binary file changed." Add:
 - Size-delta info panel for other binaries
 - Graceful fallback for oversized blobs
 
-### 56. Whitespace/EOL Controls — ❌ NOT STARTED
+> Implemented via `BinaryDiffView.tsx` + `git:blob-content` (`HEAD`/`:0`/worktree reads, 10 MB cap).
+
+### 56. Whitespace/EOL Controls — ✅ DONE
 
 **Priority: Medium** | **Complexity: Low**
 
@@ -631,7 +635,9 @@ Windows-first app deserves first-class EOL handling:
 - Ignore-whitespace diff toggle (`git diff -w --ignore-cr-at-eol`)
 - CRLF/LF autocrlf advisory banner (reuse `dev:git-config-get`)
 
-### 57. Diagnostics Export — ❌ NOT STARTED
+> Toggle in DiffPanel header persists per session; ChangesView shows a dismissible banner when `core.autocrlf` is unset.
+
+### 57. Diagnostics Export — ✅ DONE
 
 **Priority: Low** | **Complexity: Low**
 
@@ -639,6 +645,8 @@ One-click bundle in DeveloperPanel for bug reports:
 
 - App/git/gh versions, auth summary, sanitized settings JSON
 - Saved via save dialog, path surfaced as toast
+
+> `dev:export-diagnostics` writes a sanitized JSON bundle (no tokens/keyring material).
 
 ---
 
@@ -663,8 +671,8 @@ _No known bugs currently tracked._
 | Security & Privacy          | 2      | 0      | 0       | 2           |
 | Integration & Extensibility | 4      | 0      | 0       | 4           |
 | Polish & Quality of Life    | 6      | 4      | 1       | 1           |
-| Recently Added              | 17     | 0      | 1       | 16          |
-| **Total**                   | **57** | **11** | **11**  | **35**      |
+| Recently Added              | 17     | 4      | 1       | 12          |
+| **Total**                   | **57** | **15** | **11**  | **31**      |
 
 ---
 
