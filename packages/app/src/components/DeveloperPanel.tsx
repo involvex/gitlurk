@@ -232,6 +232,17 @@ export function DeveloperPanel() {
             >
               Fork repo
             </button>
+            <button
+              type="button"
+              disabled={busy || !activeRepoPath}
+              onClick={() =>
+                void dispatcher.syncFork(activeRepoPath ?? undefined)
+              }
+              title="Fetch upstream and fast-forward this fork's branch"
+              className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+            >
+              Sync fork
+            </button>
           </div>
         ) : null}
 

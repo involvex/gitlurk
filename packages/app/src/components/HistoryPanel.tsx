@@ -4,6 +4,8 @@ import '@git-diff-view/react/styles/diff-view.css';
 import { dispatcher } from '../dispatcher';
 import { useAppStore } from '../stores';
 import { ConfirmDialog } from './ConfirmDialog';
+import { CommitGraphRow } from './CommitGraphRow';
+import { layoutCommitGraph, maxGraphColumns } from '../lib/graph-layout';
 
 export function HistoryPanel() {
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
@@ -35,6 +37,15 @@ export function HistoryPanel() {
         entry.sha.toLowerCase().includes(query),
     );
   }, [commitLog, filter]);
+
+  const graphLayouts = useMemo(
+    () => layoutCommitGraph(visibleLog),
+    [visibleLog],
+  );
+  const graphMaxChars = useMemo(
+    () => maxGraphColumns(visibleLog),
+    [visibleLog],
+  );
 
   if (!activeRepoPath) {
     return (
@@ -70,24 +81,32 @@ export function HistoryPanel() {
             </p>
           ) : (
             <ul className="space-y-1">
-              {visibleLog.map((entry) => (
+              {visibleLog.map((entry, index) => (
                 <li key={entry.sha}>
                   <button
                     type="button"
                     onClick={() => void dispatcher.loadCommitDiff(entry.sha)}
-                    className={`w-full rounded-md px-2 py-2 text-left ${
+                    className={`flex w-full items-start gap-1.5 rounded-md px-2 py-2 text-left ${
                       selectedCommitSha === entry.sha
                         ? 'bg-primary/20 text-primary'
                         : 'hover:bg-surface-elevated'
                     }`}
                   >
-                    <div className="font-mono text-[10px] text-muted">
-                      {entry.graph} {entry.sha.slice(0, 7)}
-                    </div>
-                    <div className="text-xs font-medium">{entry.subject}</div>
-                    <div className="text-[10px] text-muted">
-                      {entry.author} · {entry.date}
-                    </div>
+                    <CommitGraphRow
+                      layout={graphLayouts[index]}
+                      maxChars={graphMaxChars}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-mono text-[10px] text-muted">
+                        {entry.sha.slice(0, 7)}
+                      </span>
+                      <span className="block truncate text-xs font-medium">
+                        {entry.subject}
+                      </span>
+                      <span className="block text-[10px] text-muted">
+                        {entry.author} · {entry.date}
+                      </span>
+                    </span>
                   </button>
                 </li>
               ))}

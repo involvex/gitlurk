@@ -33,6 +33,8 @@ export interface UiSlice {
   ghRunWatchLog: string;
   ghRunWatchRunning: boolean;
   ghRunWatchPath: string | null;
+  ghRunView: import('@gitlurk/shared').IpcResponses['dev:gh-run-view'] | null;
+  ghRunViewLoading: boolean;
   explorerMenuEnabled: boolean;
   toast: string | null;
   authDialog: AuthDialogState | null;
@@ -84,6 +86,10 @@ export interface UiSlice {
   clearGhRunWatchLog: () => void;
   setGhRunWatchRunning: (running: boolean) => void;
   setGhRunWatchPath: (path: string | null) => void;
+  setGhRunView: (
+    view: import('@gitlurk/shared').IpcResponses['dev:gh-run-view'] | null,
+  ) => void;
+  setGhRunViewLoading: (loading: boolean) => void;
   setExplorerMenuEnabled: (enabled: boolean) => void;
   showToast: (message: string) => void;
   clearToast: () => void;
@@ -171,6 +177,8 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   ghRunWatchLog: '',
   ghRunWatchRunning: false,
   ghRunWatchPath: null,
+  ghRunView: null,
+  ghRunViewLoading: false,
   explorerMenuEnabled: false,
   toast: null,
   authDialog: null,
@@ -219,6 +227,8 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   clearGhRunWatchLog: () => set({ ghRunWatchLog: '' }),
   setGhRunWatchRunning: (ghRunWatchRunning) => set({ ghRunWatchRunning }),
   setGhRunWatchPath: (ghRunWatchPath) => set({ ghRunWatchPath }),
+  setGhRunView: (ghRunView) => set({ ghRunView }),
+  setGhRunViewLoading: (ghRunViewLoading) => set({ ghRunViewLoading }),
   setExplorerMenuEnabled: (enabled) => set({ explorerMenuEnabled: enabled }),
   showToast: (message) => set({ toast: message }),
   clearToast: () => set({ toast: null }),

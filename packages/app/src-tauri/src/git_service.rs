@@ -611,6 +611,7 @@ impl GitService {
         }
 
         let mut entries = Vec::new();
+        let mut pending_extra: Vec<String> = Vec::new();
         for line in String::from_utf8_lossy(&output.stdout).lines() {
             let trimmed = line.trim();
             if trimmed.is_empty() {
@@ -618,6 +619,7 @@ impl GitService {
             }
             let parts: Vec<&str> = trimmed.split('\x1f').collect();
             if parts.len() < 5 {
+                pending_extra.push(trimmed.trim_end().to_string());
                 continue;
             }
             entries.push(CommitLogEntry {
@@ -626,6 +628,7 @@ impl GitService {
                 author: parts[2].to_string(),
                 date: parts[3].to_string(),
                 subject: parts[4].to_string(),
+                graph_extra: std::mem::take(&mut pending_extra),
             });
         }
         Ok(entries)
@@ -757,6 +760,8 @@ pub struct CommitLogEntry {
     pub author: String,
     pub date: String,
     pub graph: String,
+    #[serde(default)]
+    pub graph_extra: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -1145,6 +1145,7 @@ export const dispatcher = {
     store.clearGhRunWatchLog();
     store.setGhRunWatchRunning(true);
     store.setShowGhRunWatch(true);
+    void dispatcher.loadCiRunView(path);
     try {
       const version = await ipcInvoke('dev:gh-version', {});
       if (!version.installed) {
@@ -1160,6 +1161,56 @@ export const dispatcher = {
       store.appendGhRunWatchLog(
         `${error instanceof Error ? error.message : 'Failed to watch CI run'}\n`,
       );
+    }
+  },
+
+  async loadCiRunView(path?: string | null) {
+    const store = getStore();
+    store.setGhRunViewLoading(true);
+    try {
+      const view = await ipcInvoke('dev:gh-run-view', {
+        path: path ?? undefined,
+      });
+      getStore().setGhRunView(view);
+    } catch (error) {
+      getStore().setGhRunView(null);
+      if (getStore().showGhRunWatch) {
+        getStore().appendGhRunWatchLog(
+          `\n[jobs] ${error instanceof Error ? error.message : 'Failed to load run details'}\n`,
+        );
+      }
+    } finally {
+      getStore().setGhRunViewLoading(false);
+    }
+  },
+
+  async rerunCiRunFailed(path?: string | null) {
+    const store = getStore();
+    const runId = store.ghRunView?.id;
+    if (!runId) return;
+    try {
+      await ipcInvoke('dev:gh-run-rerun', { runId, path: path ?? undefined });
+      store.showToast('Re-running failed jobs');
+      await dispatcher.loadCiRunView(path ?? store.ghRunWatchPath);
+    } catch (error) {
+      store.setError(error instanceof Error ? error.message : 'Re-run failed');
+    }
+  },
+
+  async syncFork(path?: string) {
+    const activePath = path ?? getStore().activeRepoPath;
+    if (!activePath) return;
+    getStore().setGitOpLoading(true);
+    try {
+      await ipcInvoke('dev:gh-repo-sync', { path: activePath });
+      await dispatcher.refreshStatus();
+      getStore().showToast('Fork synced with upstream');
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Fork sync failed',
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
     }
   },
 

@@ -59,6 +59,41 @@ pub struct GhRunItem {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GhStepItem {
+    pub name: String,
+    pub number: i64,
+    pub status: String,
+    pub conclusion: Option<String>,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GhJobItem {
+    pub name: String,
+    pub status: String,
+    pub conclusion: Option<String>,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub url: Option<String>,
+    pub steps: Vec<GhStepItem>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GhRunDetailResponse {
+    pub id: Option<String>,
+    pub status: Option<String>,
+    pub conclusion: Option<String>,
+    pub workflow: Option<String>,
+    pub display_title: Option<String>,
+    pub url: Option<String>,
+    pub jobs: Vec<GhJobItem>,
+}
+
+#[derive(Serialize)]
 pub struct GhRunListResponse {
     pub runs: Vec<GhRunItem>,
 }
@@ -324,6 +359,162 @@ pub fn dev_gh_run_watch_stop(state: State<'_, AppState>) -> Result<(), String> {
     Ok(())
 }
 
+fn parse_gh_run_detail(stdout: &[u8]) -> GhRunDetailResponse {
+    let parsed: serde_json::Value = serde_json::from_slice(stdout).unwrap_or_default();
+    let steps_of = |job: &serde_json::Value| -> Vec<GhStepItem> {
+        job.get("steps")
+            .and_then(|v| v.as_array())
+            .map(|steps| {
+                steps
+                    .iter()
+                    .map(|step| GhStepItem {
+                        name: step
+                            .get("name")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string(),
+                        number: step
+                            .get("number")
+                            .and_then(|v| v.as_i64())
+                            .unwrap_or_default(),
+                        status: step
+                            .get("status")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("unknown")
+                            .to_string(),
+                        conclusion: step
+                            .get("conclusion")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_string),
+                        started_at: step
+                            .get("startedAt")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_string),
+                        completed_at: step
+                            .get("completedAt")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_string),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let jobs = parsed
+        .get("jobs")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .map(|job| GhJobItem {
+                    name: job
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    status: job
+                        .get("status")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown")
+                        .to_string(),
+                    conclusion: job
+                        .get("conclusion")
+                        .and_then(|v| v.as_str())
+                        .map(str::to_string),
+                    started_at: job
+                        .get("startedAt")
+                        .and_then(|v| v.as_str())
+                        .map(str::to_string),
+                    completed_at: job
+                        .get("completedAt")
+                        .and_then(|v| v.as_str())
+                        .map(str::to_string),
+                    url: job.get("url").and_then(|v| v.as_str()).map(str::to_string),
+                    steps: steps_of(job),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    GhRunDetailResponse {
+        id: parsed
+            .get("databaseId")
+            .map(|v| v.to_string().trim_matches('"').to_string()),
+        status: parsed
+            .get("status")
+            .and_then(|v| v.as_str())
+            .map(str::to_string),
+        conclusion: parsed
+            .get("conclusion")
+            .and_then(|v| v.as_str())
+            .map(str::to_string),
+        workflow: parsed
+            .get("workflowName")
+            .and_then(|v| v.as_str())
+            .map(str::to_string),
+        display_title: parsed
+            .get("displayTitle")
+            .and_then(|v| v.as_str())
+            .map(str::to_string),
+        url: parsed.get("url").and_then(|v| v.as_str()).map(str::to_string),
+        jobs,
+    }
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn dev_gh_run_view(
+    state: State<'_, AppState>,
+    run_id: Option<String>,
+    repo: Option<String>,
+    path: Option<String>,
+) -> Result<GhRunDetailResponse, String> {
+    let cwd = repo_cwd(path)?;
+    let gh = state.gh.resolve_gh()?;
+    run_blocking(move || {
+        let mut cmd = Command::new(&gh);
+        cmd.arg("run").arg("view");
+        if let Some(id) = &run_id {
+            cmd.arg(id);
+        }
+        if let Some(r) = &repo {
+            cmd.arg("--repo").arg(r);
+        }
+        cmd.args([
+            "--json",
+            "databaseId,status,conclusion,workflowName,displayTitle,url,jobs",
+        ])
+        .current_dir(&cwd);
+        let output = cmd.output().map_err(|e| e.to_string())?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(parse_gh_run_detail(&output.stdout))
+    })
+    .await
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn dev_gh_run_rerun(
+    state: State<'_, AppState>,
+    run_id: String,
+    repo: Option<String>,
+    path: Option<String>,
+) -> Result<(), String> {
+    let cwd = repo_cwd(path)?;
+    let gh = state.gh.resolve_gh()?;
+    run_blocking(move || {
+        let mut cmd = Command::new(&gh);
+        cmd.arg("run").arg("rerun").arg(&run_id).arg("--failed");
+        if let Some(r) = &repo {
+            cmd.arg("--repo").arg(r);
+        }
+        cmd.current_dir(&cwd);
+        let output = cmd.output().map_err(|e| e.to_string())?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(())
+    })
+    .await
+}
+
 #[tauri::command(rename_all = "camelCase")]
 pub async fn dev_gh_repo_fork(
     state: State<'_, AppState>,
@@ -345,6 +536,37 @@ pub async fn dev_gh_repo_fork(
         let output = cmd.output().map_err(|e| e.to_string())?;
         if !output.status.success() {
             return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+        }
+        Ok(serde_json::json!({
+            "summary": String::from_utf8_lossy(&output.stdout).trim()
+        }))
+    })
+    .await
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn dev_gh_repo_sync(
+    state: State<'_, AppState>,
+    repo: Option<String>,
+    path: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let cwd = repo_cwd(path)?;
+    let gh = state.gh.resolve_gh()?;
+    run_blocking(move || {
+        let mut cmd = Command::new(&gh);
+        cmd.arg("repo").arg("sync").current_dir(&cwd);
+        if let Some(r) = repo.as_deref() {
+            cmd.args(["-r", r]);
+        }
+        let output = cmd.output().map_err(|e| e.to_string())?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            if stderr.contains("no upstream") || stderr.contains("not a fork") {
+                return Err(
+                    "This repository has no upstream configured (is it a fork?)".into(),
+                );
+            }
+            return Err(stderr);
         }
         Ok(serde_json::json!({
             "summary": String::from_utf8_lossy(&output.stdout).trim()

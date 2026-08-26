@@ -28,6 +28,7 @@ export interface CommitLogEntry {
   author: string;
   date: string;
   graph: string;
+  graphExtra?: string[];
 }
 
 export interface StashEntry {

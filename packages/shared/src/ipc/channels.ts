@@ -135,7 +135,10 @@ export interface IpcChannels {
   'dev:gh-run-list': { repo?: string; limit?: number; path?: string };
   'dev:gh-run-watch': { runId?: string; repo?: string; path?: string };
   'dev:gh-run-watch-stop': Record<string, never>;
+  'dev:gh-run-view': { runId?: string; repo?: string; path?: string };
+  'dev:gh-run-rerun': { runId: string; repo?: string; path?: string };
   'dev:gh-repo-fork': { repo?: string; clone?: boolean; path?: string };
+  'dev:gh-repo-sync': { repo?: string; path?: string };
   'dev:gh-release-create': {
     tag: string;
     title?: string;
@@ -269,6 +272,7 @@ export interface IpcResponses {
       author: string;
       date: string;
       graph: string;
+      graphExtra?: string[];
     }>;
   };
   'git:show': { patch: string; isBinary: boolean };
@@ -410,7 +414,33 @@ export interface IpcResponses {
   };
   'dev:gh-run-watch': { started: boolean };
   'dev:gh-run-watch-stop': void;
+  'dev:gh-run-view': {
+    id: string | null;
+    status: string | null;
+    conclusion: string | null;
+    workflow: string | null;
+    displayTitle: string | null;
+    url: string | null;
+    jobs: Array<{
+      name: string;
+      status: string;
+      conclusion: string | null;
+      startedAt: string | null;
+      completedAt: string | null;
+      url: string | null;
+      steps: Array<{
+        name: string;
+        number: number;
+        status: string;
+        conclusion: string | null;
+        startedAt: string | null;
+        completedAt: string | null;
+      }>;
+    }>;
+  };
+  'dev:gh-run-rerun': void;
   'dev:gh-repo-fork': { summary: string };
+  'dev:gh-repo-sync': { summary: string };
   'dev:gh-release-create': { url: string };
   'dev:gh-config-list': { entries: Array<{ key: string; value: string }> };
   'dev:gh-config-get': { value: string | null };
