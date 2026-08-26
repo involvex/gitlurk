@@ -157,6 +157,24 @@ export function DeveloperPanel() {
   return (
     <div className="space-y-5">
       <section className="rounded-md border border-border p-3">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Diagnostics</h3>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void dispatcher.exportDiagnostics()}
+            className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+          >
+            Export diagnostics
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-muted">
+          Saves app/git/gh versions, an auth summary, and sanitized settings as
+          a JSON file — safe to attach to bug reports.
+        </p>
+      </section>
+
+      <section className="rounded-md border border-border p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold">GitHub CLI</h3>
           {ghInstalled ? (

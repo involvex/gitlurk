@@ -383,6 +383,21 @@ export const dispatcher = {
     }
   },
 
+  async exportDiagnostics() {
+    try {
+      const dir = await ipcInvoke('dialog:save-directory', {
+        title: 'Choose folder for diagnostics bundle',
+      });
+      if (!dir) return;
+      const { path } = await ipcInvoke('dev:export-diagnostics', { dir });
+      getStore().showToast(`Diagnostics exported to ${path}`);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Diagnostics export failed',
+      );
+    }
+  },
+
   async importSettings() {
     try {
       const filePath = await ipcInvoke('dialog:open-file', {

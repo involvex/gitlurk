@@ -177,6 +177,7 @@ export interface IpcChannels {
     scope?: 'global' | 'local' | 'system';
     path?: string;
   };
+  'dev:export-diagnostics': { dir: string };
   'screenshot:capture': { savePath: string };
 }
 
@@ -464,6 +465,7 @@ export interface IpcResponses {
   'dev:git-config-get': { value: string | null };
   'dev:git-config-set': void;
   'dev:git-config-edit': void;
+  'dev:export-diagnostics': { path: string };
   'screenshot:capture': void;
 }
 

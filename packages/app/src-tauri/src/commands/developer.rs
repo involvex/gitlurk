@@ -7,7 +7,7 @@ use std::time::Duration;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
-use crate::{validate_repo_path, AppState};
+use crate::{validate_repo_path, AppState, Settings};
 
 fn repo_cwd(path: Option<String>) -> Result<PathBuf, String> {
     match path {
@@ -845,6 +845,148 @@ pub async fn dev_git_config_edit(
                 .map_err(|e| e.to_string())?;
         }
         Ok(())
+    })
+    .await
+}
+
+fn read_settings(state: &AppState) -> Settings {
+    let file = state.settings_file();
+    if !file.exists() {
+        return Settings::default();
+    }
+    std::fs::read_to_string(file)
+        .ok()
+        .and_then(|content| serde_json::from_str(&content).ok())
+        .unwrap_or_default()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiagnosticsExportResponse {
+    pub path: String,
+}
+
+/// Writes a sanitized diagnostics bundle (versions, auth summary, settings
+/// subset). Contains no credentials, keyring material, or API keys.
+#[tauri::command(rename_all = "camelCase")]
+pub async fn dev_export_diagnostics(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    dir: String,
+) -> Result<DiagnosticsExportResponse, String> {
+    let out_dir = PathBuf::from(dir);
+    if !out_dir.is_dir() {
+        return Err("Directory does not exist".into());
+    }
+
+    let version = app.package_info().version.to_string();
+    let os = std::env::consts::OS.to_string();
+    let arch = std::env::consts::ARCH.to_string();
+
+    // Sanitized snapshot: preference flags only — no secrets, tokens, or
+    // machine-specific paths.
+    let settings = {
+        let s = read_settings(&state);
+        serde_json::json!({
+            "theme": s.theme,
+            "themePreset": s.theme_preset,
+            "aiProvider": s.ai_provider,
+            "aiModel": s.ai_model,
+            "terminalShell": s.terminal_shell,
+            "minimizeToTray": s.minimize_to_tray,
+            "backgroundFetchEnabled": s.background_fetch_enabled,
+            "backgroundFetchIntervalMin": s.background_fetch_interval_min,
+            "desktopNotifications": s.desktop_notifications,
+            "notificationSoundEnabled": s.notification_sound_enabled,
+            "autoRefreshOnChange": s.auto_refresh_on_change,
+        })
+    };
+
+    let git = state.git.resolve_git()?;
+    let gh_installed = state.gh.is_installed();
+    let gh = state.gh.resolve_gh().ok();
+
+    run_blocking(move || {
+        let first_line = |out: &std::process::Output| {
+            String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_string()
+        };
+
+        let git_version = Command::new(&git)
+            .args(["--version"])
+            .output()
+            .ok()
+            .map(|out| first_line(&out))
+            .filter(|line| !line.is_empty());
+
+        let gh_version = gh.as_ref().and_then(|gh_path| {
+            Command::new(gh_path)
+                .args(["--version"])
+                .output()
+                .ok()
+                .map(|out| first_line(&out))
+                .filter(|line| !line.is_empty())
+        });
+
+        // gh auth status prints account/host info but never raw tokens.
+        let (auth_logged_in, auth_summary) = gh.as_ref()
+            .and_then(|gh_path| {
+                let output = Command::new(gh_path)
+                    .args(["auth", "status"])
+                    .output()
+                    .ok()?;
+                let mut text = format!(
+                    "{}{}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                text = text.trim().to_string();
+                if text.len() > 800 {
+                    text = format!("{}…", &text[..800]);
+                }
+                Some((output.status.success(), text))
+            })
+            .unwrap_or((false, "gh CLI unavailable".into()));
+
+        let generated_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        let payload = serde_json::json!({
+            "app": {
+                "name": "GitLurk Desktop",
+                "version": version,
+                "os": os,
+                "arch": arch,
+            },
+            "generatedAtUnixSecs": generated_at,
+            "tools": {
+                "git": git_version,
+                "ghInstalled": gh_installed,
+                "gh": gh_version,
+            },
+            "auth": {
+                "loggedIn": auth_logged_in,
+                "summary": auth_summary,
+            },
+            "settings": settings,
+        });
+
+        let target = out_dir.join(format!("gitlurk-diagnostics-{generated_at}.json"));
+        std::fs::write(
+            &target,
+            serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| e.to_string())?;
+
+        Ok(DiagnosticsExportResponse {
+            path: target.to_string_lossy().into_owned(),
+        })
     })
     .await
 }
