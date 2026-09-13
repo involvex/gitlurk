@@ -96,7 +96,8 @@ function schedulePanelPersist() {
 }
 
 function persistDefaultCloneDir(dir: string) {
-  const parent = dir.replace(/[\\/]+$/, '');
+  const cut = Math.max(dir.lastIndexOf('\\'), dir.lastIndexOf('/'));
+  const parent = cut > 0 ? dir.slice(0, cut) : dir;
   if (!parent) return;
   getStore().setDefaultCloneDir(parent);
   if (cloneDirPersistTimer) clearTimeout(cloneDirPersistTimer);
