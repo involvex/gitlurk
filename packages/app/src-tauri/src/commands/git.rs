@@ -405,3 +405,26 @@ pub fn git_blob_content(
         "sizeBytes": blob.size_bytes,
     }))
 }
+
+use crate::gitignore_templates::{get_all_templates, GitignoreTemplate};
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GitignoreTemplateDto {
+    id: String,
+    name: String,
+    content: String,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn git_gitignore_templates() -> Result<serde_json::Value, String> {
+    let templates: Vec<GitignoreTemplateDto> = get_all_templates()
+        .into_iter()
+        .map(|t| GitignoreTemplateDto {
+            id: t.id.to_string(),
+            name: t.name.to_string(),
+            content: t.content.to_string(),
+        })
+        .collect();
+    Ok(serde_json::json!({ "templates": templates }))
+}

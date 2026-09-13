@@ -227,6 +227,7 @@ export function Sidebar() {
             [
               ['explorer', 'Open in Explorer'],
               ['terminal', 'Open in Terminal'],
+              ['gitignore', 'Edit .gitignore'],
               ['github', 'Open on GitHub'],
               ['watch', 'Watch CI run'],
               ['remove', 'Remove from list'],
@@ -246,6 +247,8 @@ export function Sidebar() {
                   void dispatcher.revealInExplorer(path);
                 } else if (id === 'terminal') {
                   void dispatcher.openTerminalAt(path);
+                } else if (id === 'gitignore') {
+                  useAppStore.getState().openGitignoreEditor(path);
                 } else if (id === 'github') {
                   void dispatcher.openRepoOnGitHub(path);
                 } else if (id === 'watch') {

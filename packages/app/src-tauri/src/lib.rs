@@ -10,6 +10,7 @@ mod commands;
 mod env_config;
 mod gh_service;
 mod git_service;
+mod gitignore_templates;
 mod hotkeys;
 mod mcp_server;
 mod plugin_host;
@@ -394,6 +395,7 @@ pub fn run() {
             commands::git::git_cherry_pick,
             commands::git::git_revert,
             commands::git::git_blob_content,
+            commands::git::git_gitignore_templates,
             commands::dialog::dialog_open_directory,
             commands::dialog::dialog_save_directory,
             commands::dialog::dialog_open_file,
@@ -430,6 +432,7 @@ pub fn run() {
             commands::shell::shell_reveal_in_explorer,
             commands::fs::fs_list_dir,
             commands::fs::fs_read_file,
+            commands::fs::fs_write_file,
             commands::terminal::terminal_spawn,
             commands::terminal::terminal_write,
             commands::terminal::terminal_resize,

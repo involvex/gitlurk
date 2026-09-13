@@ -18,7 +18,7 @@
     },
     "packages/app": {
       "name": "@gitlurk/app",
-      "version": "0.1.2",
+      "version": "0.1.4",
       "dependencies": {
         "@git-diff-view/react": "^0.1.7",
         "@gitlurk/git": "workspace:*",
@@ -51,7 +51,7 @@
     },
     "packages/cli": {
       "name": "@involvex/gitlurk-desktop",
-      "version": "0.1.2",
+      "version": "0.1.4",
       "bin": {
         "gitlurk": "./dist/index.js",
       },
@@ -64,7 +64,7 @@
     },
     "packages/extension": {
       "name": "@gitlurk/extension",
-      "version": "0.1.2",
+      "version": "0.1.4",
       "dependencies": {
         "@gitlurk/shared": "workspace:*",
       },
@@ -78,7 +78,7 @@
     },
     "packages/git": {
       "name": "@gitlurk/git",
-      "version": "0.1.2",
+      "version": "0.1.4",
       "dependencies": {
         "@gitlurk/shared": "workspace:*",
       },
@@ -88,21 +88,21 @@
     },
     "packages/plugin-sdk": {
       "name": "@gitlurk/plugin-sdk",
-      "version": "0.1.2",
+      "version": "0.1.4",
       "devDependencies": {
         "typescript": "^5.8.3",
       },
     },
     "packages/plugins/example-hello": {
       "name": "example-hello",
-      "version": "0.1.2",
+      "version": "0.1.4",
       "dependencies": {
         "@gitlurk/plugin-sdk": "workspace:*",
       },
     },
     "packages/shared": {
       "name": "@gitlurk/shared",
-      "version": "0.1.2",
+      "version": "0.1.4",
       "devDependencies": {
         "typescript": "^5.8.3",
       },

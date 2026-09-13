@@ -41,6 +41,12 @@ export interface TagEntry {
   message?: string;
 }
 
+export interface GitignoreTemplate {
+  id: string;
+  name: string;
+  content: string;
+}
+
 export interface GitOpsSlice {
   status: GitStatus | null;
   branches: string[];
@@ -60,6 +66,12 @@ export interface GitOpsSlice {
   selectedCommitSha: string | null;
   commitDiff: FileDiff | null;
   commitDiffLoading: boolean;
+  // Gitignore Editor
+  gitignoreTemplates: GitignoreTemplate[];
+  gitignoreTemplatesLoading: boolean;
+  gitignoreEditorContent: string;
+  gitignoreEditorPath: string | null;
+  showGitignoreEditor: boolean;
   setStatus: (status: GitStatus | null) => void;
   setBranches: (branches: string[], current: string) => void;
   setPulls: (pulls: PullRequest[]) => void;
@@ -72,10 +84,18 @@ export interface GitOpsSlice {
   setDiffIgnoreWhitespace: (ignore: boolean) => void;
   setStashes: (stashes: StashEntry[]) => void;
   setTags: (tags: TagEntry[]) => void;
-  setCommitLog: (entries: CommitLogEntry[]) => void;
+  setCommitLog: (commitLog: CommitLogEntry[]) => void;
   setSelectedCommitSha: (sha: string | null) => void;
   setCommitDiff: (diff: FileDiff | null) => void;
   setCommitDiffLoading: (commitDiffLoading: boolean) => void;
+  // Gitignore Editor actions
+  setGitignoreTemplates: (templates: GitignoreTemplate[]) => void;
+  setGitignoreTemplatesLoading: (loading: boolean) => void;
+  setGitignoreEditorContent: (content: string) => void;
+  setGitignoreEditorPath: (path: string | null) => void;
+  setShowGitignoreEditor: (show: boolean) => void;
+  openGitignoreEditor: (repoPath: string, initialContent?: string) => void;
+  closeGitignoreEditor: () => void;
 }
 
 export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
@@ -97,6 +117,12 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   selectedCommitSha: null,
   commitDiff: null,
   commitDiffLoading: false,
+  // Gitignore Editor
+  gitignoreTemplates: [],
+  gitignoreTemplatesLoading: false,
+  gitignoreEditorContent: '',
+  gitignoreEditorPath: null,
+  showGitignoreEditor: false,
   setStatus: (status) => set({ status }),
   setBranches: (branches, current) => set({ branches, currentBranch: current }),
   setPulls: (pulls) => set({ pulls }),
@@ -114,4 +140,24 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   setSelectedCommitSha: (selectedCommitSha) => set({ selectedCommitSha }),
   setCommitDiff: (commitDiff) => set({ commitDiff }),
   setCommitDiffLoading: (commitDiffLoading) => set({ commitDiffLoading }),
+  // Gitignore Editor actions
+  setGitignoreTemplates: (templates) => set({ gitignoreTemplates: templates }),
+  setGitignoreTemplatesLoading: (loading) =>
+    set({ gitignoreTemplatesLoading: loading }),
+  setGitignoreEditorContent: (content) =>
+    set({ gitignoreEditorContent: content }),
+  setGitignoreEditorPath: (path) => set({ gitignoreEditorPath: path }),
+  setShowGitignoreEditor: (show) => set({ showGitignoreEditor: show }),
+  openGitignoreEditor: (repoPath, initialContent = '') =>
+    set({
+      gitignoreEditorPath: repoPath,
+      gitignoreEditorContent: initialContent,
+      showGitignoreEditor: true,
+    }),
+  closeGitignoreEditor: () =>
+    set({
+      gitignoreEditorPath: null,
+      gitignoreEditorContent: '',
+      showGitignoreEditor: false,
+    }),
 });

@@ -164,3 +164,25 @@ pub fn fs_read_file(repo_path: String, relative_path: String) -> Result<serde_js
     })
     .map_err(|e| e.to_string())?)
 }
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn fs_write_file(
+    repo_path: String,
+    relative_path: String,
+    content: String,
+) -> Result<(), String> {
+    // Only allow writing .gitignore at repository root for security
+    if relative_path != ".gitignore" {
+        return Err("Only .gitignore at repository root is allowed".into());
+    }
+
+    let file = resolve_under_repo(&repo_path, Some(&relative_path))?;
+
+    // Ensure parent directory exists
+    if let Some(parent) = file.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    fs::write(&file, content).map_err(|e| e.to_string())?;
+    Ok(())
+}

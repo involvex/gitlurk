@@ -128,6 +128,18 @@ export function CommandPalette() {
         keywords: 'changelog release notes',
         run: () => dispatcher.openWhatsNew(),
       },
+      {
+        id: 'gitignore',
+        label: 'Edit .gitignore',
+        group: 'Git',
+        keywords: 'gitignore template',
+        run: () => {
+          const activeRepoPath = useAppStore.getState().activeRepoPath;
+          if (activeRepoPath) {
+            useAppStore.getState().openGitignoreEditor(activeRepoPath);
+          }
+        },
+      },
     ];
 
     for (const repo of repos) {

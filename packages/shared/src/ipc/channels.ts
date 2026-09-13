@@ -25,6 +25,7 @@ export interface IpcChannels {
   'shell:reveal-in-explorer': { path: string };
   'fs:list-dir': { repoPath: string; relativePath?: string };
   'fs:read-file': { repoPath: string; relativePath: string };
+  'fs:write-file': { repoPath: string; relativePath: string; content: string };
   'app:get-repos': Record<string, never>;
   'app:save-repos': {
     repos: Array<{
@@ -104,6 +105,7 @@ export interface IpcChannels {
     rev: 'HEAD' | ':0' | 'worktree';
     file: string;
   };
+  'git:gitignore-templates': Record<string, never>;
   'terminal:spawn': {
     cwd: string;
     cols: number;
@@ -216,6 +218,7 @@ export interface IpcResponses {
     truncated: boolean;
     binary: boolean;
   };
+  'fs:write-file': void;
   'app:get-repos': {
     repos: Array<{
       path: string;
@@ -295,6 +298,9 @@ export interface IpcResponses {
   'git:cherry-pick': void;
   'git:revert': void;
   'git:blob-content': { base64: string | null; sizeBytes: number | null };
+  'git:gitignore-templates': {
+    templates: Array<{ id: string; name: string; content: string }>;
+  };
   'terminal:spawn': { sessionId: string };
   'terminal:write': void;
   'terminal:resize': void;

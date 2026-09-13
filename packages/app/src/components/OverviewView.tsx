@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
 import { ResizeHandle } from './ResizeHandle';
+import { GitignoreEditor } from './GitignoreEditor';
 
 type FsEntry = {
   name: string;
@@ -204,6 +205,7 @@ export function OverviewView() {
 
   return (
     <div className="flex min-w-0 flex-1 overflow-hidden">
+      <GitignoreEditor />
       <aside
         className="flex shrink-0 flex-col border-r border-border"
         style={{ width: fileListWidth }}
@@ -243,19 +245,30 @@ export function OverviewView() {
             <h2 className="text-sm font-semibold">{previewTitle}</h2>
             <p className="text-xs text-muted">Repository overview</p>
           </div>
-          {selectedPath ? (
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() =>
-                void dispatcher.revealInExplorer(
-                  `${activeRepoPath}\\${selectedPath.replace(/\//g, '\\')}`,
-                )
+                useAppStore.getState().openGitignoreEditor(activeRepoPath)
               }
-              className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+              className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated transition-colors"
             >
-              Reveal in Explorer
+              Edit .gitignore
             </button>
-          ) : null}
+            {selectedPath ? (
+              <button
+                type="button"
+                onClick={() =>
+                  void dispatcher.revealInExplorer(
+                    `${activeRepoPath}\\${selectedPath.replace(/\//g, '\\')}`,
+                  )
+                }
+                className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+              >
+                Reveal in Explorer
+              </button>
+            ) : null}
+          </div>
         </header>
         <div className="min-h-0 flex-1 overflow-auto px-6 py-4">
           {loadingPreview ? (

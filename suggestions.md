@@ -4,7 +4,7 @@ A collection of features that can be implemented to enhance GitLurk Desktop.
 
 **Legend:** ✅ DONE · 🟡 PARTIAL · ❌ NOT STARTED
 
-_Audited against codebase on 2026-08-26._
+_Audited against codebase on 2026-09-13._
 
 ---
 
@@ -57,8 +57,8 @@ Add a commit history viewer:
 - Click a commit to view its diff
 - Filter by author, date range, or message
 
-> **Have:** linear log + click-to-diff (`HistoryPanel.tsx`, `git:log`/`git:show`) and real SVG topology rendering (`CommitGraphRow.tsx` + `lib/graph-layout`).
-> **Missing:** author/date/message filters, pagination beyond fixed limit of 80.
+> **Have:** linear log + click-to-diff (`HistoryPanel.tsx`, `git:log`/`git:show`) and real SVG topology rendering (`CommitGraphRow.tsx` + `lib/graph-layout`). Filter by message/author/date/SHA added.
+> **Missing:** pagination beyond fixed limit of 80.
 
 ### 5. Discard Changes (git checkout / git restore) — ✅ DONE
 
@@ -160,7 +160,7 @@ Extend the existing fork feature:
 - Sync fork with upstream
 - Create PR from fork
 
-> **Have:** `gh repo fork` + fork-and-clone flow that adds `upstream` remote; sync fork with upstream (`dev:gh-repo-sync`).
+> **Have:** `gh repo fork` + fork-and-clone flow that adds `upstream` remote; sync fork with upstream (`dev:gh-repo-sync` / `dispatcher.syncFork`).
 > **Missing:** PR from fork, listing existing forks.
 
 ---
@@ -266,8 +266,8 @@ Extend the existing AI commit feature:
 - Generate PR descriptions from diff
 - Summarize changes across multiple commits
 
-> **Have:** working commit generation across opencode/kilo providers.
-> **Missing:** `style` param accepted by backend but never passed from UI; no conventional-commit validation; no PR description gen; no multi-commit summarization.
+> **Have:** working commit generation across opencode/kilo providers. Style param now passed from UI (`ChangesView.tsx` select).
+> **Missing:** conventional-commit validation; no PR description gen; no multi-commit summarization.
 
 ### 21. AI-Powered Git Help — ❌ NOT STARTED
 
@@ -460,7 +460,7 @@ Quick access to recently opened repos:
 - Pinned/favorite repos
 - Search recent repos
 
-> Pins + recents sort + context menu done; sidebar search input is the remaining gap (queued).
+> Pins + recents sort + context menu + search input done in `Sidebar.tsx`.
 
 ### 37. Notification Improvements — 🟡 PARTIAL
 
@@ -677,4 +677,4 @@ _No known bugs currently tracked._
 
 ---
 
-_Last updated: 2026-08-26_
+_Last updated: 2026-09-13_

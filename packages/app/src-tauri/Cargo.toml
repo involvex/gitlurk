@@ -12,6 +12,8 @@ crate-type = ["cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 dotenvy = "0.15"
+reqwest = { version = "0.12", features = ["blocking", "rustls-tls"], default-features = false }
+zip = "0.6"
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
