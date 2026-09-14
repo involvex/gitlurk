@@ -53,11 +53,15 @@ const CURATED_TEMPLATES: &[(&str, &str)] = &[
     ("ruby", "Ruby"),
     ("swift", "Swift"),
     ("kotlin", "Kotlin"),
+    ("scala", "Scala"),
+    ("elixir", "Elixir"),
     // Frameworks
     ("vue", "Vue"),
     ("nextjs", "Next.js"),
     ("rails", "Rails"),
     ("laravel", "Laravel"),
+    ("unity", "Unity"),
+    ("unrealengine", "Unreal Engine"),
     // IDEs
     ("visualstudiocode", "VisualStudioCode"),
     ("jetbrains", "JetBrains"),
@@ -72,6 +76,10 @@ const CURATED_TEMPLATES: &[(&str, &str)] = &[
     // Tools
     ("terraform", "Terraform"),
     ("dotnet", ".NET"),
+    ("cmake", "CMake"),
+    ("gradle", "Gradle"),
+    ("maven", "Maven"),
+    ("bun", "Bun"),
 ];
 
 // Map from our curated IDs to actual filenames in github/gitignore repo
@@ -80,6 +88,14 @@ fn normalize_template_id(id: &str) -> &str {
         "c++" => "C++",
         "visualstudiocode" => "VisualStudioCode",
         "dotnet" => "Dotnet",
+        "unrealengine" => "UnrealEngine",
+        "scala" => "Scala",
+        "elixir" => "Elixir",
+        "unity" => "Unity",
+        "cmake" => "CMake",
+        "gradle" => "Gradle",
+        "maven" => "Maven",
+        "bun" => "bun",
         _ => id,
     }
 }

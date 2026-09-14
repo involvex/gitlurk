@@ -14,9 +14,20 @@ const TEMPLATE_CATEGORIES: Record<string, string[]> = {
     'ruby',
     'swift',
     'kotlin',
+    'scala',
+    'elixir',
     'dotnet',
+    'bun',
   ],
-  Frameworks: ['vue', 'nextjs', 'rails', 'laravel', 'terraform'],
+  Frameworks: [
+    'vue',
+    'nextjs',
+    'rails',
+    'laravel',
+    'terraform',
+    'unity',
+    'unrealengine',
+  ],
   Editors: [
     'visualstudiocode',
     'jetbrains',
@@ -26,6 +37,7 @@ const TEMPLATE_CATEGORIES: Record<string, string[]> = {
     'visualstudio',
   ],
   OS: ['macos', 'windows', 'linux'],
+  BuildTools: ['cmake', 'gradle', 'maven'],
 };
 
 export function GitignoreEditor() {

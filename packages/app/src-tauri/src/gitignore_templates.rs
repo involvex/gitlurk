@@ -55,6 +55,16 @@ pub const GITIGNORE_TEMPLATES: &[GitignoreTemplate] = &[
         content: include_str!("../templates/kotlin.gitignore"),
     },
     GitignoreTemplate {
+        id: "scala",
+        name: "Scala",
+        content: include_str!("../templates/scala.gitignore"),
+    },
+    GitignoreTemplate {
+        id: "elixir",
+        name: "Elixir",
+        content: include_str!("../templates/elixir.gitignore"),
+    },
+    GitignoreTemplate {
         id: "vue",
         name: "Vue",
         content: include_str!("../templates/vue.gitignore"),
@@ -73,6 +83,16 @@ pub const GITIGNORE_TEMPLATES: &[GitignoreTemplate] = &[
         id: "laravel",
         name: "Laravel",
         content: include_str!("../templates/laravel.gitignore"),
+    },
+    GitignoreTemplate {
+        id: "unity",
+        name: "Unity",
+        content: include_str!("../templates/unity.gitignore"),
+    },
+    GitignoreTemplate {
+        id: "unrealengine",
+        name: "Unreal Engine",
+        content: include_str!("../templates/unrealengine.gitignore"),
     },
     GitignoreTemplate {
         id: "visualstudiocode",
@@ -128,6 +148,26 @@ pub const GITIGNORE_TEMPLATES: &[GitignoreTemplate] = &[
         id: "dotnet",
         name: ".NET",
         content: include_str!("../templates/dotnet.gitignore"),
+    },
+    GitignoreTemplate {
+        id: "cmake",
+        name: "CMake",
+        content: include_str!("../templates/cmake.gitignore"),
+    },
+    GitignoreTemplate {
+        id: "gradle",
+        name: "Gradle",
+        content: include_str!("../templates/gradle.gitignore"),
+    },
+    GitignoreTemplate {
+        id: "maven",
+        name: "Maven",
+        content: include_str!("../templates/maven.gitignore"),
+    },
+    GitignoreTemplate {
+        id: "bun",
+        name: "Bun",
+        content: include_str!("../templates/bun.gitignore"),
     },
 ];
 
