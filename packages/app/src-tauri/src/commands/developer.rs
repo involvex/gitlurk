@@ -7,7 +7,7 @@ use std::time::Duration;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
-use crate::{validate_repo_path, AppState, Settings};
+use crate::{process_util, validate_repo_path, AppState, Settings};
 
 fn repo_cwd(path: Option<String>) -> Result<PathBuf, String> {
     match path {
@@ -141,7 +141,7 @@ pub async fn dev_gh_version(state: State<'_, AppState>) -> Result<GhVersionRespo
         }
     };
     let version = run_blocking(move || {
-        let output = Command::new(&gh)
+        let output = process_util::command(&gh)
             .args(["--version"])
             .output()
             .map_err(|e| e.to_string())?;
@@ -175,7 +175,7 @@ pub async fn dev_gh_auth_status(
         let (tx, rx) = std::sync::mpsc::channel();
         let gh2 = gh.clone();
         std::thread::spawn(move || {
-            let result = Command::new(&gh2)
+            let result = process_util::command(&gh2)
                 .args(["auth", "status"])
                 .output()
                 .map_err(|e| e.to_string());
@@ -217,7 +217,7 @@ pub async fn dev_gh_run_list(
     let gh = state.gh.resolve_gh()?;
     let limit_str = limit.unwrap_or(10).to_string();
     run_blocking(move || {
-        let mut cmd = Command::new(&gh);
+        let mut cmd = process_util::command(&gh);
         cmd.args([
             "run",
             "list",
@@ -271,7 +271,7 @@ pub fn dev_gh_run_watch(
         }
     }
 
-    let mut cmd = Command::new(&gh);
+    let mut cmd = process_util::command(&gh);
     cmd.arg("run").arg("watch");
     if let Some(id) = &run_id {
         cmd.arg(id);
@@ -468,7 +468,7 @@ pub async fn dev_gh_run_view(
     let cwd = repo_cwd(path)?;
     let gh = state.gh.resolve_gh()?;
     run_blocking(move || {
-        let mut cmd = Command::new(&gh);
+        let mut cmd = process_util::command(&gh);
         cmd.arg("run").arg("view");
         if let Some(id) = &run_id {
             cmd.arg(id);
@@ -500,7 +500,7 @@ pub async fn dev_gh_run_rerun(
     let cwd = repo_cwd(path)?;
     let gh = state.gh.resolve_gh()?;
     run_blocking(move || {
-        let mut cmd = Command::new(&gh);
+        let mut cmd = process_util::command(&gh);
         cmd.arg("run").arg("rerun").arg(&run_id).arg("--failed");
         if let Some(r) = &repo {
             cmd.arg("--repo").arg(r);
@@ -525,7 +525,7 @@ pub async fn dev_gh_repo_fork(
     let cwd = repo_cwd(path)?;
     let gh = state.gh.resolve_gh()?;
     run_blocking(move || {
-        let mut cmd = Command::new(&gh);
+        let mut cmd = process_util::command(&gh);
         cmd.arg("repo").arg("fork").current_dir(&cwd);
         if let Some(r) = repo.as_deref() {
             cmd.arg(r);
@@ -553,7 +553,7 @@ pub async fn dev_gh_repo_sync(
     let cwd = repo_cwd(path)?;
     let gh = state.gh.resolve_gh()?;
     run_blocking(move || {
-        let mut cmd = Command::new(&gh);
+        let mut cmd = process_util::command(&gh);
         cmd.arg("repo").arg("sync").current_dir(&cwd);
         if let Some(r) = repo.as_deref() {
             cmd.args(["-r", r]);
@@ -599,7 +599,7 @@ pub async fn dev_gh_release_create(
         if draft.unwrap_or(false) {
             args.push("--draft".into());
         }
-        let output = Command::new(&gh)
+        let output = process_util::command(&gh)
             .args(&args)
             .current_dir(&cwd)
             .output()
@@ -618,7 +618,7 @@ pub async fn dev_gh_release_create(
 pub async fn dev_gh_config_list(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     let gh = state.gh.resolve_gh()?;
     run_blocking(move || {
-        let output = Command::new(&gh)
+        let output = process_util::command(&gh)
             .args(["config", "list"])
             .output()
             .map_err(|e| e.to_string())?;
@@ -647,7 +647,7 @@ pub async fn dev_gh_config_get(
 ) -> Result<serde_json::Value, String> {
     let gh = state.gh.resolve_gh()?;
     run_blocking(move || {
-        let output = Command::new(&gh)
+        let output = process_util::command(&gh)
             .args(["config", "get", &key])
             .output()
             .map_err(|e| e.to_string())?;
@@ -669,7 +669,7 @@ pub async fn dev_gh_config_set(
 ) -> Result<(), String> {
     let gh = state.gh.resolve_gh()?;
     run_blocking(move || {
-        let output = Command::new(&gh)
+        let output = process_util::command(&gh)
             .args(["config", "set", &key, &value])
             .output()
             .map_err(|e| e.to_string())?;
@@ -685,7 +685,7 @@ pub async fn dev_gh_config_set(
 pub async fn dev_gh_alias_list(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     let gh = state.gh.resolve_gh()?;
     run_blocking(move || {
-        let output = Command::new(&gh)
+        let output = process_util::command(&gh)
             .args(["alias", "list"])
             .output()
             .map_err(|e| e.to_string())?;
@@ -727,7 +727,7 @@ pub async fn dev_git_config_list(
         if show_origin {
             args.push("--show-origin");
         }
-        let output = Command::new(&git)
+        let output = process_util::command(&git)
             .args(&args)
             .current_dir(&cwd)
             .output()
@@ -775,7 +775,7 @@ pub async fn dev_git_config_get(
     let git = state.git.resolve_git()?;
     run_blocking(move || {
         let scope_flag = format!("--{scope}");
-        let output = Command::new(&git)
+        let output = process_util::command(&git)
             .args(["config", scope_flag.as_str(), &key])
             .current_dir(&cwd)
             .output()
@@ -802,7 +802,7 @@ pub async fn dev_git_config_set(
     let git = state.git.resolve_git()?;
     run_blocking(move || {
         let scope_flag = format!("--{scope}");
-        let output = Command::new(&git)
+        let output = process_util::command(&git)
             .args(["config", scope_flag.as_str(), &key, &value])
             .current_dir(&cwd)
             .output()
@@ -916,7 +916,7 @@ pub async fn dev_export_diagnostics(
                 .to_string()
         };
 
-        let git_version = Command::new(&git)
+        let git_version = process_util::command(&git)
             .args(["--version"])
             .output()
             .ok()
@@ -924,7 +924,7 @@ pub async fn dev_export_diagnostics(
             .filter(|line| !line.is_empty());
 
         let gh_version = gh.as_ref().and_then(|gh_path| {
-            Command::new(gh_path)
+            process_util::command(gh_path)
                 .args(["--version"])
                 .output()
                 .ok()
@@ -935,7 +935,7 @@ pub async fn dev_export_diagnostics(
         // gh auth status prints account/host info but never raw tokens.
         let (auth_logged_in, auth_summary) = gh.as_ref()
             .and_then(|gh_path| {
-                let output = Command::new(gh_path)
+                let output = process_util::command(gh_path)
                     .args(["auth", "status"])
                     .output()
                     .ok()?;

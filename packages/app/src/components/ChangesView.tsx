@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
 import { ipcInvoke } from '../ipc/client';
+import { joinRepoPath } from '../lib/paths';
 import type { DiffKind } from '../stores/git-ops';
 import { DiffPanel } from './DiffPanel';
 import { ResizeHandle } from './ResizeHandle';
 import { ConfirmDialog } from './ConfirmDialog';
+import { BoundContextMenu } from './ContextMenu';
+import { useContextMenuState } from '../hooks/useContextMenuState';
 
 function FileList({
   title,
@@ -14,6 +17,7 @@ function FileList({
   kind,
   selectedFile,
   onSelect,
+  onContextMenu,
 }: {
   title: string;
   files: string[];
@@ -21,6 +25,7 @@ function FileList({
   kind: DiffKind;
   selectedFile: string | null;
   onSelect: (file: string, kind: DiffKind) => void;
+  onContextMenu: (event: React.MouseEvent, file: string) => void;
 }) {
   return (
     <section className="rounded-lg border border-border bg-surface-elevated">
@@ -54,6 +59,7 @@ function FileList({
               <button
                 type="button"
                 onClick={() => onSelect(file, kind)}
+                onContextMenu={(event) => onContextMenu(event, file)}
                 className={`min-w-0 flex-1 px-4 py-2 text-left font-mono text-xs ${
                   selectedFile === file
                     ? 'bg-primary/20 text-primary'
@@ -116,6 +122,11 @@ export function ChangesView() {
   const [pendingAmend, setPendingAmend] = useState(false);
   const [autocrlfUnset, setAutocrlfUnset] = useState(false);
   const [autocrlfDismissed, setAutocrlfDismissed] = useState(false);
+  const {
+    state: fileMenu,
+    open: openFileMenu,
+    close: closeFileMenu,
+  } = useContextMenuState<string>();
 
   useEffect(() => {
     if (!activeRepoPath) return;
@@ -279,6 +290,7 @@ export function ChangesView() {
             kind="staged"
             selectedFile={selectedFile}
             onSelect={(file, kind) => void dispatcher.loadFileDiff(file, kind)}
+            onContextMenu={openFileMenu}
           />
           <FileList
             title="Unstaged changes"
@@ -287,6 +299,7 @@ export function ChangesView() {
             kind="unstaged"
             selectedFile={selectedFile}
             onSelect={(file, kind) => void dispatcher.loadFileDiff(file, kind)}
+            onContextMenu={openFileMenu}
           />
           <FileList
             title="Untracked files"
@@ -295,6 +308,7 @@ export function ChangesView() {
             kind="untracked"
             selectedFile={selectedFile}
             onSelect={(file, kind) => void dispatcher.loadFileDiff(file, kind)}
+            onContextMenu={openFileMenu}
           />
         </div>
         <ResizeHandle
@@ -303,6 +317,26 @@ export function ChangesView() {
         />
         <DiffPanel />
       </div>
+
+      <BoundContextMenu
+        state={fileMenu}
+        onClose={closeFileMenu}
+        items={[
+          { id: 'explorer', label: 'Open in Explorer' },
+          { id: 'terminal', label: 'Open in Terminal' },
+          { id: 'copy-path', label: 'Copy Path' },
+        ]}
+        onSelect={(id, file) => {
+          const absolute = joinRepoPath(activeRepoPath, file);
+          if (id === 'explorer') {
+            void dispatcher.revealInExplorer(absolute);
+          } else if (id === 'terminal') {
+            void dispatcher.openTerminalAt(absolute);
+          } else if (id === 'copy-path') {
+            void dispatcher.copyPathToClipboard(absolute);
+          }
+        }}
+      />
 
       <footer className="border-t border-border p-6">
         <label

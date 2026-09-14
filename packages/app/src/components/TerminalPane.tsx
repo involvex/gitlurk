@@ -14,6 +14,9 @@ type SessionRuntime = {
   unlisten?: () => void;
 };
 
+/** Module-level lock so StrictMode remounts cannot start two PTYs. */
+let spawnInFlight = false;
+
 function invokeErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
@@ -43,6 +46,40 @@ function titleForShell(shell: string, cwd: string, index: number): string {
   return `${base} (${label}${index > 1 ? ` ${index}` : ''})`;
 }
 
+function createXtermMount(host: HTMLDivElement): {
+  term: Terminal;
+  fitAddon: FitAddon;
+  mount: HTMLDivElement;
+} {
+  const mount = document.createElement('div');
+  mount.className = 'h-full w-full';
+  host.appendChild(mount);
+
+  const term = new Terminal({
+    theme: {
+      background: '#0d1117',
+      foreground: '#e6edf3',
+    },
+    fontSize: 13,
+    fontFamily: 'Consolas, monospace',
+    cursorBlink: true,
+  });
+  const fitAddon = new FitAddon();
+  term.loadAddon(fitAddon);
+  term.open(mount);
+  fitAddon.fit();
+  return { term, fitAddon, mount };
+}
+
+/** Skip ConPTY resize when the pane is crushed to 0 by flex layout. */
+function safeResize(sessionId: string, cols: number, rows: number) {
+  if (sessionId.startsWith('local-error-')) return;
+  if (cols < 2 || rows < 1) return;
+  void ipcInvoke('terminal:resize', { sessionId, cols, rows }).catch(() => {
+    /* session may already be gone */
+  });
+}
+
 export function TerminalPane() {
   const show = useAppStore((s) => s.showTerminal);
   const terminalHeight = useAppStore((s) => s.terminalHeight);
@@ -51,11 +88,59 @@ export function TerminalPane() {
 
   const hostRef = useRef<HTMLDivElement>(null);
   const runtimesRef = useRef<Map<string, SessionRuntime>>(new Map());
-  const spawningRef = useRef(false);
+
+  function syncVisibility(activeId: string | null) {
+    for (const [id, runtime] of runtimesRef.current) {
+      const visible = id === activeId;
+      runtime.mount.style.display = visible ? 'block' : 'none';
+      if (visible) {
+        runtime.fitAddon.fit();
+        safeResize(id, runtime.term.cols, runtime.term.rows);
+        runtime.term.focus();
+      }
+    }
+  }
+
+  async function attachRuntime(
+    sessionId: string,
+    host: HTMLDivElement,
+  ): Promise<SessionRuntime> {
+    const { term, fitAddon, mount } = createXtermMount(host);
+
+    const unlisten = await onEvent('terminal-output', (event) => {
+      if (event.sessionId !== sessionId) return;
+      const runtime = runtimesRef.current.get(sessionId);
+      runtime?.term.write(event.data);
+    });
+
+    term.onData((data) => {
+      void ipcInvoke('terminal:write', { sessionId, data });
+    });
+
+    const runtime: SessionRuntime = { term, fitAddon, mount, unlisten };
+    runtimesRef.current.set(sessionId, runtime);
+    return runtime;
+  }
+
+  async function rebindExistingSessions() {
+    const host = hostRef.current;
+    if (!host) return;
+    const store = useAppStore.getState();
+    for (const session of store.terminalSessions) {
+      if (runtimesRef.current.has(session.id)) continue;
+      if (session.id.startsWith('local-error-')) continue;
+      try {
+        await attachRuntime(session.id, host);
+      } catch {
+        /* PTY may already be dead — leave tab for user to close */
+      }
+    }
+    syncVisibility(store.activeTerminalSessionId);
+  }
 
   async function spawnSession() {
-    if (spawningRef.current || !hostRef.current) return;
-    spawningRef.current = true;
+    if (spawnInFlight || !hostRef.current) return;
+    spawnInFlight = true;
     const store = useAppStore.getState();
     const cwd = store.activeRepoPath ?? '.';
     const shell = store.terminalShell;
@@ -65,29 +150,15 @@ export function TerminalPane() {
       store.terminalPwshPath,
     );
 
-    const mount = document.createElement('div');
-    mount.className = 'h-full w-full';
-    hostRef.current.appendChild(mount);
-
-    const term = new Terminal({
-      theme: {
-        background: '#0d1117',
-        foreground: '#e6edf3',
-      },
-      fontSize: 13,
-      fontFamily: 'Consolas, monospace',
-      cursorBlink: true,
-    });
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
-    term.open(mount);
-    fitAddon.fit();
+    const { term, fitAddon, mount } = createXtermMount(hostRef.current);
 
     try {
+      const cols = Math.max(term.cols, 2);
+      const rows = Math.max(term.rows, 1);
       const { sessionId } = await ipcInvoke('terminal:spawn', {
         cwd,
-        cols: term.cols,
-        rows: term.rows,
+        cols,
+        rows,
         shell,
         shellPath,
       });
@@ -104,50 +175,33 @@ export function TerminalPane() {
 
       runtimesRef.current.set(sessionId, { term, fitAddon, mount, unlisten });
 
-      const nextIndex = store.terminalSessions.length + 1;
+      const latest = useAppStore.getState();
+      const nextIndex = latest.terminalSessions.length + 1;
       const info: TerminalSessionInfo = {
         id: sessionId,
         title: titleForShell(shell, cwd, nextIndex),
       };
-      store.setTerminalSessions([...store.terminalSessions, info]);
-      store.setActiveTerminalSessionId(sessionId);
+      latest.setTerminalSessions([...latest.terminalSessions, info]);
+      latest.setActiveTerminalSessionId(sessionId);
       syncVisibility(sessionId);
     } catch (error) {
       term.writeln(`Failed to start terminal: ${invokeErrorMessage(error)}`);
-      // Keep a disposable local-only tab so the error is visible.
       const localId = `local-error-${Date.now()}`;
       runtimesRef.current.set(localId, { term, fitAddon, mount });
-      const nextIndex = store.terminalSessions.length + 1;
-      store.setTerminalSessions([
-        ...store.terminalSessions,
+      const latest = useAppStore.getState();
+      const nextIndex = latest.terminalSessions.length + 1;
+      latest.setTerminalSessions([
+        ...latest.terminalSessions,
         { id: localId, title: titleForShell(shell, cwd, nextIndex) },
       ]);
-      store.setActiveTerminalSessionId(localId);
+      latest.setActiveTerminalSessionId(localId);
       syncVisibility(localId);
     } finally {
-      spawningRef.current = false;
+      spawnInFlight = false;
     }
   }
 
-  function syncVisibility(activeId: string | null) {
-    for (const [id, runtime] of runtimesRef.current) {
-      const visible = id === activeId;
-      runtime.mount.style.display = visible ? 'block' : 'none';
-      if (visible) {
-        runtime.fitAddon.fit();
-        void ipcInvoke('terminal:resize', {
-          sessionId: id,
-          cols: runtime.term.cols,
-          rows: runtime.term.rows,
-        }).catch(() => {
-          /* local-error sessions have no PTY */
-        });
-        runtime.term.focus();
-      }
-    }
-  }
-
-  async function disposeSession(sessionId: string) {
+  async function disposeSession(sessionId: string, killPty: boolean) {
     const runtime = runtimesRef.current.get(sessionId);
     if (runtime) {
       runtime.unlisten?.();
@@ -155,7 +209,7 @@ export function TerminalPane() {
       runtime.mount.remove();
       runtimesRef.current.delete(sessionId);
     }
-    if (!sessionId.startsWith('local-error-')) {
+    if (killPty && !sessionId.startsWith('local-error-')) {
       try {
         await ipcInvoke('terminal:kill', { sessionId });
       } catch {
@@ -165,7 +219,7 @@ export function TerminalPane() {
   }
 
   async function closeSession(sessionId: string) {
-    await disposeSession(sessionId);
+    await disposeSession(sessionId, true);
 
     const store = useAppStore.getState();
     const remaining = store.terminalSessions.filter((s) => s.id !== sessionId);
@@ -184,22 +238,30 @@ export function TerminalPane() {
   }
 
   async function closeAllSessions() {
-    const ids = [...runtimesRef.current.keys()];
+    const store = useAppStore.getState();
+    const ids = new Set([
+      ...runtimesRef.current.keys(),
+      ...store.terminalSessions.map((s) => s.id),
+    ]);
     for (const id of ids) {
-      await disposeSession(id);
+      await disposeSession(id, true);
     }
     useAppStore.getState().setTerminalSessions([]);
     useAppStore.getState().setActiveTerminalSessionId(null);
   }
 
-  // Open pane: ensure at least one session. Close pane: tear everything down.
+  // Open pane: ensure at least one session (or rebind after remount).
+  // Close pane: tear everything down. Do not kill PTY on incidental remount.
   useEffect(() => {
     if (!show) {
       void closeAllSessions();
       return;
     }
-    if (useAppStore.getState().terminalSessions.length === 0) {
-      void spawnSession();
+    const store = useAppStore.getState();
+    if (store.terminalSessions.length === 0) {
+      if (!spawnInFlight) void spawnSession();
+    } else if (runtimesRef.current.size === 0) {
+      void rebindExistingSessions();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to pane visibility
   }, [show]);
@@ -217,11 +279,7 @@ export function TerminalPane() {
       const runtime = runtimesRef.current.get(id);
       if (!runtime) return;
       runtime.fitAddon.fit();
-      void ipcInvoke('terminal:resize', {
-        sessionId: id,
-        cols: runtime.term.cols,
-        rows: runtime.term.rows,
-      }).catch(() => undefined);
+      safeResize(id, runtime.term.cols, runtime.term.rows);
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -230,7 +288,7 @@ export function TerminalPane() {
   if (!show) return null;
 
   return (
-    <div className="border-t border-border bg-surface">
+    <div className="shrink-0 border-t border-border bg-surface">
       <div
         role="separator"
         aria-orientation="horizontal"
@@ -245,11 +303,7 @@ export function TerminalPane() {
             const runtime = runtimesRef.current.get(id);
             if (!runtime) return;
             runtime.fitAddon.fit();
-            void ipcInvoke('terminal:resize', {
-              sessionId: id,
-              cols: runtime.term.cols,
-              rows: runtime.term.rows,
-            }).catch(() => undefined);
+            safeResize(id, runtime.term.cols, runtime.term.rows);
           };
           const onUp = () => {
             window.removeEventListener('pointermove', onMove);

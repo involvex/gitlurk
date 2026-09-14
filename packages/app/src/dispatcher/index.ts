@@ -1182,6 +1182,17 @@ export const dispatcher = {
     await ipcInvoke('shell:open-terminal', { path });
   },
 
+  async copyPathToClipboard(path: string) {
+    try {
+      await navigator.clipboard.writeText(path);
+      getStore().showToast('Path copied');
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Failed to copy path',
+      );
+    }
+  },
+
   async revealInExplorer(path: string) {
     try {
       await ipcInvoke('shell:reveal-in-explorer', { path });

@@ -14,6 +14,7 @@ mod gitignore_templates;
 mod hotkeys;
 mod mcp_server;
 mod plugin_host;
+mod process_util;
 mod protocol;
 mod pty_session;
 mod registry;

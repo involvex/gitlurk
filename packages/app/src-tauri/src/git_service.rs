@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 use std::sync::Mutex;
 
 use serde::Serialize;
@@ -150,17 +150,10 @@ impl GitService {
 
     pub fn exec(&self, args: &[&str], cwd: &Path) -> Result<Output, String> {
         let git = self.resolve_git()?;
-        let mut cmd = Command::new(git);
+        let mut cmd = crate::process_util::command(git);
         cmd.args(args)
             .current_dir(cwd)
             .env("GIT_TERMINAL_PROMPT", "0");
-        // Prevent console-window flashes that steal focus / bounce Windows Terminal.
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-            cmd.creation_flags(CREATE_NO_WINDOW);
-        }
         cmd.output().map_err(|e| format!("Failed to run git: {e}"))
     }
 
@@ -795,7 +788,7 @@ impl GitService {
         mode: ApplyPatchMode,
     ) -> Result<(), String> {
         use std::io::Write;
-        use std::process::{Command, Stdio};
+        use std::process::Stdio;
 
         let git = self.resolve_git()?;
         let mut args = match mode {
@@ -804,7 +797,7 @@ impl GitService {
             ApplyPatchMode::Discard => vec!["apply", "--reverse"],
         };
         args.push("--");
-        let mut child_cmd = Command::new(git);
+        let mut child_cmd = crate::process_util::command(git);
         child_cmd
             .args(&args)
             .current_dir(dir)
@@ -812,12 +805,6 @@ impl GitService {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .env("GIT_TERMINAL_PROMPT", "0");
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-            child_cmd.creation_flags(CREATE_NO_WINDOW);
-        }
         let mut child = child_cmd
             .spawn()
             .map_err(|e| format!("Failed to run git apply: {e}"))?;
@@ -893,19 +880,43 @@ fn parse_config_line(line: &str) -> Option<GitConfigEntry> {
 }
 
 fn find_system_git() -> Option<PathBuf> {
-    let output = Command::new("where").arg("git").output().ok()?;
-    if !output.status.success() {
-        return None;
+    #[cfg(windows)]
+    {
+        let output = crate::process_util::command("where")
+            .arg("git")
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let line = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .next()?
+            .trim()
+            .to_string();
+        if line.is_empty() {
+            None
+        } else {
+            Some(PathBuf::from(line))
+        }
     }
-    let line = String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .next()?
-        .trim()
-        .to_string();
-    if line.is_empty() {
-        None
-    } else {
-        Some(PathBuf::from(line))
+    #[cfg(not(windows))]
+    {
+        use std::process::Command;
+        let output = Command::new("which").arg("git").output().ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let line = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .next()?
+            .trim()
+            .to_string();
+        if line.is_empty() {
+            None
+        } else {
+            Some(PathBuf::from(line))
+        }
     }
 }
 

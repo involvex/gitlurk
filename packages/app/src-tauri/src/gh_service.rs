@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 use std::sync::Mutex;
 
 pub struct GhService {
@@ -27,7 +27,7 @@ impl GhService {
 
     pub fn exec(&self, args: &[&str], cwd: &Path) -> Result<Output, String> {
         let gh = self.resolve_gh()?;
-        Command::new(gh)
+        crate::process_util::command(gh)
             .args(args)
             .current_dir(cwd)
             .output()
@@ -62,7 +62,10 @@ impl GhService {
 fn find_system_gh() -> Option<PathBuf> {
     #[cfg(windows)]
     {
-        let output = Command::new("where").arg("gh").output().ok()?;
+        let output = crate::process_util::command("where")
+            .arg("gh")
+            .output()
+            .ok()?;
         if !output.status.success() {
             return None;
         }
@@ -79,6 +82,7 @@ fn find_system_gh() -> Option<PathBuf> {
     }
     #[cfg(not(windows))]
     {
+        use std::process::Command;
         let output = Command::new("which").arg("gh").output().ok()?;
         if !output.status.success() {
             return None;

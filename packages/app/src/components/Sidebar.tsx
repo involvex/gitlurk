@@ -1,13 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
 import { ipcInvoke } from '../ipc/client';
-
-type ContextMenuState = {
-  path: string;
-  x: number;
-  y: number;
-};
+import { BoundContextMenu } from './ContextMenu';
+import { useContextMenuState } from '../hooks/useContextMenuState';
 
 export function Sidebar() {
   const repos = useAppStore((s) => s.repos);
@@ -26,26 +22,12 @@ export function Sidebar() {
   const isAuthenticating = useAppStore((s) => s.isAuthenticating);
   const sidebarWidth = useAppStore((s) => s.sidebarWidth);
   const appMode = useAppStore((s) => s.appMode);
-  const [menu, setMenu] = useState<ContextMenuState | null>(null);
+  const {
+    state: menu,
+    open: openMenu,
+    close: closeMenu,
+  } = useContextMenuState<string>();
   const [searchQuery, setSearchQuery] = useState('');
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menu) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (menuRef.current?.contains(event.target as Node)) return;
-      setMenu(null);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenu(null);
-    };
-    window.addEventListener('mousedown', onPointerDown);
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('mousedown', onPointerDown);
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [menu]);
 
   const visibleRepos = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -157,14 +139,7 @@ export function Sidebar() {
                       useAppStore.getState().setAppMode('workspace');
                       void dispatcher.selectRepo(repo.path);
                     }}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      setMenu({
-                        path: repo.path,
-                        x: event.clientX,
-                        y: event.clientY,
-                      });
-                    }}
+                    onContextMenu={(event) => openMenu(event, repo.path)}
                     className={`min-w-0 flex-1 rounded-md px-2 py-2 text-left text-sm ${
                       activeRepoPath === repo.path && appMode === 'workspace'
                         ? 'bg-primary/20 text-primary'
@@ -216,53 +191,36 @@ export function Sidebar() {
         )}
       </div>
 
-      {menu ? (
-        <div
-          ref={menuRef}
-          role="menu"
-          className="fixed z-50 min-w-[180px] rounded-md border border-border bg-surface-elevated py-1 shadow-lg"
-          style={{ left: menu.x, top: menu.y }}
-        >
-          {(
-            [
-              ['explorer', 'Open in Explorer'],
-              ['terminal', 'Open in Terminal'],
-              ['gitignore', 'Edit .gitignore'],
-              ['github', 'Open on GitHub'],
-              ['watch', 'Watch CI run'],
-              ['remove', 'Remove from list'],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="menuitem"
-              className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-surface ${
-                id === 'remove' ? 'text-danger' : ''
-              }`}
-              onClick={() => {
-                const path = menu.path;
-                setMenu(null);
-                if (id === 'explorer') {
-                  void dispatcher.revealInExplorer(path);
-                } else if (id === 'terminal') {
-                  void dispatcher.openTerminalAt(path);
-                } else if (id === 'gitignore') {
-                  useAppStore.getState().openGitignoreEditor(path);
-                } else if (id === 'github') {
-                  void dispatcher.openRepoOnGitHub(path);
-                } else if (id === 'watch') {
-                  void dispatcher.watchCiRun(path);
-                } else {
-                  void dispatcher.removeRepo(path);
-                }
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <BoundContextMenu
+        state={menu}
+        onClose={closeMenu}
+        items={[
+          { id: 'explorer', label: 'Open in Explorer' },
+          { id: 'terminal', label: 'Open in Terminal' },
+          { id: 'copy-path', label: 'Copy Path' },
+          { id: 'gitignore', label: 'Edit .gitignore' },
+          { id: 'github', label: 'Open on GitHub' },
+          { id: 'watch', label: 'Watch CI run' },
+          { id: 'remove', label: 'Remove from list', danger: true },
+        ]}
+        onSelect={(id, path) => {
+          if (id === 'explorer') {
+            void dispatcher.revealInExplorer(path);
+          } else if (id === 'terminal') {
+            void dispatcher.openTerminalAt(path);
+          } else if (id === 'copy-path') {
+            void dispatcher.copyPathToClipboard(path);
+          } else if (id === 'gitignore') {
+            useAppStore.getState().openGitignoreEditor(path);
+          } else if (id === 'github') {
+            void dispatcher.openRepoOnGitHub(path);
+          } else if (id === 'watch') {
+            void dispatcher.watchCiRun(path);
+          } else if (id === 'remove') {
+            void dispatcher.removeRepo(path);
+          }
+        }}
+      />
     </aside>
   );
 }

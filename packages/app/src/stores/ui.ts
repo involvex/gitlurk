@@ -221,7 +221,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   terminalSessions: [],
   activeTerminalSessionId: null,
   unreadNotifications: 0,
-  workspaceTab: 'changes',
+  workspaceTab: 'overview',
   showCommandPalette: false,
   showOnboarding: false,
   showWhatsNew: false,

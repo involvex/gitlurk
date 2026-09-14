@@ -3,8 +3,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
+import { joinRepoPath } from '../lib/paths';
 import { ResizeHandle } from './ResizeHandle';
 import { GitignoreEditor } from './GitignoreEditor';
+import { BoundContextMenu } from './ContextMenu';
+import { useContextMenuState } from '../hooks/useContextMenuState';
 
 type FsEntry = {
   name: string;
@@ -32,6 +35,7 @@ function TreeNode({
   childrenByPath,
   onToggle,
   onSelect,
+  onContextMenu,
 }: {
   entry: FsEntry;
   depth: number;
@@ -40,6 +44,7 @@ function TreeNode({
   childrenByPath: Record<string, FsEntry[]>;
   onToggle: (path: string) => void;
   onSelect: (entry: FsEntry) => void;
+  onContextMenu: (event: React.MouseEvent, entry: FsEntry) => void;
 }) {
   const isDir = entry.kind === 'dir';
   const isOpen = expanded.has(entry.path);
@@ -54,6 +59,7 @@ function TreeNode({
           if (isDir) onToggle(entry.path);
           onSelect(entry);
         }}
+        onContextMenu={(event) => onContextMenu(event, entry)}
         className={`flex w-full items-center gap-1 truncate px-2 py-1 text-left font-mono text-xs ${
           selected
             ? 'bg-primary/20 text-primary'
@@ -78,6 +84,7 @@ function TreeNode({
               childrenByPath={childrenByPath}
               onToggle={onToggle}
               onSelect={onSelect}
+              onContextMenu={onContextMenu}
             />
           ))}
         </ul>
@@ -108,6 +115,11 @@ export function OverviewView() {
   const [previewBinary, setPreviewBinary] = useState(false);
   const [previewTruncated, setPreviewTruncated] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const {
+    state: treeMenu,
+    open: openTreeMenu,
+    close: closeTreeMenu,
+  } = useContextMenuState<FsEntry>();
 
   useEffect(() => {
     if (!activeRepoPath) {
@@ -231,6 +243,7 @@ export function OverviewView() {
               childrenByPath={childrenByPath}
               onToggle={(path) => void toggleDir(path)}
               onSelect={(e) => void selectEntry(e)}
+              onContextMenu={openTreeMenu}
             />
           ))}
         </ul>
@@ -260,7 +273,7 @@ export function OverviewView() {
                 type="button"
                 onClick={() =>
                   void dispatcher.revealInExplorer(
-                    `${activeRepoPath}\\${selectedPath.replace(/\//g, '\\')}`,
+                    joinRepoPath(activeRepoPath, selectedPath),
                   )
                 }
                 className="rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
@@ -304,6 +317,26 @@ export function OverviewView() {
           )}
         </div>
       </section>
+
+      <BoundContextMenu
+        state={treeMenu}
+        onClose={closeTreeMenu}
+        items={[
+          { id: 'explorer', label: 'Open in Explorer' },
+          { id: 'terminal', label: 'Open in Terminal' },
+          { id: 'copy-path', label: 'Copy Path' },
+        ]}
+        onSelect={(id, entry) => {
+          const absolute = joinRepoPath(activeRepoPath, entry.path);
+          if (id === 'explorer') {
+            void dispatcher.revealInExplorer(absolute);
+          } else if (id === 'terminal') {
+            void dispatcher.openTerminalAt(absolute);
+          } else if (id === 'copy-path') {
+            void dispatcher.copyPathToClipboard(absolute);
+          }
+        }}
+      />
     </div>
   );
 }
