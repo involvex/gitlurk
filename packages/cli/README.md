@@ -20,6 +20,10 @@ gitlurk gh run list       # passthrough to GitHub CLI
 gitlurk runs              # shortcut for gh run list
 gitlurk git config list --global
 gitlurk install-desktop   # download Windows installer from GitHub Releases
+
+# PowerShell tab completion
+gitlurk completions powershell | Out-String | Invoke-Expression
+# or: gitlurk completions powershell >> $PROFILE
 ```
 
 Requires [GitHub CLI](https://cli.github.com) for `gh` commands.

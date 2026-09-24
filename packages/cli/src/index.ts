@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import { ghVersion } from '@gitlurk/gh';
 import { runDesktopCommand } from './commands/desktop.js';
+import {
+  isCompletionsCommand,
+  runCompletionsCommand,
+} from './commands/completions.js';
 import { isGhCommand, runGhCommand, runGhPassthrough } from './commands/gh.js';
 import {
   isGitConfigCommand,
@@ -52,6 +56,11 @@ async function main(): Promise<void> {
       console.error(err instanceof Error ? err.message : String(err));
       process.exit(1);
     }
+    return;
+  }
+
+  if (isCompletionsCommand(args[0])) {
+    runCompletionsCommand(args);
     return;
   }
 

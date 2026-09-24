@@ -80,6 +80,14 @@ gitlurk git config edit --global
 
 Scopes: `--global`, `--local` (default), `--system`.
 
+## Completions (PowerShell)
+
+```powershell
+gitlurk completions powershell | Out-String | Invoke-Expression
+# persist:
+gitlurk completions powershell >> $PROFILE
+```
+
 ## npm publish
 
 From the monorepo (requires npm login to the `involvex` org):

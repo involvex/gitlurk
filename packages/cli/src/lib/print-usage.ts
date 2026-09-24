@@ -29,6 +29,10 @@ Git config:
 Desktop installer:
   gitlurk install-desktop       Download & launch latest Windows installer
 
+Completions:
+  gitlurk completions powershell
+  # Install: gitlurk completions powershell | Out-String | Invoke-Expression
+
 Env:
   GITLURK_DESKTOP_EXE           Path to gitlurk-desktop.exe (optional)
   CARGO_TARGET_DIR              Cargo target dir; uses release/ then debug/
