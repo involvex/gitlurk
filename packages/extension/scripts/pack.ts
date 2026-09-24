@@ -1,7 +1,10 @@
 #!/usr/bin/env bun
 /**
- * Build the extension and pack a loadable zip for GitHub Releases.
- * Usage: bun run packages/extension/scripts/pack.ts
+ * Build the extension and pack zip + CRX for GitHub Releases.
+ * Usage: bun run --filter @gitlurk/extension pack
+ *
+ * CRX: bunx @involvex/ext-cli pack . --output gitlurk.crx
+ * (from packages/extension; reuses key.pem when present)
  */
 import { mkdirSync, readFileSync, rmSync, cpSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -16,6 +19,7 @@ const manifest = JSON.parse(
 const version = manifest.version;
 const zipName = `gitlurk-extension-${version}.zip`;
 const zipPath = join(root, zipName);
+const crxPath = join(root, 'gitlurk.crx');
 
 console.log(`Building @gitlurk/extension v${version}...`);
 await $`bun run build`.cwd(root);
@@ -36,3 +40,12 @@ await $`powershell -NoProfile -Command Compress-Archive -Path '${join(stagingDir
 
 rmSync(stagingDir, { recursive: true, force: true });
 console.log(`Packed ${zipPath}`);
+
+console.log('Packing CRX with @involvex/ext-cli...');
+rmSync(crxPath, { force: true });
+await $`bunx @involvex/ext-cli pack . --output gitlurk.crx`.cwd(root);
+
+if (!existsSync(crxPath)) {
+  throw new Error('Missing gitlurk.crx after ext-cli pack');
+}
+console.log(`Packed ${crxPath}`);

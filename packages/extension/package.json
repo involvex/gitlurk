@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "bun build src/content-script.ts --outdir dist --target browser && bun build src/background.ts --outdir dist --target browser",
-    "pack": "bun run scripts/pack.ts"
+    "pack": "bun run scripts/pack.ts",
+    "pack:crx": "bun run scripts/pack-crx.ts"
   },
   "dependencies": {
     "@gitlurk/shared": "workspace:*"

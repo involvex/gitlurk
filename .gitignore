@@ -17,3 +17,5 @@ packages/app/src-tauri/gen/
 .kilo/
 packages/extension/.pack/
 packages/extension/*.zip
+packages/extension/*.crx
+packages/extension/key.pem

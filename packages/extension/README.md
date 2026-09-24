@@ -22,13 +22,30 @@ bun run --filter @gitlurk/extension build
 
 This writes `dist/content-script.js` and `dist/background.js`. The extension root for loading is `packages/extension` (manifest + icons stay at the package root).
 
-## Pack (release zip)
+## Pack (release zip + CRX)
 
 ```bash
 bun run --filter @gitlurk/extension pack
 ```
 
-Creates `packages/extension/gitlurk-extension-<version>.zip` containing `manifest.json`, `dist/`, and `icons/`. Unzip it, then Load unpacked on the unzipped folder.
+Creates:
+
+- `packages/extension/gitlurk-extension-<version>.zip` — unzip then Load unpacked
+- `packages/extension/gitlurk.crx` — signed CRX via [`@involvex/ext-cli`](https://www.npmjs.com/package/@involvex/ext-cli)
+
+CRX only (after a prior build is fine; this rebuilds first):
+
+```bash
+bun run --filter @gitlurk/extension pack:crx
+```
+
+Equivalent manual step from `packages/extension`:
+
+```bash
+bunx @involvex/ext-cli pack . --output gitlurk.crx
+```
+
+`key.pem` is created/reused next to the extension for a stable extension ID — keep it private (gitignored).
 
 ## Load unpacked (Edge / Chrome)
 
