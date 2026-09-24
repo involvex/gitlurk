@@ -1754,14 +1754,7 @@ export const dispatcher = {
     switch (action.type) {
       case 'openRepo':
       case 'clone': {
-        const url = action.type === 'clone' ? action.url : action.url;
-        const dir = await ipcInvoke('dialog:save-directory', {
-          title: 'Clone Repository',
-          defaultPath: url.split('/').pop()?.replace('.git', ''),
-        });
-        if (dir) {
-          await dispatcher.cloneRepo(url, dir);
-        }
+        getStore().setShowCloneDialog(true, action.url);
         break;
       }
       case 'openLocalRepo': {

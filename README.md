@@ -3,10 +3,10 @@
 **Windows-focused Git client** — Pull Requests, CI monitoring, notifications, AI commit messages, and an embedded terminal. Built with Tauri 2, React, and TypeScript.
 
 <p align="center">
-  <img src="docs/images/01-changes-view.png" alt="GitLurk Desktop main workspace" width="800">
+  <img src="assets/ui.png" alt="GitLurk Desktop main workspace" width="800">
 </p>
 
-[![Version](https://img.shields.io/badge/version-0.1.3-blue)](https://github.com/involvex/gitlurk/releases)
+[![Version](https://img.shields.io/badge/version-0.1.5-blue)](https://github.com/involvex/gitlurk/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/involvex/gitlurk)
 
@@ -25,11 +25,6 @@ Stage, unstage, and discard files — per-file, per-hunk, or in bulk. Commit, pu
 - **Stash panel** — push, pop, and drop stashes
 - **File tree browser** — explore the repo from within the app
 
-<p align="center">
-  <img src="docs/images/02-history-graph.png" alt="Commit history with graph" width="400">
-  <img src="docs/images/03-branches.png" alt="Branch management panel" width="400">
-</p>
-
 ### GitHub Integration
 
 Connect your GitHub account to manage pull requests, notifications, and explore repositories without leaving the app.
@@ -39,11 +34,6 @@ Connect your GitHub account to manage pull requests, notifications, and explore 
 - **Discover Hub** — activity feed, repository search, trending repos, and your repos
 - **Device Flow auth** — secure OAuth sign-in via GitHub.com, tokens stored in Windows Credential Manager
 
-<p align="center">
-  <img src="docs/images/04-pull-requests.png" alt="Pull Request list" width="400">
-  <img src="docs/images/05-discover-hub.png" alt="Discover Hub with search and trending" width="400">
-</p>
-
 ### CI/CD — GitHub Actions
 
 Watch CI runs live from the app. Stream logs in real time, fork repos, and create releases — all powered by GitHub CLI.
@@ -51,11 +41,6 @@ Watch CI runs live from the app. Stream logs in real time, fork repos, and creat
 - **Run list** — view recent workflow runs with status and workflow name
 - **Live log streaming** — watch a run in real time with output streamed to a dialog
 - **Fork & release** — fork repos and create GitHub releases from the developer panel
-
-<p align="center">
-  <img src="docs/images/07-ci-watch.png" alt="CI run live watch" width="400">
-  <img src="docs/images/08-settings.png" alt="Settings and Developer panel" width="400">
-</p>
 
 ### AI Commit Messages
 
@@ -65,10 +50,6 @@ Generate conventional commit messages from your staged diffs using AI. Supports 
 - **Kilo** — bring your own API key and custom base URL
 - **Test connection** — verify your AI provider before committing
 
-<p align="center">
-  <img src="docs/images/06-ai-commit.png" alt="AI commit message generation" width="800">
-</p>
-
 ### Embedded Terminal
 
 Full pseudo-terminal (PTY) embedded in a resizable pane at the bottom of the workspace. Multi-session support with configurable shells.
@@ -76,10 +57,6 @@ Full pseudo-terminal (PTY) embedded in a resizable pane at the bottom of the wor
 - **Multi-session** — spawn multiple terminal sessions, switch between tabs
 - **Configurable shell** — PowerShell 7, Windows PowerShell 5, CMD, or custom shell path
 - **Auto-cwd** — opens at the active repository root
-
-<p align="center">
-  <img src="docs/images/09-terminal.png" alt="Embedded terminal pane" width="800">
-</p>
 
 ### UI & UX
 
@@ -91,10 +68,10 @@ A polished, responsive interface built for daily use.
 - **Keyboard shortcuts** — pull (Ctrl+Shift+G), commit focus (Ctrl+Shift+C), sidebar toggle (Ctrl+B), refresh (F5)
 - **System tray** — minimize to tray with right-click actions (pull, notifications, discover, settings)
 - **Windows Explorer integration** — "Open with GitLurk Desktop" context menu for folders
+- **Browser extension** — "Open with GitLurk Desktop" in GitHub’s Code → Local menu ([`packages/extension`](packages/extension))
 
 <p align="center">
-  <img src="docs/images/11-command-palette.png" alt="Command palette" width="400">
-  <img src="docs/images/10-themes.png" alt="Theme switching" width="400">
+  <img src="assets/cloneui.png" alt="Open with GitLurk Desktop in GitHub Code Local menu" width="480">
 </p>
 
 ### CLI Companion
@@ -208,7 +185,7 @@ packages/
 ├── gh/                   # GitHub CLI wrapper
 ├── cli/                  # CLI companion (gitlurk command)
 ├── plugin-sdk/           # Plugin API type definitions
-├── extension/            # Chrome/Edge WebExtension bridge
+├── extension/            # Chrome/Edge WebExtension bridge (see packages/extension/README.md)
 └── plugins/              # Plugin packages
 ```
 

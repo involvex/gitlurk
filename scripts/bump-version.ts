@@ -47,6 +47,17 @@ tauri.version = next;
 writeFileSync(tauriPath, `${JSON.stringify(tauri, null, 2)}\n`);
 console.log(`${tauriPath} -> ${next}`);
 
+const extensionManifestPath = 'packages/extension/manifest.json';
+const extensionManifest = JSON.parse(
+  readFileSync(extensionManifestPath, 'utf8'),
+) as { version: string };
+extensionManifest.version = next;
+writeFileSync(
+  extensionManifestPath,
+  `${JSON.stringify(extensionManifest, null, 2)}\n`,
+);
+console.log(`${extensionManifestPath} -> ${next}`);
+
 const cargoPath = 'packages/app/src-tauri/Cargo.toml';
 const cargo = readFileSync(cargoPath, 'utf8');
 const updated = cargo.replace(/^version\s*=\s*"[^"]+"/m, `version = "${next}"`);

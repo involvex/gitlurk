@@ -45,6 +45,7 @@ export interface UiSlice {
   themePreset: ThemePreset;
   resolvedTheme: 'light' | 'dark';
   showCloneDialog: boolean;
+  cloneDialogUrl: string;
   showTerminal: boolean;
   showPlugins: boolean;
   showSettings: boolean;
@@ -98,7 +99,7 @@ export interface UiSlice {
   setTheme: (theme: ThemeMode) => void;
   setThemePreset: (preset: ThemePreset) => void;
   setResolvedTheme: (theme: 'light' | 'dark') => void;
-  setShowCloneDialog: (show: boolean) => void;
+  setShowCloneDialog: (show: boolean, url?: string) => void;
   setShowTerminal: (show: boolean) => void;
   setShowPlugins: (show: boolean) => void;
   setShowSettings: (show: boolean) => void;
@@ -193,6 +194,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   themePreset: 'github-dark',
   resolvedTheme: 'dark',
   showCloneDialog: false,
+  cloneDialogUrl: '',
   showTerminal: false,
   showPlugins: false,
   showSettings: false,
@@ -242,7 +244,11 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   setTheme: (theme) => set({ theme }),
   setThemePreset: (themePreset) => set({ themePreset }),
   setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
-  setShowCloneDialog: (show) => set({ showCloneDialog: show }),
+  setShowCloneDialog: (show, url) =>
+    set({
+      showCloneDialog: show,
+      cloneDialogUrl: show ? (url ?? '') : '',
+    }),
   setShowTerminal: (show) => set({ showTerminal: show }),
   setShowPlugins: (show) => set({ showPlugins: show }),
   setShowSettings: (show) => set({ showSettings: show }),

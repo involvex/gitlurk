@@ -3,7 +3,8 @@
   "version": "0.1.4",
   "private": true,
   "scripts": {
-    "build": "bun build src/content-script.ts --outdir dist --target browser && bun build src/background.ts --outdir dist --target browser"
+    "build": "bun build src/content-script.ts --outdir dist --target browser && bun build src/background.ts --outdir dist --target browser",
+    "pack": "bun run scripts/pack.ts"
   },
   "dependencies": {
     "@gitlurk/shared": "workspace:*"

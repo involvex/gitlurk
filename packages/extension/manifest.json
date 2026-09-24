@@ -1,17 +1,16 @@
 {
   "manifest_version": 3,
   "name": "GitLurk Desktop Bridge",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "description": "Adds Open with GitLurk Desktop to GitHub clone UI",
-  "permissions": ["activeTab"],
   "host_permissions": ["https://github.com/*"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "dist/background.js"
   },
   "content_scripts": [
     {
       "matches": ["https://github.com/*/*"],
-      "js": ["content-script.js"],
+      "js": ["dist/content-script.js"],
       "run_at": "document_idle"
     }
   ],

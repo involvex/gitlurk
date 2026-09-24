@@ -6,6 +6,9 @@ import { dispatcher } from '../dispatcher';
 
 type CloneTab = 'https' | 'ssh' | 'cli';
 
+const HTTPS_PLACEHOLDER = 'https://github.com/owner/repo.git';
+const SSH_PLACEHOLDER = 'git@github.com:owner/repo.git';
+
 function suggestClonePath(dir: string, url: string): string {
   const parsed = parseGitHubRemoteUrl(url.trim());
   const name = parsed?.repo;
@@ -14,19 +17,52 @@ function suggestClonePath(dir: string, url: string): string {
   return `${dir.replace(/[\\/]+$/, '')}${sep}${name}`;
 }
 
+function toHttpsUrl(url: string): string {
+  const parsed = parseGitHubRemoteUrl(url.trim());
+  if (!parsed) return HTTPS_PLACEHOLDER;
+  return `https://github.com/${parsed.owner}/${parsed.repo}.git`;
+}
+
+function toSshUrl(url: string): string {
+  const parsed = parseGitHubRemoteUrl(url.trim());
+  if (!parsed) return SSH_PLACEHOLDER;
+  return `git@github.com:${parsed.owner}/${parsed.repo}.git`;
+}
+
+function tabFromUrl(url: string): CloneTab {
+  return url.trim().startsWith('git@') ? 'ssh' : 'https';
+}
+
 export function CloneDialog() {
   const show = useAppStore((s) => s.showCloneDialog);
+  const pendingUrl = useAppStore((s) => s.cloneDialogUrl);
   const loading = useAppStore((s) => s.loading);
   const defaultCloneDir = useAppStore((s) => s.defaultCloneDir);
   const username = useAppStore((s) => s.username);
   const [tab, setTab] = useState<CloneTab>('https');
-  const [url, setUrl] = useState('https://github.com/owner/repo.git');
+  const [url, setUrl] = useState(HTTPS_PLACEHOLDER);
   const [localPath, setLocalPath] = useState('');
   const [recurseSubmodules, setRecurseSubmodules] = useState(false);
   const [shallowClone, setShallowClone] = useState(false);
   const [depth, setDepth] = useState('1');
   const [forkFirst, setForkFirst] = useState(false);
   const pathTouchedRef = useRef(false);
+
+  useEffect(() => {
+    if (!show) {
+      pathTouchedRef.current = false;
+      return;
+    }
+
+    pathTouchedRef.current = false;
+    if (pendingUrl.trim()) {
+      setUrl(pendingUrl.trim());
+      setTab(tabFromUrl(pendingUrl));
+    } else {
+      setUrl(HTTPS_PLACEHOLDER);
+      setTab('https');
+    }
+  }, [show, pendingUrl]);
 
   useEffect(() => {
     if (!show) {
@@ -44,6 +80,15 @@ export function CloneDialog() {
   const cliCommand = `gh repo clone ${url.replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '')}${
     recurseSubmodules ? ' -- --recurse-submodules' : ''
   }`;
+
+  function switchTab(item: CloneTab) {
+    setTab(item);
+    if (item === 'ssh') {
+      setUrl(toSshUrl(url));
+    } else if (item === 'https') {
+      setUrl(toHttpsUrl(url));
+    }
+  }
 
   async function pickDirectory() {
     const dir = await ipcInvoke('dialog:save-directory', {
@@ -96,14 +141,7 @@ export function CloneDialog() {
               <button
                 key={item}
                 type="button"
-                onClick={() => {
-                  setTab(item);
-                  if (item === 'ssh') {
-                    setUrl('git@github.com:owner/repo.git');
-                  } else if (item === 'https') {
-                    setUrl('https://github.com/owner/repo.git');
-                  }
-                }}
+                onClick={() => switchTab(item)}
                 className={`border-b-2 px-1 py-3 text-sm capitalize ${
                   tab === item
                     ? 'border-primary text-primary'
