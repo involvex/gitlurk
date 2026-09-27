@@ -1,4 +1,10 @@
 import { useEffect, useState } from 'react';
+import type {
+  ExternalTool,
+  ExternalToolKind,
+  ExternalToolTarget,
+} from '@gitlurk/shared';
+import { resetBuiltinTools } from '@gitlurk/shared';
 import { ipcInvoke } from '../ipc/client';
 import { dispatcher } from '../dispatcher';
 import { hotkeyFromEvent } from '../lib/hotkeys';
@@ -6,7 +12,17 @@ import { useAppStore } from '../stores';
 import type { AiProvider, TerminalShell, ThemePreset } from '../stores/ui';
 import { DeveloperPanel } from './DeveloperPanel';
 
-type SettingsTab = 'general' | 'theme' | 'hotkeys' | 'ai' | 'developer';
+type SettingsTab =
+  'general' | 'theme' | 'hotkeys' | 'tools' | 'ai' | 'developer';
+
+type ToolDraft = {
+  id?: string;
+  label: string;
+  command: string;
+  argsText: string;
+  kind: ExternalToolKind;
+  targets: ExternalToolTarget[];
+};
 
 const THEME_PRESETS: Array<{
   id: ThemePreset;
@@ -57,6 +73,7 @@ export function SettingsDialog() {
   const themePreset = useAppStore((s) => s.themePreset);
   const hotkeyShowApp = useAppStore((s) => s.hotkeyShowApp);
   const hotkeyCommandPalette = useAppStore((s) => s.hotkeyCommandPalette);
+  const externalTools = useAppStore((s) => s.externalTools);
 
   const [tab, setTab] = useState<SettingsTab>('general');
   const [provider, setProvider] = useState<AiProvider>(aiProvider);
@@ -71,6 +88,7 @@ export function SettingsDialog() {
   const [draftShowApp, setDraftShowApp] = useState(hotkeyShowApp);
   const [draftPalette, setDraftPalette] = useState(hotkeyCommandPalette);
   const [capturing, setCapturing] = useState<'show' | 'palette' | null>(null);
+  const [toolDraft, setToolDraft] = useState<ToolDraft | null>(null);
 
   useEffect(() => {
     if (!show) return;
@@ -85,6 +103,7 @@ export function SettingsDialog() {
     setDraftShowApp(hotkeyShowApp);
     setDraftPalette(hotkeyCommandPalette);
     setCapturing(null);
+    setToolDraft(null);
   }, [
     show,
     aiProvider,
@@ -220,9 +239,131 @@ export function SettingsDialog() {
     { id: 'general', label: 'General' },
     { id: 'theme', label: 'Theme' },
     { id: 'hotkeys', label: 'Hotkeys' },
+    { id: 'tools', label: 'Tools' },
     { id: 'ai', label: 'AI' },
     { id: 'developer', label: 'Developer' },
   ];
+
+  const persistTools = (tools: ExternalTool[]) => {
+    void dispatcher.setExternalTools(tools);
+  };
+
+  const moveTool = (index: number, delta: number) => {
+    const next = [...externalTools];
+    const target = index + delta;
+    if (target < 0 || target >= next.length) return;
+    const tmp = next[index]!;
+    next[index] = next[target]!;
+    next[target] = tmp;
+    persistTools(next);
+  };
+
+  const toggleTool = (id: string, enabled: boolean) => {
+    persistTools(
+      externalTools.map((t) => (t.id === id ? { ...t, enabled } : t)),
+    );
+  };
+
+  const deleteTool = (id: string) => {
+    const tool = externalTools.find((t) => t.id === id);
+    if (!tool || tool.builtin) return;
+    persistTools(externalTools.filter((t) => t.id !== id));
+  };
+
+  const openNewTool = () => {
+    setToolDraft({
+      label: 'Open in …',
+      command: '',
+      argsText: '{path}',
+      kind: 'native',
+      targets: ['repo', 'file'],
+    });
+  };
+
+  const openEditTool = (tool: ExternalTool) => {
+    setToolDraft({
+      id: tool.id,
+      label: tool.label,
+      command: tool.command,
+      argsText: tool.args.join(' '),
+      kind: tool.kind,
+      targets: [...tool.targets],
+    });
+  };
+
+  const saveToolDraft = () => {
+    if (!toolDraft) return;
+    const label = toolDraft.label.trim();
+    const command = toolDraft.command.trim();
+    if (!label) {
+      useAppStore.getState().setError('Tool label is required');
+      return;
+    }
+    if (toolDraft.kind === 'native' && !command) {
+      useAppStore.getState().setError('Command is required for native tools');
+      return;
+    }
+    if (toolDraft.targets.length === 0) {
+      useAppStore.getState().setError('Select at least one target');
+      return;
+    }
+    const args =
+      toolDraft.kind === 'wsl'
+        ? toolDraft.argsText.trim()
+          ? [toolDraft.argsText.trim()]
+          : ["cd '{wslPath}' && exec bash -l"]
+        : toolDraft.argsText.trim().split(/\s+/).filter(Boolean);
+    if (toolDraft.id) {
+      persistTools(
+        externalTools.map((t) =>
+          t.id === toolDraft.id
+            ? {
+                ...t,
+                label,
+                command: command || t.command,
+                args:
+                  args.length > 0
+                    ? args
+                    : toolDraft.kind === 'wsl'
+                      ? ["cd '{wslPath}' && exec bash -l"]
+                      : ['{path}'],
+                kind: toolDraft.kind,
+                targets: toolDraft.targets,
+              }
+            : t,
+        ),
+      );
+    } else {
+      const custom: ExternalTool = {
+        id: `custom-${crypto.randomUUID()}`,
+        label,
+        enabled: true,
+        targets: toolDraft.targets,
+        kind: toolDraft.kind,
+        command: command || 'wsl',
+        args:
+          args.length > 0
+            ? args
+            : toolDraft.kind === 'wsl'
+              ? ["cd '{wslPath}' && exec bash -l"]
+              : ['{path}'],
+        builtin: false,
+      };
+      persistTools([...externalTools, custom]);
+    }
+    setToolDraft(null);
+  };
+
+  const toggleDraftTarget = (target: ExternalToolTarget) => {
+    if (!toolDraft) return;
+    const has = toolDraft.targets.includes(target);
+    setToolDraft({
+      ...toolDraft,
+      targets: has
+        ? toolDraft.targets.filter((t) => t !== target)
+        : [...toolDraft.targets, target],
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -591,6 +732,202 @@ export function SettingsDialog() {
                 className="rounded-md bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover disabled:opacity-50"
               >
                 Save hotkeys
+              </button>
+            </div>
+          </div>
+        ) : tab === 'tools' ? (
+          <div className="space-y-4">
+            <p className="text-xs text-muted">
+              Custom CLI tools appear in right-click menus and the command
+              palette. Placeholders:{' '}
+              <code className="text-foreground">{'{path}'}</code>,{' '}
+              <code className="text-foreground">{'{dir}'}</code>,{' '}
+              <code className="text-foreground">{'{fileName}'}</code>,{' '}
+              <code className="text-foreground">{'{wslPath}'}</code>. Origin CLI
+              installs into WSL — see{' '}
+              <button
+                type="button"
+                className="text-primary underline"
+                onClick={() =>
+                  void ipcInvoke('shell:open-external', {
+                    url: 'https://cursor.com/docs/origin/cli',
+                  })
+                }
+              >
+                Origin CLI docs
+              </button>
+              .
+            </p>
+
+            <ul className="divide-y divide-border rounded-md border border-border">
+              {externalTools.map((tool, index) => (
+                <li
+                  key={tool.id}
+                  className="flex flex-wrap items-center gap-2 px-3 py-2"
+                >
+                  <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={tool.enabled}
+                      onChange={(e) => toggleTool(tool.id, e.target.checked)}
+                    />
+                    <span className="truncate font-medium">{tool.label}</span>
+                    <span className="shrink-0 text-[10px] text-muted">
+                      {tool.kind}
+                      {tool.builtin ? ' · builtin' : ''}
+                    </span>
+                  </label>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onClick={() => moveTool(index, -1)}
+                      className="rounded border border-border px-2 py-0.5 text-[10px] disabled:opacity-40"
+                    >
+                      Up
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === externalTools.length - 1}
+                      onClick={() => moveTool(index, 1)}
+                      className="rounded border border-border px-2 py-0.5 text-[10px] disabled:opacity-40"
+                    >
+                      Down
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openEditTool(tool)}
+                      className="rounded border border-border px-2 py-0.5 text-[10px]"
+                    >
+                      Edit
+                    </button>
+                    {!tool.builtin ? (
+                      <button
+                        type="button"
+                        onClick={() => deleteTool(tool.id)}
+                        className="rounded border border-border px-2 py-0.5 text-[10px] text-danger"
+                      >
+                        Delete
+                      </button>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {toolDraft ? (
+              <div className="space-y-3 rounded-md border border-border bg-surface-elevated p-3">
+                <p className="text-xs font-medium">
+                  {toolDraft.id ? 'Edit tool' : 'Add custom tool'}
+                </p>
+                <label className="block text-xs text-muted">
+                  Label
+                  <input
+                    value={toolDraft.label}
+                    onChange={(e) =>
+                      setToolDraft({ ...toolDraft, label: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+                  />
+                </label>
+                <label className="block text-xs text-muted">
+                  Kind
+                  <select
+                    value={toolDraft.kind}
+                    onChange={(e) =>
+                      setToolDraft({
+                        ...toolDraft,
+                        kind: e.target.value as ExternalToolKind,
+                      })
+                    }
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+                  >
+                    <option value="native">Native (Windows)</option>
+                    <option value="wsl">WSL</option>
+                  </select>
+                </label>
+                {toolDraft.kind === 'native' ? (
+                  <label className="block text-xs text-muted">
+                    Command
+                    <input
+                      value={toolDraft.command}
+                      onChange={(e) =>
+                        setToolDraft({
+                          ...toolDraft,
+                          command: e.target.value,
+                        })
+                      }
+                      placeholder="code"
+                      className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground"
+                    />
+                  </label>
+                ) : null}
+                <label className="block text-xs text-muted">
+                  {toolDraft.kind === 'wsl'
+                    ? 'Bash script (WSL)'
+                    : 'Arguments (space-separated)'}
+                  <input
+                    value={toolDraft.argsText}
+                    onChange={(e) =>
+                      setToolDraft({
+                        ...toolDraft,
+                        argsText: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-sm text-foreground"
+                  />
+                </label>
+                <div className="flex gap-4 text-xs">
+                  <label className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={toolDraft.targets.includes('repo')}
+                      onChange={() => toggleDraftTarget('repo')}
+                    />
+                    Repo folders
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={toolDraft.targets.includes('file')}
+                      onChange={() => toggleDraftTarget('file')}
+                    />
+                    Files
+                  </label>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setToolDraft(null)}
+                    className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => saveToolDraft()}
+                    className="rounded-md bg-accent px-3 py-1.5 text-xs text-white hover:bg-accent-hover"
+                  >
+                    Save tool
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => openNewTool()}
+                className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated"
+              >
+                Add custom tool
+              </button>
+              <button
+                type="button"
+                onClick={() => persistTools(resetBuiltinTools(externalTools))}
+                className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated"
+              >
+                Reset built-in presets
               </button>
             </div>
           </div>

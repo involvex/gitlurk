@@ -152,6 +152,7 @@ pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value,
         "hotkeyCommandPalette": settings.hotkey_command_palette,
         "defaultCloneDir": settings.default_clone_dir,
         "lastSeenWhatsNewVersion": settings.last_seen_whats_new_version,
+        "externalTools": settings.external_tools,
     }))
 }
 
@@ -182,6 +183,7 @@ pub fn app_set_settings(
     hotkey_command_palette: Option<String>,
     default_clone_dir: Option<String>,
     last_seen_whats_new_version: Option<String>,
+    external_tools: Option<Vec<crate::ExternalTool>>,
 ) -> Result<(), String> {
     let mut settings = read_settings(&state);
     let mut hotkey_changed = false;
@@ -279,6 +281,9 @@ pub fn app_set_settings(
     }
     if let Some(v) = last_seen_whats_new_version {
         settings.last_seen_whats_new_version = v;
+    }
+    if let Some(v) = external_tools {
+        settings.external_tools = v;
     }
     write_settings(&state, &settings)?;
     if hotkey_changed {

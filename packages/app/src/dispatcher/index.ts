@@ -1,4 +1,6 @@
 import { parseGitHubRemoteUrl } from '@gitlurk/shared';
+import type { ExternalTool } from '@gitlurk/shared';
+import { defaultExternalTools } from '@gitlurk/shared';
 import {
   isPermissionGranted,
   requestPermission,
@@ -142,6 +144,7 @@ interface PersistedSettingsPayload {
   hotkeyCommandPalette?: string;
   defaultCloneDir?: string;
   lastSeenWhatsNewVersion?: string;
+  externalTools?: ExternalTool[];
 }
 
 function applyPersistedState(
@@ -184,6 +187,10 @@ function applyPersistedState(
     hotkeyShowApp: settings.hotkeyShowApp ?? 'Ctrl+Alt+G',
     hotkeyCommandPalette: settings.hotkeyCommandPalette ?? 'Ctrl+Shift+P',
     defaultCloneDir: settings.defaultCloneDir ?? '',
+    externalTools:
+      Array.isArray(settings.externalTools) && settings.externalTools.length > 0
+        ? settings.externalTools
+        : defaultExternalTools(),
   });
   store.setExplorerMenuEnabled(explorerMenuEnabled);
 }
@@ -1201,6 +1208,35 @@ export const dispatcher = {
         error instanceof Error ? error.message : 'Failed to open Explorer',
       );
     }
+  },
+
+  async runExternalTool(tool: ExternalTool, path: string) {
+    try {
+      await ipcInvoke('shell:run-tool', {
+        path,
+        command: tool.command,
+        args: tool.args,
+        kind: tool.kind,
+      });
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : `Failed to run ${tool.label}`,
+      );
+    }
+  },
+
+  async runExternalToolById(toolId: string, path: string) {
+    const tool = getStore().externalTools.find((t) => t.id === toolId);
+    if (!tool) {
+      getStore().setError('Unknown external tool');
+      return;
+    }
+    await dispatcher.runExternalTool(tool, path);
+  },
+
+  async setExternalTools(tools: ExternalTool[]) {
+    getStore().setExternalTools(tools);
+    await ipcInvoke('app:set-settings', { externalTools: tools });
   },
 
   async openRepoOnGitHub(path: string) {

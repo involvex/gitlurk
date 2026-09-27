@@ -69,6 +69,77 @@ impl AppState {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalTool {
+    pub id: String,
+    pub label: String,
+    pub enabled: bool,
+    pub targets: Vec<String>,
+    pub kind: String,
+    pub command: String,
+    pub args: Vec<String>,
+    pub builtin: bool,
+}
+
+fn default_external_tools() -> Vec<ExternalTool> {
+    vec![
+        ExternalTool {
+            id: "vscode".into(),
+            label: "Open in VS Code".into(),
+            enabled: true,
+            targets: vec!["repo".into(), "file".into()],
+            kind: "native".into(),
+            command: "code".into(),
+            args: vec!["{path}".into()],
+            builtin: true,
+        },
+        ExternalTool {
+            id: "cursor".into(),
+            label: "Open in Cursor".into(),
+            enabled: true,
+            targets: vec!["repo".into(), "file".into()],
+            kind: "native".into(),
+            command: "cursor".into(),
+            args: vec!["{path}".into()],
+            builtin: true,
+        },
+        ExternalTool {
+            id: "antigravity".into(),
+            label: "Open in Antigravity".into(),
+            enabled: true,
+            targets: vec!["repo".into(), "file".into()],
+            kind: "native".into(),
+            command: "antigravity".into(),
+            args: vec!["{path}".into()],
+            builtin: true,
+        },
+        ExternalTool {
+            id: "origin-wsl".into(),
+            label: "Open in WSL (Origin)".into(),
+            enabled: true,
+            targets: vec!["repo".into()],
+            kind: "wsl".into(),
+            command: "wsl".into(),
+            args: vec![
+                "export PATH=\"$HOME/.local/bin:$PATH\"; cd '{wslPath}' && exec bash -l"
+                    .into(),
+            ],
+            builtin: true,
+        },
+        ExternalTool {
+            id: "wsl".into(),
+            label: "Open in WSL".into(),
+            enabled: true,
+            targets: vec!["repo".into()],
+            kind: "wsl".into(),
+            command: "wsl".into(),
+            args: vec!["cd '{wslPath}' && exec bash -l".into()],
+            builtin: true,
+        },
+    ]
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
     #[serde(default = "default_theme")]
@@ -117,6 +188,8 @@ pub struct Settings {
     pub default_clone_dir: String,
     #[serde(default)]
     pub last_seen_whats_new_version: String,
+    #[serde(default = "default_external_tools")]
+    pub external_tools: Vec<ExternalTool>,
 }
 
 fn default_theme() -> String {
@@ -184,6 +257,7 @@ impl Default for Settings {
             hotkey_command_palette: hotkeys::default_command_palette(),
             default_clone_dir: String::new(),
             last_seen_whats_new_version: String::new(),
+            external_tools: default_external_tools(),
         }
     }
 }
@@ -431,6 +505,7 @@ pub fn run() {
             commands::shell::shell_open_external,
             commands::shell::shell_open_terminal,
             commands::shell::shell_reveal_in_explorer,
+            commands::shell::shell_run_tool,
             commands::fs::fs_list_dir,
             commands::fs::fs_read_file,
             commands::fs::fs_write_file,

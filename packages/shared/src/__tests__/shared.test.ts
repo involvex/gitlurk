@@ -8,6 +8,14 @@ import {
   validateRepoPath,
   PathValidationError,
 } from '../security/path-validator.js';
+import {
+  defaultExternalTools,
+  menuItemsForTools,
+  resetBuiltinTools,
+  substitutePlaceholders,
+  toWslPath,
+  toolsForTarget,
+} from '../external-tools.js';
 
 describe('parseAppUrl', () => {
   test('parses openRepo for github.com', () => {
@@ -83,5 +91,57 @@ describe('validateRepoPath', () => {
 
   test('rejects empty path', () => {
     expect(() => validateRepoPath('')).toThrow(PathValidationError);
+  });
+});
+
+describe('external tools', () => {
+  test('toWslPath converts drive paths', () => {
+    expect(toWslPath('C:\\Users\\a\\repo')).toBe('/mnt/c/Users/a/repo');
+    expect(toWslPath('D:/foo/bar')).toBe('/mnt/d/foo/bar');
+  });
+
+  test('substitutePlaceholders replaces all tokens', () => {
+    expect(
+      substitutePlaceholders('{path}|{dir}|{fileName}|{wslPath}', {
+        path: 'D:\\r\\f.txt',
+        dir: 'D:\\r',
+        fileName: 'f.txt',
+        wslPath: '/mnt/d/r/f.txt',
+      }),
+    ).toBe('D:\\r\\f.txt|D:\\r|f.txt|/mnt/d/r/f.txt');
+  });
+
+  test('toolsForTarget filters enabled tools', () => {
+    const tools = defaultExternalTools();
+    tools.find((t) => t.id === 'vscode')!.enabled = false;
+    const repo = toolsForTarget(tools, 'repo');
+    expect(repo.some((t) => t.id === 'vscode')).toBe(false);
+    expect(repo.some((t) => t.id === 'cursor')).toBe(true);
+    expect(repo.some((t) => t.id === 'origin-wsl')).toBe(true);
+    const file = toolsForTarget(tools, 'file');
+    expect(file.some((t) => t.id === 'origin-wsl')).toBe(false);
+  });
+
+  test('resetBuiltinTools keeps customs', () => {
+    const custom = {
+      id: 'custom-1',
+      label: 'Open in Foo',
+      enabled: true,
+      targets: ['repo' as const],
+      kind: 'native' as const,
+      command: 'foo',
+      args: ['{path}'],
+      builtin: false,
+    };
+    const tools = defaultExternalTools();
+    tools.find((t) => t.id === 'vscode')!.enabled = false;
+    const reset = resetBuiltinTools([...tools, custom]);
+    expect(reset.find((t) => t.id === 'vscode')?.enabled).toBe(true);
+    expect(reset.some((t) => t.id === 'custom-1')).toBe(true);
+  });
+
+  test('menuItemsForTools prefixes ids', () => {
+    const items = menuItemsForTools(defaultExternalTools(), 'file');
+    expect(items.every((i) => i.id.startsWith('tool:'))).toBe(true);
   });
 });

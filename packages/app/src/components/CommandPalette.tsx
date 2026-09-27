@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toolsForTarget } from '@gitlurk/shared';
 import { dispatcher } from '../dispatcher';
 import { useAppStore } from '../stores';
 
@@ -25,6 +26,8 @@ export function CommandPalette() {
   const hotkeyCommandPalette = useAppStore((s) => s.hotkeyCommandPalette);
   const repos = useAppStore((s) => s.repos);
   const branches = useAppStore((s) => s.branches);
+  const externalTools = useAppStore((s) => s.externalTools);
+  const activeRepoPath = useAppStore((s) => s.activeRepoPath);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -134,13 +137,25 @@ export function CommandPalette() {
         group: 'Git',
         keywords: 'gitignore template',
         run: () => {
-          const activeRepoPath = useAppStore.getState().activeRepoPath;
-          if (activeRepoPath) {
-            useAppStore.getState().openGitignoreEditor(activeRepoPath);
+          const path = useAppStore.getState().activeRepoPath;
+          if (path) {
+            useAppStore.getState().openGitignoreEditor(path);
           }
         },
       },
     ];
+
+    if (activeRepoPath) {
+      for (const tool of toolsForTarget(externalTools, 'repo')) {
+        base.push({
+          id: `tool-${tool.id}`,
+          label: `${tool.label} (active repo)`,
+          group: 'Open with',
+          keywords: `external editor ${tool.command} ${tool.label}`,
+          run: () => dispatcher.runExternalTool(tool, activeRepoPath),
+        });
+      }
+    }
 
     for (const repo of repos) {
       base.push({
@@ -162,7 +177,7 @@ export function CommandPalette() {
     }
 
     return base;
-  }, [repos, branches]);
+  }, [repos, branches, externalTools, activeRepoPath]);
 
   const filtered = useMemo(() => {
     const scored = commands

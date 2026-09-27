@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { menuItemsForTools } from '@gitlurk/shared';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
 import { joinRepoPath } from '../lib/paths';
 import { ResizeHandle } from './ResizeHandle';
 import { GitignoreEditor } from './GitignoreEditor';
 import { BoundContextMenu } from './ContextMenu';
+import type { ContextMenuItem } from './ContextMenu';
 import { useContextMenuState } from '../hooks/useContextMenuState';
 
 type FsEntry = {
@@ -103,6 +105,7 @@ function MarkdownBody({ content }: { content: string }) {
 
 export function OverviewView() {
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
+  const externalTools = useAppStore((s) => s.externalTools);
   const fileListWidth = useAppStore((s) => s.fileListWidth);
   const [rootEntries, setRootEntries] = useState<FsEntry[]>([]);
   const [childrenByPath, setChildrenByPath] = useState<
@@ -120,6 +123,23 @@ export function OverviewView() {
     open: openTreeMenu,
     close: closeTreeMenu,
   } = useContextMenuState<FsEntry>();
+
+  const fileMenuItems = useMemo<ContextMenuItem[]>(() => {
+    const toolItems = menuItemsForTools(externalTools, 'file');
+    const items: ContextMenuItem[] = [
+      { id: 'explorer', label: 'Open in Explorer' },
+      { id: 'terminal', label: 'Open in Terminal' },
+    ];
+    if (toolItems.length > 0) {
+      items.push({ id: 'sep-tools', label: '', separator: true });
+      items.push(...toolItems);
+    }
+    items.push(
+      { id: 'sep-rest', label: '', separator: true },
+      { id: 'copy-path', label: 'Copy Path' },
+    );
+    return items;
+  }, [externalTools]);
 
   useEffect(() => {
     if (!activeRepoPath) {
@@ -321,17 +341,15 @@ export function OverviewView() {
       <BoundContextMenu
         state={treeMenu}
         onClose={closeTreeMenu}
-        items={[
-          { id: 'explorer', label: 'Open in Explorer' },
-          { id: 'terminal', label: 'Open in Terminal' },
-          { id: 'copy-path', label: 'Copy Path' },
-        ]}
+        items={fileMenuItems}
         onSelect={(id, entry) => {
           const absolute = joinRepoPath(activeRepoPath, entry.path);
           if (id === 'explorer') {
             void dispatcher.revealInExplorer(absolute);
           } else if (id === 'terminal') {
             void dispatcher.openTerminalAt(absolute);
+          } else if (id.startsWith('tool:')) {
+            void dispatcher.runExternalToolById(id.slice(5), absolute);
           } else if (id === 'copy-path') {
             void dispatcher.copyPathToClipboard(absolute);
           }

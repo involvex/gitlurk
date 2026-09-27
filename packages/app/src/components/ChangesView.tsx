@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { menuItemsForTools } from '@gitlurk/shared';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
 import { ipcInvoke } from '../ipc/client';
@@ -8,6 +9,7 @@ import { DiffPanel } from './DiffPanel';
 import { ResizeHandle } from './ResizeHandle';
 import { ConfirmDialog } from './ConfirmDialog';
 import { BoundContextMenu } from './ContextMenu';
+import type { ContextMenuItem } from './ContextMenu';
 import { useContextMenuState } from '../hooks/useContextMenuState';
 
 function FileList({
@@ -107,6 +109,7 @@ function FileList({
 
 export function ChangesView() {
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
+  const externalTools = useAppStore((s) => s.externalTools);
   const status = useAppStore((s) => s.status);
   const loading = useAppStore((s) => s.loading);
   const error = useAppStore((s) => s.error);
@@ -127,6 +130,23 @@ export function ChangesView() {
     open: openFileMenu,
     close: closeFileMenu,
   } = useContextMenuState<string>();
+
+  const fileMenuItems = useMemo<ContextMenuItem[]>(() => {
+    const toolItems = menuItemsForTools(externalTools, 'file');
+    const items: ContextMenuItem[] = [
+      { id: 'explorer', label: 'Open in Explorer' },
+      { id: 'terminal', label: 'Open in Terminal' },
+    ];
+    if (toolItems.length > 0) {
+      items.push({ id: 'sep-tools', label: '', separator: true });
+      items.push(...toolItems);
+    }
+    items.push(
+      { id: 'sep-rest', label: '', separator: true },
+      { id: 'copy-path', label: 'Copy Path' },
+    );
+    return items;
+  }, [externalTools]);
 
   useEffect(() => {
     if (!activeRepoPath) return;
@@ -321,17 +341,15 @@ export function ChangesView() {
       <BoundContextMenu
         state={fileMenu}
         onClose={closeFileMenu}
-        items={[
-          { id: 'explorer', label: 'Open in Explorer' },
-          { id: 'terminal', label: 'Open in Terminal' },
-          { id: 'copy-path', label: 'Copy Path' },
-        ]}
+        items={fileMenuItems}
         onSelect={(id, file) => {
           const absolute = joinRepoPath(activeRepoPath, file);
           if (id === 'explorer') {
             void dispatcher.revealInExplorer(absolute);
           } else if (id === 'terminal') {
             void dispatcher.openTerminalAt(absolute);
+          } else if (id.startsWith('tool:')) {
+            void dispatcher.runExternalToolById(id.slice(5), absolute);
           } else if (id === 'copy-path') {
             void dispatcher.copyPathToClipboard(absolute);
           }

@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
+import { menuItemsForTools } from '@gitlurk/shared';
 import { useAppStore } from '../stores';
 import { dispatcher } from '../dispatcher';
 import { ipcInvoke } from '../ipc/client';
 import { BoundContextMenu } from './ContextMenu';
+import type { ContextMenuItem } from './ContextMenu';
 import { useContextMenuState } from '../hooks/useContextMenuState';
 
 export function Sidebar() {
   const repos = useAppStore((s) => s.repos);
+  const externalTools = useAppStore((s) => s.externalTools);
   const sortedRepos = useMemo(() => {
     const copy = [...repos];
     copy.sort((a, b) => {
@@ -38,6 +41,27 @@ export function Sidebar() {
         repo.path.toLowerCase().includes(query),
     );
   }, [sortedRepos, searchQuery]);
+
+  const menuItems = useMemo<ContextMenuItem[]>(() => {
+    const toolItems = menuItemsForTools(externalTools, 'repo');
+    const items: ContextMenuItem[] = [
+      { id: 'explorer', label: 'Open in Explorer' },
+      { id: 'terminal', label: 'Open in Terminal' },
+    ];
+    if (toolItems.length > 0) {
+      items.push({ id: 'sep-tools', label: '', separator: true });
+      items.push(...toolItems);
+    }
+    items.push(
+      { id: 'sep-rest', label: '', separator: true },
+      { id: 'copy-path', label: 'Copy Path' },
+      { id: 'gitignore', label: 'Edit .gitignore' },
+      { id: 'github', label: 'Open on GitHub' },
+      { id: 'watch', label: 'Watch CI run' },
+      { id: 'remove', label: 'Remove from list', danger: true },
+    );
+    return items;
+  }, [externalTools]);
 
   return (
     <aside
@@ -194,20 +218,14 @@ export function Sidebar() {
       <BoundContextMenu
         state={menu}
         onClose={closeMenu}
-        items={[
-          { id: 'explorer', label: 'Open in Explorer' },
-          { id: 'terminal', label: 'Open in Terminal' },
-          { id: 'copy-path', label: 'Copy Path' },
-          { id: 'gitignore', label: 'Edit .gitignore' },
-          { id: 'github', label: 'Open on GitHub' },
-          { id: 'watch', label: 'Watch CI run' },
-          { id: 'remove', label: 'Remove from list', danger: true },
-        ]}
+        items={menuItems}
         onSelect={(id, path) => {
           if (id === 'explorer') {
             void dispatcher.revealInExplorer(path);
           } else if (id === 'terminal') {
             void dispatcher.openTerminalAt(path);
+          } else if (id.startsWith('tool:')) {
+            void dispatcher.runExternalToolById(id.slice(5), path);
           } else if (id === 'copy-path') {
             void dispatcher.copyPathToClipboard(path);
           } else if (id === 'gitignore') {

@@ -7,6 +7,7 @@ export type ContextMenuItem = {
   label: string;
   danger?: boolean;
   disabled?: boolean;
+  separator?: boolean;
 };
 
 type ContextMenuProps = {
@@ -49,23 +50,31 @@ export function ContextMenu({
       className="fixed z-50 min-w-[180px] rounded-md border border-border bg-surface-elevated py-1 shadow-lg"
       style={{ left: x, top: y }}
     >
-      {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          role="menuitem"
-          disabled={item.disabled}
-          className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-surface disabled:opacity-40 ${
-            item.danger ? 'text-danger' : ''
-          }`}
-          onClick={() => {
-            if (item.disabled) return;
-            onSelect(item.id);
-          }}
-        >
-          {item.label}
-        </button>
-      ))}
+      {items.map((item) =>
+        item.separator ? (
+          <div
+            key={item.id}
+            role="separator"
+            className="my-1 border-t border-border"
+          />
+        ) : (
+          <button
+            key={item.id}
+            type="button"
+            role="menuitem"
+            disabled={item.disabled}
+            className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-surface disabled:opacity-40 ${
+              item.danger ? 'text-danger' : ''
+            }`}
+            onClick={() => {
+              if (item.disabled) return;
+              onSelect(item.id);
+            }}
+          >
+            {item.label}
+          </button>
+        ),
+      )}
     </div>
   );
 }

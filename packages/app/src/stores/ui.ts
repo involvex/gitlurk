@@ -1,4 +1,6 @@
 import type { StateCreator } from 'zustand';
+import type { ExternalTool } from '@gitlurk/shared';
+import { defaultExternalTools } from '@gitlurk/shared';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ThemePreset =
@@ -9,7 +11,7 @@ export type DiscoverTab =
   'notifications' | 'feed' | 'explore' | 'trending' | 'my-repos';
 export type AiProvider = 'opencode' | 'kilo';
 export type TerminalShell = 'pwsh' | 'powershell' | 'cmd' | 'custom';
-
+export type { ExternalTool };
 export interface TerminalSessionInfo {
   id: string;
   title: string;
@@ -91,6 +93,7 @@ export interface UiSlice {
   hotkeyCommandPalette: string;
   defaultCloneDir: string;
   commitTemplate: string | null;
+  externalTools: ExternalTool[];
   pendingDiscard:
     | { type: 'discard-file'; file: string; kind: import('./git-ops').DiffKind }
     | { type: 'discard-all-unstaged' }
@@ -150,6 +153,7 @@ export interface UiSlice {
   setHotkeyCommandPalette: (hotkey: string) => void;
   setDefaultCloneDir: (dir: string) => void;
   setCommitTemplate: (template: string | null) => void;
+  setExternalTools: (tools: ExternalTool[]) => void;
   setPendingDiscard: (
     pending:
       | {
@@ -183,6 +187,7 @@ export interface UiSlice {
     hotkeyShowApp?: string;
     hotkeyCommandPalette?: string;
     defaultCloneDir?: string;
+    externalTools?: ExternalTool[];
   }) => void;
 }
 
@@ -241,6 +246,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   defaultCloneDir: '',
   pendingDiscard: null,
   commitTemplate: null,
+  externalTools: defaultExternalTools(),
   setTheme: (theme) => set({ theme }),
   setThemePreset: (themePreset) => set({ themePreset }),
   setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
@@ -309,6 +315,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
     set({ hotkeyCommandPalette }),
   setDefaultCloneDir: (defaultCloneDir) => set({ defaultCloneDir }),
   setCommitTemplate: (commitTemplate) => set({ commitTemplate }),
+  setExternalTools: (externalTools) => set({ externalTools }),
   setPendingDiscard: (pendingDiscard) => set({ pendingDiscard }),
   applyPanelSettings: (settings) =>
     set({
@@ -358,6 +365,9 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
         : {}),
       ...(typeof settings.defaultCloneDir === 'string'
         ? { defaultCloneDir: settings.defaultCloneDir }
+        : {}),
+      ...(Array.isArray(settings.externalTools)
+        ? { externalTools: settings.externalTools }
         : {}),
     }),
 });

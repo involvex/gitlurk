@@ -1,4 +1,7 @@
+import type { ExternalTool } from '../external-tools.js';
 import type { UrlAction } from '../protocol/parse-app-url.js';
+
+export type { ExternalTool };
 
 export interface IpcChannels {
   'git:status': { path: string };
@@ -23,6 +26,12 @@ export interface IpcChannels {
   'shell:open-external': { url: string };
   'shell:open-terminal': { path: string };
   'shell:reveal-in-explorer': { path: string };
+  'shell:run-tool': {
+    path: string;
+    command: string;
+    args: string[];
+    kind: 'native' | 'wsl';
+  };
   'fs:list-dir': { repoPath: string; relativePath?: string };
   'fs:read-file': { repoPath: string; relativePath: string };
   'fs:write-file': { repoPath: string; relativePath: string; content: string };
@@ -62,6 +71,7 @@ export interface IpcChannels {
     hotkeyCommandPalette?: string;
     defaultCloneDir?: string;
     lastSeenWhatsNewVersion?: string;
+    externalTools?: ExternalTool[];
   };
   'app:watch-repo': { path?: string | null };
   'app:get-explorer-menu': Record<string, never>;
@@ -206,6 +216,7 @@ export interface IpcResponses {
   'shell:open-external': void;
   'shell:open-terminal': void;
   'shell:reveal-in-explorer': void;
+  'shell:run-tool': void;
   'fs:list-dir': {
     entries: Array<{
       name: string;
@@ -255,6 +266,7 @@ export interface IpcResponses {
     hotkeyCommandPalette: string;
     defaultCloneDir: string;
     lastSeenWhatsNewVersion: string;
+    externalTools: ExternalTool[];
   };
   'app:set-settings': void;
   'app:watch-repo': void;
