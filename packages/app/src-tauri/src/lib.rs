@@ -87,7 +87,7 @@ fn default_external_tools() -> Vec<ExternalTool> {
         ExternalTool {
             id: "vscode".into(),
             label: "Open in VS Code".into(),
-            enabled: true,
+            enabled: false,
             targets: vec!["repo".into(), "file".into()],
             kind: "native".into(),
             command: "code".into(),
@@ -97,7 +97,7 @@ fn default_external_tools() -> Vec<ExternalTool> {
         ExternalTool {
             id: "cursor".into(),
             label: "Open in Cursor".into(),
-            enabled: true,
+            enabled: false,
             targets: vec!["repo".into(), "file".into()],
             kind: "native".into(),
             command: "cursor".into(),
@@ -107,7 +107,7 @@ fn default_external_tools() -> Vec<ExternalTool> {
         ExternalTool {
             id: "antigravity".into(),
             label: "Open in Antigravity".into(),
-            enabled: true,
+            enabled: false,
             targets: vec!["repo".into(), "file".into()],
             kind: "native".into(),
             command: "antigravity".into(),
@@ -117,7 +117,7 @@ fn default_external_tools() -> Vec<ExternalTool> {
         ExternalTool {
             id: "origin-wsl".into(),
             label: "Open in WSL (Origin)".into(),
-            enabled: true,
+            enabled: false,
             targets: vec!["repo".into()],
             kind: "wsl".into(),
             command: "wsl".into(),
@@ -130,7 +130,7 @@ fn default_external_tools() -> Vec<ExternalTool> {
         ExternalTool {
             id: "wsl".into(),
             label: "Open in WSL".into(),
-            enabled: true,
+            enabled: false,
             targets: vec!["repo".into()],
             kind: "wsl".into(),
             command: "wsl".into(),
@@ -190,6 +190,9 @@ pub struct Settings {
     pub last_seen_whats_new_version: String,
     #[serde(default = "default_external_tools")]
     pub external_tools: Vec<ExternalTool>,
+    /// Bumped when external-tool defaults/safety policy changes.
+    #[serde(default)]
+    pub external_tools_version: u32,
 }
 
 fn default_theme() -> String {
@@ -258,6 +261,7 @@ impl Default for Settings {
             default_clone_dir: String::new(),
             last_seen_whats_new_version: String::new(),
             external_tools: default_external_tools(),
+            external_tools_version: 1,
         }
     }
 }

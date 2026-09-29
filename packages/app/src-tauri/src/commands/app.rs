@@ -122,10 +122,33 @@ fn migrate_terminal_paths(settings: &mut Settings) -> bool {
     false
 }
 
+/// v0 shipped with every builtin tool enabled; launching missing CLIs / WSL
+/// could spam Windows "Open with" dialogs. Force opt-in once.
+fn migrate_external_tools(settings: &mut Settings) -> bool {
+    if settings.external_tools_version >= 1 {
+        return false;
+    }
+    for tool in &mut settings.external_tools {
+        tool.enabled = false;
+    }
+    if settings.external_tools.is_empty() {
+        settings.external_tools = crate::Settings::default().external_tools;
+    }
+    settings.external_tools_version = 1;
+    true
+}
+
 #[tauri::command(rename_all = "camelCase")]
 pub fn app_get_settings(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     let mut settings = read_settings(&state);
+    let mut dirty = false;
     if migrate_terminal_paths(&mut settings) {
+        dirty = true;
+    }
+    if migrate_external_tools(&mut settings) {
+        dirty = true;
+    }
+    if dirty {
         let _ = write_settings(&state, &settings);
     }
     Ok(serde_json::json!({

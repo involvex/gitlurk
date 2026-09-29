@@ -25,7 +25,7 @@ export function defaultExternalTools(): ExternalTool[] {
     {
       id: 'vscode',
       label: 'Open in VS Code',
-      enabled: true,
+      enabled: false,
       targets: ['repo', 'file'],
       kind: 'native',
       command: 'code',
@@ -35,7 +35,7 @@ export function defaultExternalTools(): ExternalTool[] {
     {
       id: 'cursor',
       label: 'Open in Cursor',
-      enabled: true,
+      enabled: false,
       targets: ['repo', 'file'],
       kind: 'native',
       command: 'cursor',
@@ -45,7 +45,7 @@ export function defaultExternalTools(): ExternalTool[] {
     {
       id: 'antigravity',
       label: 'Open in Antigravity',
-      enabled: true,
+      enabled: false,
       targets: ['repo', 'file'],
       kind: 'native',
       command: 'antigravity',
@@ -55,7 +55,7 @@ export function defaultExternalTools(): ExternalTool[] {
     {
       id: 'origin-wsl',
       label: 'Open in WSL (Origin)',
-      enabled: true,
+      enabled: false,
       targets: ['repo'],
       kind: 'wsl',
       command: 'wsl',
@@ -67,7 +67,7 @@ export function defaultExternalTools(): ExternalTool[] {
     {
       id: 'wsl',
       label: 'Open in WSL',
-      enabled: true,
+      enabled: false,
       targets: ['repo'],
       kind: 'wsl',
       command: 'wsl',

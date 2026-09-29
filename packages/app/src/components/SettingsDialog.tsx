@@ -739,7 +739,7 @@ export function SettingsDialog() {
           <div className="space-y-4">
             <p className="text-xs text-muted">
               Custom CLI tools appear in right-click menus and the command
-              palette. Placeholders:{' '}
+              palette once enabled below (off by default). Placeholders:{' '}
               <code className="text-foreground">{'{path}'}</code>,{' '}
               <code className="text-foreground">{'{dir}'}</code>,{' '}
               <code className="text-foreground">{'{fileName}'}</code>,{' '}

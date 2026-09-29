@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { ContextMenuPosition } from '../hooks/useContextMenuState';
 
@@ -26,6 +26,14 @@ export function ContextMenu({
   onClose,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  // Ignore the mouse-up that often follows a right-click so the menu cannot
+  // auto-activate the item under the cursor.
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setArmed(true), 280);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -48,7 +56,7 @@ export function ContextMenu({
       ref={menuRef}
       role="menu"
       className="fixed z-50 min-w-[180px] rounded-md border border-border bg-surface-elevated py-1 shadow-lg"
-      style={{ left: x, top: y }}
+      style={{ left: x + 2, top: y + 2 }}
     >
       {items.map((item) =>
         item.separator ? (
@@ -62,12 +70,12 @@ export function ContextMenu({
             key={item.id}
             type="button"
             role="menuitem"
-            disabled={item.disabled}
+            disabled={item.disabled || !armed}
             className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-surface disabled:opacity-40 ${
               item.danger ? 'text-danger' : ''
             }`}
             onClick={() => {
-              if (item.disabled) return;
+              if (item.disabled || !armed) return;
               onSelect(item.id);
             }}
           >

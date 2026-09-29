@@ -113,6 +113,9 @@ describe('external tools', () => {
 
   test('toolsForTarget filters enabled tools', () => {
     const tools = defaultExternalTools();
+    tools.find((t) => t.id === 'vscode')!.enabled = true;
+    tools.find((t) => t.id === 'cursor')!.enabled = true;
+    tools.find((t) => t.id === 'origin-wsl')!.enabled = true;
     tools.find((t) => t.id === 'vscode')!.enabled = false;
     const repo = toolsForTarget(tools, 'repo');
     expect(repo.some((t) => t.id === 'vscode')).toBe(false);
@@ -134,14 +137,16 @@ describe('external tools', () => {
       builtin: false,
     };
     const tools = defaultExternalTools();
-    tools.find((t) => t.id === 'vscode')!.enabled = false;
+    tools.find((t) => t.id === 'vscode')!.enabled = true;
     const reset = resetBuiltinTools([...tools, custom]);
-    expect(reset.find((t) => t.id === 'vscode')?.enabled).toBe(true);
+    expect(reset.find((t) => t.id === 'vscode')?.enabled).toBe(false);
     expect(reset.some((t) => t.id === 'custom-1')).toBe(true);
   });
 
   test('menuItemsForTools prefixes ids', () => {
-    const items = menuItemsForTools(defaultExternalTools(), 'file');
+    const tools = defaultExternalTools().map((t) => ({ ...t, enabled: true }));
+    const items = menuItemsForTools(tools, 'file');
     expect(items.every((i) => i.id.startsWith('tool:'))).toBe(true);
+    expect(items.length).toBeGreaterThan(0);
   });
 });
