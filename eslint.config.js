@@ -26,7 +26,12 @@ export default tseslint.config(
       'react-refresh': reactRefresh,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      ...reactHooks.configs.flat.recommended.rules,
+      // Advisory React Compiler rules. These flag pre-existing patterns
+      // (mostly setState inside effects) rather than definite bugs, so
+      // they stay warnings until the affected components are refactored.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

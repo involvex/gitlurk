@@ -104,7 +104,7 @@ export function GitignoreEditor() {
   const handleApplyConfirmed = async () => {
     if (!selectedTemplate || !gitignoreEditorPath) return;
 
-    let newContent = '';
+    let newContent: string;
     if (applyMode === 'replace') {
       newContent = selectedTemplate.content;
     } else {

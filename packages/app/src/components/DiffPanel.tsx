@@ -58,7 +58,7 @@ export function DiffPanel() {
 
   const hunks = useMemo(
     () => (fileDiff?.patch ? splitDiffHunks(fileDiff.patch) : []),
-    [fileDiff?.patch],
+    [fileDiff],
   );
 
   if (!selectedFile) {
