@@ -4,17 +4,20 @@ All notable changes to GitLurk Desktop.
 
 ## [Unreleased]
 
-- feat(app): repos dashboard with ahead/behind badges and CI runs
-- feat(app): create pull request dialog from Pull Request panel
-- feat(app): extend `git:remote-ahead` with behind count; multi-repo background refresh
-- feat(app): add configurable external open tools for context menus ([4960319](https://github.com/involvex/gitlurk/commit/4960319))
+- feat(app): add repos dashboard and create-PR flow ([b234877](https://github.com/involvex/gitlurk/commit/b234877))
+- chore(lint): upgrade to eslint 10 and react-hooks 7 ([11f3e89](https://github.com/involvex/gitlurk/commit/11f3e89))
+- chore(terminal): upgrade xterm to 6.0.0 ([9c8149b](https://github.com/involvex/gitlurk/commit/9c8149b))
+- chore(tauri): align JS and Rust to 2.12.1 ([b53c6dd](https://github.com/involvex/gitlurk/commit/b53c6dd))
+- chore(deps): bump react, zustand, tailwind, prettier, @types/bun ([098bb98](https://github.com/involvex/gitlurk/commit/098bb98))
+- build(deps): bump Bun types ([054b424](https://github.com/involvex/gitlurk/commit/054b424))
 - fix(client): harden external tools ([902ccd5](https://github.com/involvex/gitlurk/commit/902ccd5))
-- feat(cli): add PowerShell completions and publish 0.1.6 ([3d71b09](https://github.com/involvex/gitlurk/commit/3d71b09))
+- feat(app): add configurable external open tools for context menus ([4960319](https://github.com/involvex/gitlurk/commit/4960319))
 - chore(extension): add CRX pack via @involvex/ext-cli ([2026bd8](https://github.com/involvex/gitlurk/commit/2026bd8))
-- chore(deps): bump React, Zustand, Tailwind, Prettier, Tauri, xterm, ESLint
+- feat(cli): add PowerShell completions and publish 0.1.6 ([3d71b09](https://github.com/involvex/gitlurk/commit/3d71b09))
 
-## [v0.1.5](https://github.com/involvex/gitlurk/releases/tag/v0.1.5)
+## [v0.1.5](https://github.com/involvex/gitlurk/releases/tag/v0.1.5) - 2026-09-24
 
+- v0.1.5 ([12f77a9](https://github.com/involvex/gitlurk/commit/12f77a9))
 - feat(extension): open in-app clone UI from browser bridge ([2398ad3](https://github.com/involvex/gitlurk/commit/2398ad3))
 - fix(app): keep ConPTY alive on view swap and add Copy Path menus ([ba0a0f5](https://github.com/involvex/gitlurk/commit/ba0a0f5))
 - feat(gitignore): add 9 more templates (total 32) ([3ecb384](https://github.com/involvex/gitlurk/commit/3ecb384))
