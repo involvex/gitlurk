@@ -501,6 +501,8 @@ pub fn run() {
             commands::github::github_search_repos,
             commands::github::github_trending,
             commands::github::github_list_my_repos,
+            commands::github::github_list_runs,
+            commands::github::github_create_pr,
             commands::ai::ai_set_api_key,
             commands::ai::ai_has_api_key,
             commands::ai::ai_list_models,

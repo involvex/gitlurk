@@ -4,7 +4,7 @@ A collection of features that can be implemented to enhance GitLurk Desktop.
 
 **Legend:** ✅ DONE · 🟡 PARTIAL · ❌ NOT STARTED
 
-_Audited against codebase on 2026-09-13._
+_Audited against codebase on 2026-11-15._
 
 ---
 
@@ -99,7 +99,7 @@ Add tag creation and listing:
 
 ## GitHub Integration
 
-### 8. Create Pull Request from UI — ❌ NOT STARTED
+### 8. Create Pull Request from UI — 🟡 PARTIAL
 
 **Priority: High** | **Complexity: Medium**
 
@@ -110,7 +110,8 @@ Currently PRs are only listed. Add a "Create PR" flow:
 - Draft PR option
 - Reviewers and labels assignment
 
-> `PullRequestPanel.tsx` is list-only; no `gh pr create` anywhere. **Queued as Phase 4.1.**
+> **Have:** `CreatePrDialog.tsx` + `github:create-pr` (title/body/head/base/draft) from Pull Request panel and command palette.
+> **Missing:** reviewers and labels assignment.
 
 ### 9. Issue Management — ❌ NOT STARTED
 
@@ -560,11 +561,13 @@ Pick any two branches and see their diff before merging.
 
 "Undo" affordance after destructive ops (amend, reset) driven by reflog lookup.
 
-### 48. .gitignore Editor + Templates — ❌ NOT STARTED
+### 48. .gitignore Editor + Templates — ✅ DONE
 
 **Priority: Low** | **Complexity: Low**
 
 Edit `.gitignore` in-app with template gallery (Node, Python, VS, macOS…).
+
+> Implemented via `GitignoreEditor.tsx` with embedded templates (32).
 
 ### 49. Drag & Drop Folder Open — ❌ NOT STARTED
 
@@ -572,11 +575,13 @@ Edit `.gitignore` in-app with template gallery (Node, Python, VS, macOS…).
 
 Drop a folder onto the window to open it as a repository.
 
-### 50. Repos Dashboard — ❌ NOT STARTED
+### 50. Repos Dashboard — ✅ DONE
 
 **Priority: High** | **Complexity: Medium**
 
 Aggregate ahead/behind/dirty status badges across all pinned repos in the sidebar footer.
+
+> Implemented `ReposDashboardView` with expandable cards, ahead/behind, CI runs, branch status, and multi-repo background refresh.
 
 ### 51. Clickable Notifications Deep Links — ❌ NOT STARTED
 
@@ -664,7 +669,7 @@ _No known bugs currently tracked._
 | Category                    | Total  | Done   | Partial | Not started |
 | --------------------------- | ------ | ------ | ------- | ----------- |
 | Git Operations              | 7      | 4      | 2       | 1           |
-| GitHub Integration          | 5      | 0      | 2       | 3           |
+| GitHub Integration          | 5      | 0      | 3       | 2           |
 | UI/UX Improvements          | 6      | 1      | 3       | 2           |
 | AI Features                 | 3      | 0      | 1       | 2           |
 | Developer Experience        | 4      | 0      | 1       | 3           |
@@ -672,9 +677,9 @@ _No known bugs currently tracked._
 | Security & Privacy          | 2      | 0      | 0       | 2           |
 | Integration & Extensibility | 4      | 0      | 0       | 4           |
 | Polish & Quality of Life    | 6      | 4      | 1       | 1           |
-| Recently Added              | 17     | 4      | 2       | 11          |
-| **Total**                   | **57** | **15** | **12**  | **30**      |
+| Recently Added              | 17     | 8      | 1       | 8           |
+| **Total**                   | **57** | **19** | **12**  | **26**      |
 
 ---
 
-_Last updated: 2026-09-13_
+_Last updated: 2026-11-15_

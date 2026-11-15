@@ -33,8 +33,16 @@ async function persistRepos() {
     path: r.path,
     pinned: r.pinned,
     lastOpenedAt: r.lastOpenedAt,
+    aheadCount: r.aheadCount,
+    behindCount: r.behindCount,
+    lastFetchedAt: r.lastFetchedAt,
+    ciRuns: r.ciRuns,
   }));
   await ipcInvoke('app:save-repos', { repos });
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 async function maybeNotify(title: string, body: string) {
@@ -117,6 +125,18 @@ interface PersistedReposPayload {
     path: string;
     pinned?: boolean;
     lastOpenedAt?: string | null;
+    aheadCount?: number | null;
+    behindCount?: number | null;
+    lastFetchedAt?: string | null;
+    ciRuns?: Array<{
+      id: string;
+      status: string;
+      conclusion?: string | null;
+      workflow: string;
+      title?: string;
+      createdAt: string;
+      url: string;
+    }>;
   }>;
 }
 
@@ -159,6 +179,11 @@ function applyPersistedState(
       name: entry.path.split(/[/\\]/).pop() ?? entry.path,
       pinned: entry.pinned ?? false,
       lastOpenedAt: entry.lastOpenedAt ?? null,
+      aheadCount: entry.aheadCount ?? null,
+      behindCount: entry.behindCount ?? null,
+      lastFetchedAt: entry.lastFetchedAt ?? null,
+      ciRuns: entry.ciRuns ?? [],
+      isFetching: false,
     })),
   );
   store.setTheme(settings.theme);
@@ -309,18 +334,10 @@ export const dispatcher = {
     }
     const poll = async () => {
       if (!getStore().backgroundFetchEnabled) return;
-      const path = getStore().activeRepoPath;
-      if (!path) return;
+      const repos = getStore().repos;
+      if (repos.length === 0) return;
       try {
-        await ipcInvoke('git:fetch', { path });
-        const { ahead } = await ipcInvoke('git:remote-ahead', { path });
-        if (ahead && ahead > 0) {
-          getStore().showToast(`Remote is ${ahead} commit(s) ahead`);
-          await maybeNotify(
-            'GitLurk',
-            `Remote branch is ${ahead} commit(s) ahead`,
-          );
-        }
+        await dispatcher.refreshAllRepos({ notify: true });
       } catch {
         // Ignore background fetch failures.
       }
@@ -330,6 +347,120 @@ export const dispatcher = {
       fetchPollTimer = setInterval(() => void poll(), minutes * 60_000);
     };
     schedule();
+  },
+
+  async refreshRepo(path: string, options?: { notify?: boolean }) {
+    const store = getStore();
+    store.updateRepoMetrics(path, { isFetching: true });
+    try {
+      try {
+        await ipcInvoke('git:fetch', { path });
+      } catch {
+        // Fetch may fail offline; still compute local ahead/behind.
+      }
+
+      const { ahead, behind } = await ipcInvoke('git:remote-ahead', { path });
+
+      let currentBranch: string | null = null;
+      let upstreamBranch: string | null = null;
+      let dirty = false;
+      try {
+        const status = await ipcInvoke('git:status', { path });
+        currentBranch = status.branch || null;
+        dirty = Boolean(
+          (status.staged?.length ?? 0) +
+          (status.unstaged?.length ?? 0) +
+          (status.untracked?.length ?? 0),
+        );
+      } catch {
+        // Branch status is best-effort.
+      }
+      try {
+        const branches = await ipcInvoke('git:branch-list', { path });
+        if (branches.current) {
+          currentBranch = branches.current;
+        }
+      } catch {
+        // Branch list is best-effort.
+      }
+      if (ahead !== null || behind !== null) {
+        try {
+          // When tracking exists, show conventional upstream name.
+          upstreamBranch = currentBranch ? `origin/${currentBranch}` : null;
+        } catch {
+          upstreamBranch = null;
+        }
+      }
+
+      let ciRuns: Array<{
+        id: string;
+        status: string;
+        conclusion?: string | null;
+        workflow: string;
+        title?: string;
+        createdAt: string;
+        url: string;
+      }> = store.repos.find((r) => r.path === path)?.ciRuns ?? [];
+
+      try {
+        const { url } = await ipcInvoke('git:get-remote-origin', { path });
+        const parsed = url ? parseGitHubRemoteUrl(url) : null;
+        if (parsed && store.username) {
+          const { runs } = await ipcInvoke('github:list-runs', {
+            owner: parsed.owner,
+            repo: parsed.repo,
+            limit: 5,
+          });
+          ciRuns = runs;
+        }
+      } catch {
+        // CI listing requires auth / GitHub remote.
+      }
+
+      const lastFetchedAt = new Date().toISOString();
+      store.updateRepoMetrics(path, {
+        aheadCount: ahead,
+        behindCount: behind,
+        lastFetchedAt,
+        ciRuns,
+        isFetching: false,
+        currentBranch,
+        upstreamBranch,
+        dirty,
+      });
+      await persistRepos();
+
+      if (options?.notify) {
+        const parts: string[] = [];
+        if (behind && behind > 0) {
+          parts.push(`${behind} commit(s) behind`);
+        }
+        if (ahead && ahead > 0) {
+          parts.push(`${ahead} unpushed commit(s)`);
+        }
+        if (parts.length > 0) {
+          const name = path.split(/[/\\]/).pop() ?? path;
+          const message = `${name}: ${parts.join(', ')}`;
+          store.showToast(message);
+          await maybeNotify('GitLurk', message);
+        }
+      }
+    } catch (error) {
+      store.updateRepoMetrics(path, { isFetching: false });
+      throw error;
+    }
+  },
+
+  async refreshAllRepos(options?: { notify?: boolean }) {
+    const repos = [...getStore().repos];
+    for (const repo of repos) {
+      try {
+        await dispatcher.refreshRepo(repo.path, options);
+      } catch {
+        // Continue refreshing remaining repos.
+      }
+      await sleep(2000);
+    }
   },
 
   async setBackgroundFetchEnabled(enabled: boolean) {
@@ -1016,6 +1147,54 @@ export const dispatcher = {
       getStore().setPulls(pulls);
     } catch {
       getStore().setPulls([]);
+    }
+  },
+
+  async createPullRequest(input: {
+    title: string;
+    body?: string;
+    head: string;
+    base: string;
+    draft?: boolean;
+  }) {
+    const path = getStore().activeRepoPath;
+    if (!path) {
+      getStore().setError('No active repository');
+      return null;
+    }
+    getStore().setGitOpLoading(true);
+    getStore().setError(null);
+    try {
+      const { url } = await ipcInvoke('git:get-remote-origin', { path });
+      if (!url) {
+        throw new Error('No GitHub remote configured');
+      }
+      const parsed = parseGitHubRemoteUrl(url);
+      if (!parsed) {
+        throw new Error('Remote is not a GitHub repository');
+      }
+      const pr = await ipcInvoke('github:create-pr', {
+        owner: parsed.owner,
+        repo: parsed.repo,
+        title: input.title,
+        body: input.body,
+        head: input.head,
+        base: input.base,
+        draft: input.draft,
+      });
+      getStore().setShowCreatePrDialog(false);
+      getStore().showToast(`Created PR #${pr.number}`);
+      await dispatcher.refreshPullRequests();
+      return pr;
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to create pull request',
+      );
+      return null;
+    } finally {
+      getStore().setGitOpLoading(false);
     }
   },
 

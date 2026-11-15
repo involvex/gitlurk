@@ -485,6 +485,114 @@ pub fn github_list_my_repos(state: State<'_, AppState>) -> Result<serde_json::Va
     Ok(serde_json::json!({ "repos": repos }))
 }
 
+#[derive(Deserialize)]
+struct WorkflowRunItem {
+    id: u64,
+    name: Option<String>,
+    status: String,
+    conclusion: Option<String>,
+    html_url: String,
+    created_at: String,
+    #[serde(default)]
+    display_title: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct WorkflowRunsResponse {
+    workflow_runs: Vec<WorkflowRunItem>,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_list_runs(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    limit: Option<u32>,
+) -> Result<serde_json::Value, String> {
+    let token = state.auth_token.lock().unwrap().clone();
+    let per_page = limit.unwrap_or(5).clamp(1, 30);
+    let client = github_client();
+    let request = auth_headers(
+        client.get(format!(
+            "https://api.github.com/repos/{owner}/{repo}/actions/runs?per_page={per_page}"
+        )),
+        token.as_deref(),
+    );
+
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("GitHub Actions API error: {}", response.status()));
+    }
+
+    let body: WorkflowRunsResponse = response.json().map_err(|e| e.to_string())?;
+    let runs: Vec<serde_json::Value> = body
+        .workflow_runs
+        .into_iter()
+        .map(|r| {
+            serde_json::json!({
+                "id": r.id.to_string(),
+                "status": r.status,
+                "conclusion": r.conclusion,
+                "workflow": r.name.unwrap_or_else(|| "workflow".into()),
+                "title": r.display_title.unwrap_or_default(),
+                "createdAt": r.created_at,
+                "url": r.html_url,
+            })
+        })
+        .collect();
+
+    Ok(serde_json::json!({ "runs": runs }))
+}
+
+#[derive(Deserialize)]
+struct CreatedPullRequest {
+    number: u64,
+    title: String,
+    html_url: String,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_create_pr(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    title: String,
+    body: Option<String>,
+    head: String,
+    base: String,
+    draft: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    let token = require_token(&state)?;
+    let client = github_client();
+    let payload = serde_json::json!({
+        "title": title,
+        "body": body.unwrap_or_default(),
+        "head": head,
+        "base": base,
+        "draft": draft.unwrap_or(false),
+    });
+    let request = auth_headers(
+        client
+            .post(format!("https://api.github.com/repos/{owner}/{repo}/pulls"))
+            .json(&payload),
+        Some(&token),
+    );
+
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let detail = response.text().unwrap_or_default();
+        return Err(format!("GitHub create PR error: {status} {detail}"));
+    }
+
+    let pr: CreatedPullRequest = response.json().map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "number": pr.number,
+        "title": pr.title,
+        "url": pr.html_url,
+    }))
+}
+
 fn urlencoding_lite(s: &str) -> String {
     let mut out = String::with_capacity(s.len() * 2);
     for b in s.bytes() {

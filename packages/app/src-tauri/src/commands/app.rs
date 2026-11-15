@@ -9,12 +9,34 @@ use crate::{validate_repo_path, AppState, Settings};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RepoCiRun {
+    pub id: String,
+    pub status: String,
+    #[serde(default)]
+    pub conclusion: Option<String>,
+    pub workflow: String,
+    #[serde(default)]
+    pub title: String,
+    pub created_at: String,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RepoEntry {
     pub path: String,
     #[serde(default)]
     pub pinned: bool,
     #[serde(default)]
     pub last_opened_at: Option<String>,
+    #[serde(default)]
+    pub ahead_count: Option<u32>,
+    #[serde(default)]
+    pub behind_count: Option<u32>,
+    #[serde(default)]
+    pub last_fetched_at: Option<String>,
+    #[serde(default)]
+    pub ci_runs: Vec<RepoCiRun>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -50,6 +72,10 @@ fn read_repos_file(state: &AppState) -> ReposFile {
                     path,
                     pinned: false,
                     last_opened_at: None,
+                    ahead_count: None,
+                    behind_count: None,
+                    last_fetched_at: None,
+                    ci_runs: Vec::new(),
                 })
                 .collect(),
         };

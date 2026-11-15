@@ -113,6 +113,16 @@ export function Sidebar() {
         >
           Workspace
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            useAppStore.getState().setAppMode('workspace');
+            useAppStore.getState().setWorkspaceTab('dashboard');
+          }}
+          className="mt-1 w-full rounded-md px-2 py-2 text-left text-sm text-foreground hover:bg-surface"
+        >
+          Repos Dashboard
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-2">

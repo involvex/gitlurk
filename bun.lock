@@ -53,7 +53,7 @@
       "name": "@involvex/gitlurk-desktop",
       "version": "0.1.6",
       "bin": {
-        "gitlurk": "./dist/index.js",
+        "gitlurk": "dist/index.js",
       },
       "devDependencies": {
         "@gitlurk/gh": "workspace:*",

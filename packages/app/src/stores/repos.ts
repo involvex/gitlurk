@@ -1,10 +1,28 @@
 import type { StateCreator } from 'zustand';
 
+export interface RepoCiRun {
+  id: string;
+  status: string;
+  conclusion?: string | null;
+  workflow: string;
+  title?: string;
+  createdAt: string;
+  url: string;
+}
+
 export interface Repository {
   path: string;
   name: string;
   pinned: boolean;
   lastOpenedAt: string | null;
+  aheadCount: number | null;
+  behindCount: number | null;
+  lastFetchedAt: string | null;
+  ciRuns: RepoCiRun[];
+  isFetching: boolean;
+  currentBranch?: string | null;
+  upstreamBranch?: string | null;
+  dirty?: boolean;
 }
 
 export interface ReposSlice {
@@ -16,7 +34,46 @@ export interface ReposSlice {
   setActiveRepo: (path: string | null) => void;
   toggleRepoPin: (path: string) => void;
   touchRepo: (path: string) => void;
+  updateRepoMetrics: (
+    path: string,
+    metrics: Partial<
+      Pick<
+        Repository,
+        | 'aheadCount'
+        | 'behindCount'
+        | 'lastFetchedAt'
+        | 'ciRuns'
+        | 'isFetching'
+        | 'currentBranch'
+        | 'upstreamBranch'
+        | 'dirty'
+      >
+    >,
+  ) => void;
   sortedRepos: () => Repository[];
+}
+
+function emptyMetrics(): Pick<
+  Repository,
+  | 'aheadCount'
+  | 'behindCount'
+  | 'lastFetchedAt'
+  | 'ciRuns'
+  | 'isFetching'
+  | 'currentBranch'
+  | 'upstreamBranch'
+  | 'dirty'
+> {
+  return {
+    aheadCount: null,
+    behindCount: null,
+    lastFetchedAt: null,
+    ciRuns: [],
+    isFetching: false,
+    currentBranch: null,
+    upstreamBranch: null,
+    dirty: false,
+  };
 }
 
 export const createReposSlice: StateCreator<ReposSlice> = (set, get) => ({
@@ -37,7 +94,16 @@ export const createReposSlice: StateCreator<ReposSlice> = (set, get) => ({
       return;
     }
     set((state) => ({
-      repos: [...state.repos, { path, name, pinned: false, lastOpenedAt: now }],
+      repos: [
+        ...state.repos,
+        {
+          path,
+          name,
+          pinned: false,
+          lastOpenedAt: now,
+          ...emptyMetrics(),
+        },
+      ],
       activeRepoPath: path,
     }));
   },
@@ -62,6 +128,12 @@ export const createReposSlice: StateCreator<ReposSlice> = (set, get) => ({
       ),
     }));
   },
+  updateRepoMetrics: (path, metrics) =>
+    set((state) => ({
+      repos: state.repos.map((r) =>
+        r.path === path ? { ...r, ...metrics } : r,
+      ),
+    })),
   sortedRepos: () => {
     const repos = [...get().repos];
     repos.sort((a, b) => {

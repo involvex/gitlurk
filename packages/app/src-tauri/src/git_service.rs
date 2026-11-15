@@ -621,24 +621,35 @@ impl GitService {
         Ok(())
     }
 
-    pub fn remote_ahead_count(&self, dir: &Path) -> Result<Option<u32>, String> {
-        let branch_output = self.exec(&["branch", "--show-current"], dir)?;
-        let branch = String::from_utf8_lossy(&branch_output.stdout)
-            .trim()
-            .to_string();
-        if branch.is_empty() {
-            return Ok(None);
+    /// Returns (ahead, behind) vs upstream tracking branch.
+    /// ahead = local commits not on upstream; behind = upstream commits not local.
+    /// Both `None` when detached HEAD or no upstream is configured.
+    pub fn remote_ahead_behind(
+        &self,
+        dir: &Path,
+    ) -> Result<(Option<u32>, Option<u32>), String> {
+        let upstream_check = self.exec(&["rev-parse", "--abbrev-ref", "@{u}"], dir)?;
+        if !upstream_check.status.success() {
+            return Ok((None, None));
         }
-        let upstream = format!("origin/{branch}");
-        let output = self.exec(&["rev-list", "--count", &format!("HEAD..{upstream}")], dir)?;
+        let output = self.exec(&["rev-list", "--left-right", "--count", "@{u}...HEAD"], dir)?;
         if !output.status.success() {
-            return Ok(None);
+            return Ok((None, None));
         }
-        let count = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .parse::<u32>()
-            .unwrap_or(0);
-        Ok(Some(count))
+        let text = String::from_utf8_lossy(&output.stdout);
+        let mut parts = text.split_whitespace();
+        let behind = parts
+            .next()
+            .and_then(|s| s.parse::<u32>().ok());
+        let ahead = parts
+            .next()
+            .and_then(|s| s.parse::<u32>().ok());
+        Ok((ahead, behind))
+    }
+
+    pub fn remote_ahead_count(&self, dir: &Path) -> Result<Option<u32>, String> {
+        let (ahead, _) = self.remote_ahead_behind(dir)?;
+        Ok(ahead)
     }
 
     pub fn add_paths(&self, dir: &Path, paths: &[String]) -> Result<(), String> {
@@ -679,19 +690,29 @@ impl GitService {
         Ok(())
     }
 
-    pub fn log(&self, dir: &Path, limit: u32) -> Result<Vec<CommitLogEntry>, String> {
+    pub fn log(
+        &self,
+        dir: &Path,
+        limit: u32,
+        range: Option<&str>,
+    ) -> Result<Vec<CommitLogEntry>, String> {
         let limit = limit.max(1).min(500).to_string();
-        let output = self.exec(
-            &[
-                "log",
-                "--graph",
-                "--decorate",
-                &format!("-n{limit}"),
-                "--date=short",
-                "--pretty=format:%m%x1f%H%x1f%an%x1f%ad%x1f%s",
-            ],
-            dir,
-        )?;
+        let mut args = vec![
+            "log".to_string(),
+            "--graph".to_string(),
+            "--decorate".to_string(),
+            format!("-n{limit}"),
+            "--date=short".to_string(),
+            "--pretty=format:%m%x1f%H%x1f%an%x1f%ad%x1f%s".to_string(),
+        ];
+        if let Some(r) = range {
+            let trimmed = r.trim();
+            if !trimmed.is_empty() {
+                args.push(trimmed.to_string());
+            }
+        }
+        let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+        let output = self.exec(&arg_refs, dir)?;
         if !output.status.success() {
             return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
         }

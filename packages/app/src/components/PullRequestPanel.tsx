@@ -9,15 +9,24 @@ export function PullRequestPanel() {
 
   return (
     <section className="border-t border-border p-4">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Pull Requests</h3>
-        <button
-          type="button"
-          onClick={() => void dispatcher.refreshPullRequests()}
-          className="text-xs text-primary hover:underline"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => useAppStore.getState().setShowCreatePrDialog(true)}
+            className="text-xs text-primary hover:underline"
+          >
+            New PR
+          </button>
+          <button
+            type="button"
+            onClick={() => void dispatcher.refreshPullRequests()}
+            className="text-xs text-primary hover:underline"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
       {pulls.length === 0 ? (
         <p className="text-xs text-muted">No open pull requests</p>

@@ -119,6 +119,27 @@ export function CommandPalette() {
         run: () => useAppStore.getState().setWorkspaceTab('changes'),
       },
       {
+        id: 'dashboard',
+        label: 'Show repos dashboard',
+        group: 'Git',
+        keywords: 'repos ahead behind ci status',
+        run: () => useAppStore.getState().setWorkspaceTab('dashboard'),
+      },
+      {
+        id: 'create-pr',
+        label: 'Create pull request',
+        group: 'GitHub',
+        keywords: 'pr pull request draft',
+        run: () => useAppStore.getState().setShowCreatePrDialog(true),
+      },
+      {
+        id: 'refresh-dashboard',
+        label: 'Refresh all repos',
+        group: 'Git',
+        keywords: 'dashboard fetch ahead behind',
+        run: () => void dispatcher.refreshAllRepos(),
+      },
+      {
         id: 'discover',
         label: 'Open discover',
         group: 'App',

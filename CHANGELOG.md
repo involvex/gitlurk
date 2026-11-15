@@ -4,6 +4,17 @@ All notable changes to GitLurk Desktop.
 
 ## [Unreleased]
 
+- feat(app): repos dashboard with ahead/behind badges and CI runs
+- feat(app): create pull request dialog from Pull Request panel
+- feat(app): extend `git:remote-ahead` with behind count; multi-repo background refresh
+- feat(app): add configurable external open tools for context menus ([4960319](https://github.com/involvex/gitlurk/commit/4960319))
+- fix(client): harden external tools ([902ccd5](https://github.com/involvex/gitlurk/commit/902ccd5))
+- feat(cli): add PowerShell completions and publish 0.1.6 ([3d71b09](https://github.com/involvex/gitlurk/commit/3d71b09))
+- chore(extension): add CRX pack via @involvex/ext-cli ([2026bd8](https://github.com/involvex/gitlurk/commit/2026bd8))
+- chore(deps): bump React, Zustand, Tailwind, Prettier, Tauri, xterm, ESLint
+
+## [v0.1.5](https://github.com/involvex/gitlurk/releases/tag/v0.1.5)
+
 - feat(extension): open in-app clone UI from browser bridge ([2398ad3](https://github.com/involvex/gitlurk/commit/2398ad3))
 - fix(app): keep ConPTY alive on view swap and add Copy Path menus ([ba0a0f5](https://github.com/involvex/gitlurk/commit/ba0a0f5))
 - feat(gitignore): add 9 more templates (total 32) ([3ecb384](https://github.com/involvex/gitlurk/commit/3ecb384))

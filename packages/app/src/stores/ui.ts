@@ -6,7 +6,7 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export type ThemePreset =
   'github-dark' | 'github-light' | 'dim' | 'high-contrast';
 export type AppMode = 'workspace' | 'discover';
-export type WorkspaceTab = 'overview' | 'changes' | 'history';
+export type WorkspaceTab = 'overview' | 'changes' | 'history' | 'dashboard';
 export type DiscoverTab =
   'notifications' | 'feed' | 'explore' | 'trending' | 'my-repos';
 export type AiProvider = 'opencode' | 'kilo';
@@ -48,6 +48,7 @@ export interface UiSlice {
   resolvedTheme: 'light' | 'dark';
   showCloneDialog: boolean;
   cloneDialogUrl: string;
+  showCreatePrDialog: boolean;
   showTerminal: boolean;
   showPlugins: boolean;
   showSettings: boolean;
@@ -103,6 +104,7 @@ export interface UiSlice {
   setThemePreset: (preset: ThemePreset) => void;
   setResolvedTheme: (theme: 'light' | 'dark') => void;
   setShowCloneDialog: (show: boolean, url?: string) => void;
+  setShowCreatePrDialog: (show: boolean) => void;
   setShowTerminal: (show: boolean) => void;
   setShowPlugins: (show: boolean) => void;
   setShowSettings: (show: boolean) => void;
@@ -200,6 +202,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
   resolvedTheme: 'dark',
   showCloneDialog: false,
   cloneDialogUrl: '',
+  showCreatePrDialog: false,
   showTerminal: false,
   showPlugins: false,
   showSettings: false,
@@ -255,6 +258,7 @@ export const createUiSlice: StateCreator<UiSlice> = (set) => ({
       showCloneDialog: show,
       cloneDialogUrl: show ? (url ?? '') : '',
     }),
+  setShowCreatePrDialog: (show) => set({ showCreatePrDialog: show }),
   setShowTerminal: (show) => set({ showTerminal: show }),
   setShowPlugins: (show) => set({ showPlugins: show }),
   setShowSettings: (show) => set({ showSettings: show }),

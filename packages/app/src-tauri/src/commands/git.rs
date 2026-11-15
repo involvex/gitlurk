@@ -246,8 +246,8 @@ pub fn git_remote_ahead(
     path: String,
 ) -> Result<serde_json::Value, String> {
     let dir = validate_repo_path(&path)?;
-    let ahead = state.git.remote_ahead_count(&dir)?;
-    Ok(serde_json::json!({ "ahead": ahead }))
+    let (ahead, behind) = state.git.remote_ahead_behind(&dir)?;
+    Ok(serde_json::json!({ "ahead": ahead, "behind": behind }))
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -278,9 +278,12 @@ pub fn git_log(
     state: State<'_, AppState>,
     path: String,
     limit: Option<u32>,
+    range: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let dir = validate_repo_path(&path)?;
-    let entries = state.git.log(&dir, limit.unwrap_or(50))?;
+    let entries = state
+        .git
+        .log(&dir, limit.unwrap_or(50), range.as_deref())?;
     Ok(serde_json::json!({ "entries": entries }))
 }
 

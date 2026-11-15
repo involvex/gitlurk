@@ -3,8 +3,10 @@ import { Sidebar } from './components/Sidebar';
 import { OverviewView } from './components/OverviewView';
 import { ChangesView } from './components/ChangesView';
 import { HistoryPanel } from './components/HistoryPanel';
+import { ReposDashboardView } from './components/ReposDashboardView';
 import { DiscoverView } from './components/DiscoverView';
 import { CloneDialog } from './components/CloneDialog';
+import { CreatePrDialog } from './components/CreatePrDialog';
 import { BranchPanel } from './components/BranchPanel';
 import { StashPanel } from './components/StashPanel';
 import { PullRequestPanel } from './components/PullRequestPanel';
@@ -142,6 +144,19 @@ export function App() {
                   >
                     History
                   </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      useAppStore.getState().setWorkspaceTab('dashboard')
+                    }
+                    className={`rounded px-2 py-1 text-xs ${
+                      workspaceTab === 'dashboard'
+                        ? 'bg-primary/20 text-primary'
+                        : 'text-muted hover:text-foreground'
+                    }`}
+                  >
+                    Dashboard
+                  </button>
                 </div>
               ) : null}
             </div>
@@ -227,25 +242,31 @@ export function App() {
             <DiscoverView />
           ) : (
             <div className="flex min-h-0 flex-1">
-              {workspaceTab === 'overview' ? (
+              {workspaceTab === 'dashboard' ? (
+                <ReposDashboardView />
+              ) : workspaceTab === 'overview' ? (
                 <OverviewView />
               ) : workspaceTab === 'history' ? (
                 <HistoryPanel />
               ) : (
                 <ChangesView />
               )}
-              <ResizeHandle
-                orientation="vertical"
-                onDrag={(delta) => dispatcher.resizeRightRail(delta)}
-              />
-              <div
-                className="flex shrink-0 flex-col border-l border-border"
-                style={{ width: rightRailWidth }}
-              >
-                <BranchPanel />
-                <StashPanel />
-                <PullRequestPanel />
-              </div>
+              {workspaceTab !== 'dashboard' ? (
+                <>
+                  <ResizeHandle
+                    orientation="vertical"
+                    onDrag={(delta) => dispatcher.resizeRightRail(delta)}
+                  />
+                  <div
+                    className="flex shrink-0 flex-col border-l border-border"
+                    style={{ width: rightRailWidth }}
+                  >
+                    <BranchPanel />
+                    <StashPanel />
+                    <PullRequestPanel />
+                  </div>
+                </>
+              ) : null}
             </div>
           )}
           <TerminalPane />
@@ -253,6 +274,7 @@ export function App() {
         </main>
       </div>
       <CloneDialog />
+      <CreatePrDialog />
       <AuthDialog />
       <SettingsDialog />
       <GhRunWatchDialog />

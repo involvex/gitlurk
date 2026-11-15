@@ -64,38 +64,38 @@ interface RepoEntry {
 
 ### Phase 1: Rust Backend (Week 1)
 
-- [ ] Add `git:remote-ahead` command returning `{ ahead, behind }`
-- [ ] Add `github:list-runs` command wrapping `gh run list`
-- [ ] Add `app:refresh-repo` composite command
+- [x] Add `git:remote-ahead` command returning `{ ahead, behind }`
+- [x] Add `github:list-runs` command (GitHub Actions API)
+- [x] Refresh orchestration via dispatcher `refreshRepo` / `refreshAllRepos` (no separate `app:refresh-repo`)
 - [ ] Update `RepoWatcher` to emit `repo-changed` with ahead/behind
 
 ### Phase 2: Store & IPC (Week 1)
 
-- [ ] Add channels to `packages/shared/src/ipc/channels.ts`
-- [ ] Extend `ReposSlice` in `packages/app/src/stores/repos.ts`
-- [ ] Add `refreshRepo(path)`, `refreshAllRepos()` to dispatcher
-- [ ] Background fetch: use existing `backgroundFetchEnabled` + `backgroundFetchIntervalMin`
+- [x] Add channels to `packages/shared/src/ipc/channels.ts`
+- [x] Extend `ReposSlice` in `packages/app/src/stores/repos.ts`
+- [x] Add `refreshRepo(path)`, `refreshAllRepos()` to dispatcher
+- [x] Background fetch: use existing `backgroundFetchEnabled` + `backgroundFetchIntervalMin`
 
 ### Phase 3: UI Components (Week 2)
 
-- [ ] `ReposDashboardView.tsx` - grid of RepoCards
-- [ ] `RepoCard.tsx` - expandable with chevron
-- [ ] `CommitList.tsx` - uses `git:log` with `--oneline @{u}..HEAD` (ahead) and `HEAD..@{u}` (behind)
-- [ ] `CiRunsList.tsx` - status badges (success/failure/running), link to GitHub
-- [ ] `BranchStatus.tsx` - current branch, upstream, dirty indicator
+- [x] `ReposDashboardView.tsx` - grid of RepoCards
+- [x] `RepoCard.tsx` - expandable with chevron
+- [x] `CommitList.tsx` - uses `git:log` with range `@{u}..HEAD` / `HEAD..@{u}`
+- [x] `CiRunsList.tsx` - status badges (success/failure/running), link to GitHub
+- [x] `BranchStatus.tsx` - current branch, upstream, dirty indicator
 
 ### Phase 4: Integration (Week 2)
 
-- [ ] Add "Dashboard" tab to workspace tabs (Overview | Changes | History | **Dashboard**)
-- [ ] Wire manual refresh button (per card + global)
-- [ ] Add to Sidebar: "Open Dashboard" action
-- [ ] Command Palette: "Show Repos Dashboard"
+- [x] Add "Dashboard" tab to workspace tabs (Overview | Changes | History | **Dashboard**)
+- [x] Wire manual refresh button (per card + global)
+- [x] Add to Sidebar: "Open Dashboard" action
+- [x] Command Palette: "Show Repos Dashboard"
 
 ### Phase 5: Polish (Week 2)
 
-- [ ] Loading skeletons for cards
-- [ ] Empty states (no repos, no CI runs)
-- [ ] Error handling (no GitHub remote, auth expired)
+- [x] Loading skeletons for cards
+- [x] Empty states (no repos, no CI runs)
+- [x] Error handling (no GitHub remote, auth expired)
 - [ ] Keyboard navigation between cards
 - [ ] Persist expanded state per repo
 

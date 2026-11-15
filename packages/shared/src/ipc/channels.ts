@@ -41,6 +41,18 @@ export interface IpcChannels {
       path: string;
       pinned?: boolean;
       lastOpenedAt?: string | null;
+      aheadCount?: number | null;
+      behindCount?: number | null;
+      lastFetchedAt?: string | null;
+      ciRuns?: Array<{
+        id: string;
+        status: string;
+        conclusion?: string | null;
+        workflow: string;
+        title?: string;
+        createdAt: string;
+        url: string;
+      }>;
     }>;
   };
   'app:take-pending-action': Record<string, never>;
@@ -96,7 +108,7 @@ export interface IpcChannels {
   'git:remote-ahead': { path: string };
   'git:add': { path: string; files?: string[] };
   'git:reset': { path: string; files: string[] };
-  'git:log': { path: string; limit?: number };
+  'git:log': { path: string; limit?: number; range?: string };
   'git:show': { path: string; sha: string };
   'git:tag-list': { path: string };
   'git:tag-create': { path: string; name: string; message?: string };
@@ -145,6 +157,16 @@ export interface IpcChannels {
   'github:search-repos': { query: string };
   'github:trending': { language?: string };
   'github:list-my-repos': Record<string, never>;
+  'github:list-runs': { owner: string; repo: string; limit?: number };
+  'github:create-pr': {
+    owner: string;
+    repo: string;
+    title: string;
+    body?: string;
+    head: string;
+    base: string;
+    draft?: boolean;
+  };
   'ai:set-api-key': { provider: 'opencode' | 'kilo'; key: string };
   'ai:has-api-key': { provider: 'opencode' | 'kilo' };
   'ai:list-models': Record<string, never>;
@@ -235,6 +257,18 @@ export interface IpcResponses {
       path: string;
       pinned: boolean;
       lastOpenedAt: string | null;
+      aheadCount?: number | null;
+      behindCount?: number | null;
+      lastFetchedAt?: string | null;
+      ciRuns?: Array<{
+        id: string;
+        status: string;
+        conclusion?: string | null;
+        workflow: string;
+        title?: string;
+        createdAt: string;
+        url: string;
+      }>;
     }>;
   };
   'app:save-repos': void;
@@ -286,7 +320,7 @@ export interface IpcResponses {
   'git:stash-drop': void;
   'git:stash-apply': void;
   'git:fetch': void;
-  'git:remote-ahead': { ahead: number | null };
+  'git:remote-ahead': { ahead: number | null; behind: number | null };
   'git:add': void;
   'git:reset': void;
   'git:log': {
@@ -410,6 +444,22 @@ export interface IpcResponses {
       private: boolean;
       updatedAt: string;
     }>;
+  };
+  'github:list-runs': {
+    runs: Array<{
+      id: string;
+      status: string;
+      conclusion: string | null;
+      workflow: string;
+      title: string;
+      createdAt: string;
+      url: string;
+    }>;
+  };
+  'github:create-pr': {
+    number: number;
+    title: string;
+    url: string;
   };
   'github:list-my-repos': {
     repos: Array<{
