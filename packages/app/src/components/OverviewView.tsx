@@ -118,11 +118,25 @@ export function OverviewView() {
   const [previewBinary, setPreviewBinary] = useState(false);
   const [previewTruncated, setPreviewTruncated] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [prevRepoPath, setPrevRepoPath] = useState(activeRepoPath);
   const {
     state: treeMenu,
     open: openTreeMenu,
     close: closeTreeMenu,
   } = useContextMenuState<FsEntry>();
+
+  if (activeRepoPath !== prevRepoPath) {
+    setPrevRepoPath(activeRepoPath);
+    setRootEntries([]);
+    setChildrenByPath({});
+    setExpanded(new Set());
+    setSelectedPath(null);
+    setPreviewContent(null);
+    setPreviewTitle('README');
+    setPreviewBinary(false);
+    setPreviewTruncated(false);
+    setLoadingPreview(false);
+  }
 
   const fileMenuItems = useMemo<ContextMenuItem[]>(() => {
     const toolItems = menuItemsForTools(externalTools, 'file');
@@ -142,14 +156,7 @@ export function OverviewView() {
   }, [externalTools]);
 
   useEffect(() => {
-    if (!activeRepoPath) {
-      setRootEntries([]);
-      setChildrenByPath({});
-      setExpanded(new Set());
-      setSelectedPath(null);
-      setPreviewContent(null);
-      return;
-    }
+    if (!activeRepoPath) return;
 
     let cancelled = false;
     void (async () => {

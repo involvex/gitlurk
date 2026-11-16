@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { parseGitHubRemoteUrl } from '@gitlurk/shared';
 import { ipcInvoke } from '../ipc/client';
 import { useAppStore } from '../stores';
@@ -46,34 +46,30 @@ export function CloneDialog() {
   const [shallowClone, setShallowClone] = useState(false);
   const [depth, setDepth] = useState('1');
   const [forkFirst, setForkFirst] = useState(false);
-  const pathTouchedRef = useRef(false);
+  const [pathBaseline, setPathBaseline] = useState('');
+  const [pathTouched, setPathTouched] = useState(false);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const nextOpenKey = show ? pendingUrl : null;
 
-  useEffect(() => {
-    if (!show) {
-      pathTouchedRef.current = false;
-      return;
+  if (nextOpenKey !== openKey) {
+    setOpenKey(nextOpenKey);
+    setPathTouched(false);
+    if (nextOpenKey !== null) {
+      if (pendingUrl.trim()) {
+        setUrl(pendingUrl.trim());
+        setTab(tabFromUrl(pendingUrl));
+      } else {
+        setUrl(HTTPS_PLACEHOLDER);
+        setTab('https');
+      }
     }
+  }
 
-    pathTouchedRef.current = false;
-    if (pendingUrl.trim()) {
-      setUrl(pendingUrl.trim());
-      setTab(tabFromUrl(pendingUrl));
-    } else {
-      setUrl(HTTPS_PLACEHOLDER);
-      setTab('https');
-    }
-  }, [show, pendingUrl]);
-
-  useEffect(() => {
-    if (!show) {
-      pathTouchedRef.current = false;
-      return;
-    }
-    // While the destination hasn't been manually chosen, follow the repo
-    // name from the URL so pasting a new link updates the folder name.
-    if (pathTouchedRef.current) return;
-    setLocalPath(suggestClonePath(defaultCloneDir, url));
-  }, [show, defaultCloneDir, url]);
+  const suggestedPath = suggestClonePath(defaultCloneDir, url);
+  if (show && !pathTouched && suggestedPath !== pathBaseline) {
+    setPathBaseline(suggestedPath);
+    setLocalPath(suggestedPath);
+  }
 
   if (!show) return null;
 
@@ -97,7 +93,7 @@ export function CloneDialog() {
     });
     if (dir) {
       setLocalPath(dir);
-      pathTouchedRef.current = true;
+      setPathTouched(true);
       dispatcher.rememberCloneDir(dir);
     }
   }
@@ -183,7 +179,10 @@ export function CloneDialog() {
             <div className="flex gap-2">
               <input
                 value={localPath}
-                onChange={(e) => setLocalPath(e.target.value)}
+                onChange={(e) => {
+                  setPathTouched(true);
+                  setLocalPath(e.target.value);
+                }}
                 placeholder="C:\dev\my-repo"
                 className="flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
               />

@@ -125,11 +125,23 @@ export function ChangesView() {
   const [pendingAmend, setPendingAmend] = useState(false);
   const [autocrlfUnset, setAutocrlfUnset] = useState(false);
   const [autocrlfDismissed, setAutocrlfDismissed] = useState(false);
+  const [prevRepoPath, setPrevRepoPath] = useState(activeRepoPath);
   const {
     state: fileMenu,
     open: openFileMenu,
     close: closeFileMenu,
   } = useContextMenuState<string>();
+
+  if (activeRepoPath !== prevRepoPath) {
+    setPrevRepoPath(activeRepoPath);
+    setTemplateLoaded(false);
+    setAutocrlfDismissed(false);
+  }
+
+  if (commitTemplate && !commitMessage && !templateLoaded) {
+    setTemplateLoaded(true);
+    useAppStore.getState().setCommitMessage(commitTemplate);
+  }
 
   const fileMenuItems = useMemo<ContextMenuItem[]>(() => {
     const toolItems = menuItemsForTools(externalTools, 'file');
@@ -150,8 +162,6 @@ export function ChangesView() {
 
   useEffect(() => {
     if (!activeRepoPath) return;
-    setTemplateLoaded(false);
-    setAutocrlfDismissed(false);
     void dispatcher.loadCommitTemplate();
     let cancelled = false;
     void (async () => {
@@ -181,13 +191,6 @@ export function ChangesView() {
       cancelled = true;
     };
   }, [activeRepoPath]);
-
-  useEffect(() => {
-    if (commitTemplate && !commitMessage) {
-      useAppStore.getState().setCommitMessage(commitTemplate);
-      setTemplateLoaded(true);
-    }
-  }, [commitTemplate, commitMessage]);
 
   if (!activeRepoPath) {
     return (

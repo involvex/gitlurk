@@ -108,7 +108,13 @@ export function GhRunWatchDialog() {
   const ghRunView = useAppStore((s) => s.ghRunView);
   const ghRunViewLoading = useAppStore((s) => s.ghRunViewLoading);
   const [tab, setTab] = useState<'jobs' | 'log'>('jobs');
+  const [wasOpen, setWasOpen] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
+
+  if (show !== wasOpen) {
+    setWasOpen(show);
+    if (!show) setTab('jobs');
+  }
 
   useEffect(() => {
     if (!show) return;
@@ -141,10 +147,6 @@ export function GhRunWatchDialog() {
       preRef.current.scrollTop = preRef.current.scrollHeight;
     }
   }, [log, tab]);
-
-  useEffect(() => {
-    if (!show) setTab('jobs');
-  }, [show]);
 
   if (!show) return null;
 

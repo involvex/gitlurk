@@ -2,13 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["./src/*"],
       "@gitlurk/shared": ["../shared/src/index.ts"],
       "@gitlurk/shared/*": ["../shared/src/*"],
       "@gitlurk/git": ["../git/src/index.ts"]
     },
+    "types": ["bun", "react", "react-dom"],
     "noEmit": true
   },
   "include": ["src"]

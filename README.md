@@ -194,7 +194,7 @@ packages/
 ```bash
 bun run lint              # ESLint
 bun run format:check      # Prettier check
-bun run typecheck         # TypeScript type checking
+bun run typecheck         # TypeScript type checking (bun check)
 bun test                  # Run all tests
 ```
 

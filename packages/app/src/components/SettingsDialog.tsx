@@ -89,29 +89,25 @@ export function SettingsDialog() {
   const [draftPalette, setDraftPalette] = useState(hotkeyCommandPalette);
   const [capturing, setCapturing] = useState<'show' | 'palette' | null>(null);
   const [toolDraft, setToolDraft] = useState<ToolDraft | null>(null);
+  const [wasOpen, setWasOpen] = useState(false);
 
-  useEffect(() => {
-    if (!show) return;
-    setTab('general');
-    setProvider(aiProvider);
-    setModel(aiModel);
-    setKiloUrl(kiloBaseUrl);
-    setApiKey('');
-    setStatus(null);
-    setAiLoaded(false);
-    setModels([]);
-    setDraftShowApp(hotkeyShowApp);
-    setDraftPalette(hotkeyCommandPalette);
-    setCapturing(null);
-    setToolDraft(null);
-  }, [
-    show,
-    aiProvider,
-    aiModel,
-    kiloBaseUrl,
-    hotkeyShowApp,
-    hotkeyCommandPalette,
-  ]);
+  if (show !== wasOpen) {
+    setWasOpen(show);
+    if (show) {
+      setTab('general');
+      setProvider(aiProvider);
+      setModel(aiModel);
+      setKiloUrl(kiloBaseUrl);
+      setApiKey('');
+      setStatus(null);
+      setAiLoaded(false);
+      setModels([]);
+      setDraftShowApp(hotkeyShowApp);
+      setDraftPalette(hotkeyCommandPalette);
+      setCapturing(null);
+      setToolDraft(null);
+    }
+  }
 
   useEffect(() => {
     if (!show || tab !== 'ai' || aiLoaded) return;

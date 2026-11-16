@@ -34,7 +34,7 @@
   "scripts": {
     "dev": "bun run src/cli.ts",
     "build": "bun build src/index.ts --outdir dist --target node --minify && node ./scripts/postbuild.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "bun check",
     "prepublishOnly": "bun run build"
   },
   "engines": {

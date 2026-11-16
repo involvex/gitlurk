@@ -91,7 +91,7 @@ bun run tauri:build            # Build production desktop app (MSI/NSIS installe
 bun run lint                   # Run ESLint
 bun run format                 # Format all files with Prettier
 bun run format:check           # Check formatting (CI uses this)
-bun run typecheck              # Type-check all packages
+bun run typecheck              # Type-check all packages (bun check)
 ```
 
 ### Testing

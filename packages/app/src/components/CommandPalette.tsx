@@ -30,7 +30,16 @@ export function CommandPalette() {
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [wasOpen, setWasOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  if (show !== wasOpen) {
+    setWasOpen(show);
+    if (show) {
+      setQuery('');
+      setActiveIndex(0);
+    }
+  }
 
   const commands = useMemo<CommandItem[]>(() => {
     const base: CommandItem[] = [
@@ -212,15 +221,9 @@ export function CommandPalette() {
 
   useEffect(() => {
     if (!show) return;
-    setQuery('');
-    setActiveIndex(0);
     const timer = setTimeout(() => inputRef.current?.focus(), 0);
     return () => clearTimeout(timer);
   }, [show]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
 
   if (!show) return null;
 
@@ -243,7 +246,10 @@ export function CommandPalette() {
         <input
           ref={inputRef}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setActiveIndex(0);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown') {
               e.preventDefault();

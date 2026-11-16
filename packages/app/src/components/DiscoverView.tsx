@@ -154,8 +154,7 @@ function SubjectTypeIcon({ type }: { type: string }) {
 
 export function DiscoverView() {
   const username = useAppStore((s) => s.username);
-  const discoverTab = useAppStore((s) => s.discoverTab);
-  const [tab, setTab] = useState<DiscoverTab>(discoverTab);
+  const tab = useAppStore((s) => s.discoverTab);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -164,12 +163,7 @@ export function DiscoverView() {
   const [query, setQuery] = useState('stars:>1000');
   const [language, setLanguage] = useState('all');
 
-  useEffect(() => {
-    setTab(discoverTab);
-  }, [discoverTab]);
-
   const selectTab = (next: DiscoverTab) => {
-    setTab(next);
     useAppStore.getState().setDiscoverTab(next);
   };
 
@@ -215,14 +209,27 @@ export function DiscoverView() {
   );
 
   useEffect(() => {
-    void loadTab(tab);
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) void loadTab(tab);
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- explore search is manual; trending refreshes on language below
   }, [tab, username]);
 
   useEffect(() => {
-    if (tab === 'trending' && username) {
-      void loadTab('trending');
-    }
+    if (tab !== 'trending' || !username) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!cancelled) void loadTab('trending');
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
 

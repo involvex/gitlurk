@@ -15,13 +15,18 @@ export function HistoryPanel() {
   const commitDiffLoading = useAppStore((s) => s.commitDiffLoading);
   const resolvedTheme = useAppStore((s) => s.resolvedTheme);
   const [filter, setFilter] = useState('');
+  const [prevRepoPath, setPrevRepoPath] = useState(activeRepoPath);
   const [pendingCherryPickSha, setPendingCherryPickSha] = useState<
     string | null
   >(null);
   const [pendingRevertSha, setPendingRevertSha] = useState<string | null>(null);
 
-  useEffect(() => {
+  if (activeRepoPath !== prevRepoPath) {
+    setPrevRepoPath(activeRepoPath);
     setFilter('');
+  }
+
+  useEffect(() => {
     if (activeRepoPath) {
       void dispatcher.refreshCommitLog();
     }

@@ -103,11 +103,17 @@ export function BinaryDiffView({
   const mime = IMAGE_MIME[extOf(file)];
   const [blobs, setBlobs] = useState<Array<BlobResponse | null>>([null, null]);
   const [error, setError] = useState<string | null>(null);
+  const [loadKey, setLoadKey] = useState(`${path}\0${file}\0${kind ?? ''}`);
+  const nextKey = `${path}\0${file}\0${kind ?? ''}`;
+
+  if (nextKey !== loadKey) {
+    setLoadKey(nextKey);
+    setBlobs([null, null]);
+    setError(null);
+  }
 
   useEffect(() => {
     let cancelled = false;
-    setBlobs([null, null]);
-    setError(null);
     const sides = sidesFor(kind);
     void (async () => {
       const next: Array<BlobResponse | null> = [null, null];
