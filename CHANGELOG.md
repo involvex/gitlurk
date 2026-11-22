@@ -4,8 +4,13 @@ All notable changes to GitLurk Desktop.
 
 ## [Unreleased]
 
-- feat(app): in-app PR detail, checkout, review verdicts, and notification deep links
-- feat(app): create PR with reviewers and labels
+- formatting ([5eeedc0](https://github.com/involvex/gitlurk/commit/5eeedc0))
+- feat(app): close the in-app pull request loop ([95a7dc7](https://github.com/involvex/gitlurk/commit/95a7dc7))
+- chore(deps): bump Tauri/JS packages and switch typecheck to bun check ([4c8004a](https://github.com/involvex/gitlurk/commit/4c8004a))
+
+## [v0.1.6](https://github.com/involvex/gitlurk/releases/tag/v0.1.6) - 2026-11-15
+
+- v0.1.6 ([9d0d98b](https://github.com/involvex/gitlurk/commit/9d0d98b))
 - feat(app): add repos dashboard and create-PR flow ([b234877](https://github.com/involvex/gitlurk/commit/b234877))
 - chore(lint): upgrade to eslint 10 and react-hooks 7 ([11f3e89](https://github.com/involvex/gitlurk/commit/11f3e89))
 - chore(terminal): upgrade xterm to 6.0.0 ([9c8149b](https://github.com/involvex/gitlurk/commit/9c8149b))
