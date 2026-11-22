@@ -4,6 +4,7 @@ import { dispatcher } from '../dispatcher';
 export function PullRequestPanel() {
   const pulls = useAppStore((s) => s.pulls);
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
+  const activePullNumber = useAppStore((s) => s.activePullNumber);
 
   if (!activeRepoPath) return null;
 
@@ -34,16 +35,19 @@ export function PullRequestPanel() {
         <ul className="space-y-2">
           {pulls.map((pr) => (
             <li key={pr.number}>
-              <a
-                href={pr.url}
-                target="_blank"
-                rel="noreferrer"
-                className="block rounded-md border border-border px-3 py-2 text-xs hover:bg-surface"
+              <button
+                type="button"
+                onClick={() => void dispatcher.openPullRequest(pr.number)}
+                className={`block w-full rounded-md border px-3 py-2 text-left text-xs hover:bg-surface ${
+                  activePullNumber === pr.number
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border'
+                }`}
               >
                 <span className="font-medium text-primary">#{pr.number}</span>{' '}
                 {pr.title}
                 <span className="mt-1 block text-muted">by {pr.user}</span>
-              </a>
+              </button>
             </li>
           ))}
         </ul>

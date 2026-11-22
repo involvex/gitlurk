@@ -495,6 +495,10 @@ struct WorkflowRunItem {
     created_at: String,
     #[serde(default)]
     display_title: Option<String>,
+    #[serde(default)]
+    head_sha: Option<String>,
+    #[serde(default)]
+    head_branch: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -537,6 +541,8 @@ pub fn github_list_runs(
                 "title": r.display_title.unwrap_or_default(),
                 "createdAt": r.created_at,
                 "url": r.html_url,
+                "headSha": r.head_sha.unwrap_or_default(),
+                "headBranch": r.head_branch.unwrap_or_default(),
             })
         })
         .collect();
@@ -591,6 +597,438 @@ pub fn github_create_pr(
         "title": pr.title,
         "url": pr.html_url,
     }))
+}
+
+#[derive(Deserialize)]
+struct PrLabel {
+    name: String,
+    color: String,
+}
+
+#[derive(Deserialize)]
+struct PrRepoOwner {
+    login: String,
+}
+
+#[derive(Deserialize)]
+struct PrRepoRef {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    clone_url: Option<String>,
+    #[serde(default)]
+    fork: Option<bool>,
+    #[serde(default)]
+    owner: Option<PrRepoOwner>,
+}
+
+#[derive(Deserialize)]
+struct PrBranchRef {
+    #[serde(rename = "ref")]
+    git_ref: String,
+    sha: String,
+    #[serde(default)]
+    label: Option<String>,
+    #[serde(default)]
+    repo: Option<PrRepoRef>,
+    #[serde(default)]
+    user: Option<PullRequestUser>,
+}
+
+#[derive(Deserialize)]
+struct PullRequestDetail {
+    number: u64,
+    title: String,
+    #[serde(default)]
+    body: Option<String>,
+    html_url: String,
+    state: String,
+    #[serde(default)]
+    draft: Option<bool>,
+    user: PullRequestUser,
+    base: PrBranchRef,
+    head: PrBranchRef,
+    created_at: String,
+    updated_at: String,
+    #[serde(default)]
+    mergeable: Option<bool>,
+    #[serde(default)]
+    labels: Vec<PrLabel>,
+    #[serde(default)]
+    requested_reviewers: Vec<PullRequestUser>,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_get_pr(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    number: u64,
+) -> Result<serde_json::Value, String> {
+    let token = require_token(&state)?;
+    let client = github_client();
+    let request = auth_headers(
+        client.get(format!(
+            "https://api.github.com/repos/{owner}/{repo}/pulls/{number}"
+        )),
+        Some(&token),
+    );
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("GitHub get PR error: {}", response.status()));
+    }
+    let pr: PullRequestDetail = response.json().map_err(|e| e.to_string())?;
+    let head_owner = pr
+        .head
+        .repo
+        .as_ref()
+        .and_then(|r| r.owner.as_ref())
+        .map(|o| o.login.clone())
+        .or_else(|| pr.head.user.as_ref().map(|u| u.login.clone()))
+        .unwrap_or_else(|| owner.clone());
+    let head_repo_name = pr
+        .head
+        .repo
+        .as_ref()
+        .and_then(|r| r.name.clone())
+        .unwrap_or_else(|| repo.clone());
+    let head_clone_url = pr
+        .head
+        .repo
+        .as_ref()
+        .and_then(|r| r.clone_url.clone())
+        .unwrap_or_else(|| format!("https://github.com/{head_owner}/{head_repo_name}.git"));
+    let head_is_fork = pr
+        .head
+        .repo
+        .as_ref()
+        .and_then(|r| r.fork)
+        .unwrap_or(false)
+        || head_owner != owner
+        || head_repo_name != repo;
+
+    Ok(serde_json::json!({
+        "number": pr.number,
+        "title": pr.title,
+        "body": pr.body.unwrap_or_default(),
+        "url": pr.html_url,
+        "state": pr.state,
+        "draft": pr.draft.unwrap_or(false),
+        "user": pr.user.login,
+        "base": {
+            "ref": pr.base.git_ref,
+            "sha": pr.base.sha,
+            "label": pr.base.label.unwrap_or_default(),
+        },
+        "head": {
+            "ref": pr.head.git_ref,
+            "sha": pr.head.sha,
+            "label": pr.head.label.unwrap_or_default(),
+            "owner": head_owner,
+            "repo": head_repo_name,
+            "cloneUrl": head_clone_url,
+            "isFork": head_is_fork,
+        },
+        "createdAt": pr.created_at,
+        "updatedAt": pr.updated_at,
+        "mergeable": pr.mergeable,
+        "labels": pr.labels.into_iter().map(|l| serde_json::json!({
+            "name": l.name,
+            "color": l.color,
+        })).collect::<Vec<_>>(),
+        "requestedReviewers": pr.requested_reviewers.into_iter().map(|u| u.login).collect::<Vec<_>>(),
+    }))
+}
+
+#[derive(Deserialize)]
+struct PrFileItem {
+    filename: String,
+    status: String,
+    additions: u64,
+    deletions: u64,
+    changes: u64,
+    #[serde(default)]
+    patch: Option<String>,
+    #[serde(default)]
+    previous_filename: Option<String>,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_pr_files(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    number: u64,
+) -> Result<serde_json::Value, String> {
+    let token = require_token(&state)?;
+    let client = github_client();
+    let request = auth_headers(
+        client.get(format!(
+            "https://api.github.com/repos/{owner}/{repo}/pulls/{number}/files?per_page=100"
+        )),
+        Some(&token),
+    );
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("GitHub PR files error: {}", response.status()));
+    }
+    let items: Vec<PrFileItem> = response.json().map_err(|e| e.to_string())?;
+    let files: Vec<serde_json::Value> = items
+        .into_iter()
+        .map(|f| {
+            let mut obj = serde_json::json!({
+                "filename": f.filename,
+                "status": f.status,
+                "additions": f.additions,
+                "deletions": f.deletions,
+                "changes": f.changes,
+            });
+            if let Some(patch) = f.patch {
+                obj.as_object_mut()
+                    .unwrap()
+                    .insert("patch".into(), serde_json::Value::String(patch));
+            }
+            if let Some(prev) = f.previous_filename {
+                obj.as_object_mut().unwrap().insert(
+                    "previousFilename".into(),
+                    serde_json::Value::String(prev),
+                );
+            }
+            obj
+        })
+        .collect();
+    Ok(serde_json::json!({ "files": files }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_pr_diff(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    number: u64,
+) -> Result<serde_json::Value, String> {
+    let token = require_token(&state)?;
+    let client = github_client();
+    let request = client
+        .get(format!(
+            "https://api.github.com/repos/{owner}/{repo}/pulls/{number}"
+        ))
+        .header("User-Agent", "GitLurk-Desktop")
+        .header("Accept", "application/vnd.github.v3.diff")
+        .header("Authorization", format!("Bearer {token}"));
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("GitHub PR diff error: {}", response.status()));
+    }
+    let diff = response.text().map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({ "diff": diff }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_request_reviewers(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    number: u64,
+    reviewers: Vec<String>,
+) -> Result<(), String> {
+    if reviewers.is_empty() {
+        return Ok(());
+    }
+    let token = require_token(&state)?;
+    let client = github_client();
+    let payload = serde_json::json!({ "reviewers": reviewers });
+    let request = auth_headers(
+        client
+            .post(format!(
+                "https://api.github.com/repos/{owner}/{repo}/pulls/{number}/requested_reviewers"
+            ))
+            .json(&payload),
+        Some(&token),
+    );
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let detail = response.text().unwrap_or_default();
+        return Err(format!("Request reviewers failed: {status} {detail}"));
+    }
+    Ok(())
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_set_pr_labels(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    number: u64,
+    labels: Vec<String>,
+) -> Result<(), String> {
+    if labels.is_empty() {
+        return Ok(());
+    }
+    let token = require_token(&state)?;
+    let client = github_client();
+    let payload = serde_json::json!({ "labels": labels });
+    let request = auth_headers(
+        client
+            .post(format!(
+                "https://api.github.com/repos/{owner}/{repo}/issues/{number}/labels"
+            ))
+            .json(&payload),
+        Some(&token),
+    );
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let detail = response.text().unwrap_or_default();
+        return Err(format!("Set PR labels failed: {status} {detail}"));
+    }
+    Ok(())
+}
+
+#[derive(Deserialize)]
+struct ReviewItem {
+    id: u64,
+    user: Option<PullRequestUser>,
+    state: String,
+    #[serde(default)]
+    body: Option<String>,
+    #[serde(default)]
+    submitted_at: Option<String>,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_list_reviews(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    number: u64,
+) -> Result<serde_json::Value, String> {
+    let token = require_token(&state)?;
+    let client = github_client();
+    let request = auth_headers(
+        client.get(format!(
+            "https://api.github.com/repos/{owner}/{repo}/pulls/{number}/reviews"
+        )),
+        Some(&token),
+    );
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("GitHub list reviews error: {}", response.status()));
+    }
+    let items: Vec<ReviewItem> = response.json().map_err(|e| e.to_string())?;
+    let reviews: Vec<serde_json::Value> = items
+        .into_iter()
+        .map(|r| {
+            serde_json::json!({
+                "id": r.id,
+                "user": r.user.map(|u| u.login).unwrap_or_else(|| "unknown".into()),
+                "state": r.state,
+                "body": r.body.unwrap_or_default(),
+                "submittedAt": r.submitted_at,
+            })
+        })
+        .collect();
+    Ok(serde_json::json!({ "reviews": reviews }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_submit_review(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    number: u64,
+    body: Option<String>,
+    event: String,
+) -> Result<serde_json::Value, String> {
+    let event_upper = event.to_uppercase();
+    if !matches!(
+        event_upper.as_str(),
+        "APPROVE" | "REQUEST_CHANGES" | "COMMENT"
+    ) {
+        return Err("Review event must be APPROVE, REQUEST_CHANGES, or COMMENT".into());
+    }
+    let token = require_token(&state)?;
+    let client = github_client();
+    let mut payload = serde_json::json!({ "event": event_upper });
+    if let Some(body) = body {
+        if !body.trim().is_empty() {
+            payload
+                .as_object_mut()
+                .unwrap()
+                .insert("body".into(), serde_json::Value::String(body));
+        }
+    }
+    // REQUEST_CHANGES and COMMENT require a body per GitHub API.
+    if matches!(event.to_uppercase().as_str(), "REQUEST_CHANGES" | "COMMENT")
+        && payload
+            .get("body")
+            .and_then(|v| v.as_str())
+            .map(|s| s.trim().is_empty())
+            .unwrap_or(true)
+    {
+        return Err("A review body is required for Comment and Request changes".into());
+    }
+    let request = auth_headers(
+        client
+            .post(format!(
+                "https://api.github.com/repos/{owner}/{repo}/pulls/{number}/reviews"
+            ))
+            .json(&payload),
+        Some(&token),
+    );
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let detail = response.text().unwrap_or_default();
+        return Err(format!("Submit review failed: {status} {detail}"));
+    }
+    let review: ReviewItem = response.json().map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "id": review.id,
+        "state": review.state,
+        "body": review.body.unwrap_or_default(),
+    }))
+}
+
+#[derive(Deserialize)]
+struct LabelItem {
+    name: String,
+    color: String,
+    #[serde(default)]
+    description: Option<String>,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_list_labels(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+) -> Result<serde_json::Value, String> {
+    let token = require_token(&state)?;
+    let client = github_client();
+    let request = auth_headers(
+        client.get(format!(
+            "https://api.github.com/repos/{owner}/{repo}/labels?per_page=100"
+        )),
+        Some(&token),
+    );
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("GitHub list labels error: {}", response.status()));
+    }
+    let items: Vec<LabelItem> = response.json().map_err(|e| e.to_string())?;
+    let labels: Vec<serde_json::Value> = items
+        .into_iter()
+        .map(|l| {
+            serde_json::json!({
+                "name": l.name,
+                "color": l.color,
+                "description": l.description.unwrap_or_default(),
+            })
+        })
+        .collect();
+    Ok(serde_json::json!({ "labels": labels }))
 }
 
 fn urlencoding_lite(s: &str) -> String {

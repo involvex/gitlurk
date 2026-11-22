@@ -4,6 +4,8 @@ All notable changes to GitLurk Desktop.
 
 ## [Unreleased]
 
+- feat(app): in-app PR detail, checkout, review verdicts, and notification deep links
+- feat(app): create PR with reviewers and labels
 - feat(app): add repos dashboard and create-PR flow ([b234877](https://github.com/involvex/gitlurk/commit/b234877))
 - chore(lint): upgrade to eslint 10 and react-hooks 7 ([11f3e89](https://github.com/involvex/gitlurk/commit/11f3e89))
 - chore(terminal): upgrade xterm to 6.0.0 ([9c8149b](https://github.com/involvex/gitlurk/commit/9c8149b))

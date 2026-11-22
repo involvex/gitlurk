@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand';
+import type { IpcResponses } from '@gitlurk/shared';
 
 export interface GitStatus {
   staged: string[];
@@ -14,6 +15,11 @@ export interface PullRequest {
   state: string;
   user: string;
 }
+
+export type PullRequestDetail = IpcResponses['github:get-pr'];
+export type PullRequestFile = IpcResponses['github:pr-files']['files'][number];
+export type PullRequestReview = IpcResponses['github:list-reviews']['reviews'][number];
+export type PullRequestCheckRun = IpcResponses['github:list-runs']['runs'][number];
 
 export type DiffKind = 'staged' | 'unstaged' | 'untracked';
 
@@ -52,6 +58,15 @@ export interface GitOpsSlice {
   branches: string[];
   currentBranch: string;
   pulls: PullRequest[];
+  activePullNumber: number | null;
+  activePullOwner: string | null;
+  activePullRepo: string | null;
+  pullDetail: PullRequestDetail | null;
+  pullFiles: PullRequestFile[];
+  pullReviews: PullRequestReview[];
+  pullChecks: PullRequestCheckRun[];
+  pullSelectedFile: string | null;
+  pullDetailLoading: boolean;
   loading: boolean;
   error: string | null;
   commitMessage: string;
@@ -75,6 +90,18 @@ export interface GitOpsSlice {
   setStatus: (status: GitStatus | null) => void;
   setBranches: (branches: string[], current: string) => void;
   setPulls: (pulls: PullRequest[]) => void;
+  setActivePull: (
+    number: number | null,
+    owner?: string | null,
+    repo?: string | null,
+  ) => void;
+  setPullDetail: (detail: PullRequestDetail | null) => void;
+  setPullFiles: (files: PullRequestFile[]) => void;
+  setPullReviews: (reviews: PullRequestReview[]) => void;
+  setPullChecks: (checks: PullRequestCheckRun[]) => void;
+  setPullSelectedFile: (file: string | null) => void;
+  setPullDetailLoading: (loading: boolean) => void;
+  clearPullDetail: () => void;
   setGitOpLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setCommitMessage: (message: string) => void;
@@ -103,6 +130,15 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   branches: [],
   currentBranch: '',
   pulls: [],
+  activePullNumber: null,
+  activePullOwner: null,
+  activePullRepo: null,
+  pullDetail: null,
+  pullFiles: [],
+  pullReviews: [],
+  pullChecks: [],
+  pullSelectedFile: null,
+  pullDetailLoading: false,
   loading: false,
   error: null,
   commitMessage: '',
@@ -126,6 +162,30 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   setStatus: (status) => set({ status }),
   setBranches: (branches, current) => set({ branches, currentBranch: current }),
   setPulls: (pulls) => set({ pulls }),
+  setActivePull: (number, owner = null, repo = null) =>
+    set({
+      activePullNumber: number,
+      activePullOwner: number == null ? null : (owner ?? null),
+      activePullRepo: number == null ? null : (repo ?? null),
+    }),
+  setPullDetail: (pullDetail) => set({ pullDetail }),
+  setPullFiles: (pullFiles) => set({ pullFiles }),
+  setPullReviews: (pullReviews) => set({ pullReviews }),
+  setPullChecks: (pullChecks) => set({ pullChecks }),
+  setPullSelectedFile: (pullSelectedFile) => set({ pullSelectedFile }),
+  setPullDetailLoading: (pullDetailLoading) => set({ pullDetailLoading }),
+  clearPullDetail: () =>
+    set({
+      activePullNumber: null,
+      activePullOwner: null,
+      activePullRepo: null,
+      pullDetail: null,
+      pullFiles: [],
+      pullReviews: [],
+      pullChecks: [],
+      pullSelectedFile: null,
+      pullDetailLoading: false,
+    }),
   setGitOpLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
   setCommitMessage: (message) => set({ commitMessage: message }),

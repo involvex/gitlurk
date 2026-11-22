@@ -361,8 +361,18 @@ impl GitService {
         Ok(())
     }
 
-    pub fn branch_checkout(&self, dir: &Path, name: &str) -> Result<(), String> {
-        let output = self.exec(&["checkout", name], dir)?;
+    pub fn branch_checkout(
+        &self,
+        dir: &Path,
+        name: &str,
+        start_point: Option<&str>,
+    ) -> Result<(), String> {
+        let output = if let Some(start) = start_point {
+            // Create or reset local branch to start_point, then switch to it.
+            self.exec(&["checkout", "-B", name, start], dir)?
+        } else {
+            self.exec(&["checkout", name], dir)?
+        };
         if !output.status.success() {
             return Err(String::from_utf8_lossy(&output.stderr).to_string());
         }
@@ -613,8 +623,21 @@ impl GitService {
         Ok(())
     }
 
-    pub fn fetch(&self, dir: &Path) -> Result<(), String> {
-        let output = self.exec(&["fetch"], dir)?;
+    pub fn fetch(
+        &self,
+        dir: &Path,
+        remote: Option<&str>,
+        refspec: Option<&str>,
+    ) -> Result<(), String> {
+        let mut args = vec!["fetch".to_string()];
+        if let Some(remote) = remote {
+            args.push(remote.to_string());
+            if let Some(refspec) = refspec {
+                args.push(refspec.to_string());
+            }
+        }
+        let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+        let output = self.exec(&arg_refs, dir)?;
         if !output.status.success() {
             return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
         }

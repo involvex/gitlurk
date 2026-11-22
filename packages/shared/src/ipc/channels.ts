@@ -16,7 +16,7 @@ export interface IpcChannels {
   'git:push': { path: string };
   'git:branch-list': { path: string };
   'git:branch-create': { path: string; name: string };
-  'git:branch-checkout': { path: string; name: string };
+  'git:branch-checkout': { path: string; name: string; startPoint?: string };
   'git:is-repo': { path: string };
   'git:get-remote-origin': { path: string };
   'git:remote-add': { path: string; name: string; url: string };
@@ -104,7 +104,7 @@ export interface IpcChannels {
   'git:stash-pop': { path: string; index?: number };
   'git:stash-drop': { path: string; index: number };
   'git:stash-apply': { path: string; index?: number };
-  'git:fetch': { path: string };
+  'git:fetch': { path: string; remote?: string; refspec?: string };
   'git:remote-ahead': { path: string };
   'git:add': { path: string; files?: string[] };
   'git:reset': { path: string; files: string[] };
@@ -167,6 +167,30 @@ export interface IpcChannels {
     base: string;
     draft?: boolean;
   };
+  'github:get-pr': { owner: string; repo: string; number: number };
+  'github:pr-files': { owner: string; repo: string; number: number };
+  'github:pr-diff': { owner: string; repo: string; number: number };
+  'github:request-reviewers': {
+    owner: string;
+    repo: string;
+    number: number;
+    reviewers: string[];
+  };
+  'github:set-pr-labels': {
+    owner: string;
+    repo: string;
+    number: number;
+    labels: string[];
+  };
+  'github:list-reviews': { owner: string; repo: string; number: number };
+  'github:submit-review': {
+    owner: string;
+    repo: string;
+    number: number;
+    body?: string;
+    event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+  };
+  'github:list-labels': { owner: string; repo: string };
   'ai:set-api-key': { provider: 'opencode' | 'kilo'; key: string };
   'ai:has-api-key': { provider: 'opencode' | 'kilo' };
   'ai:list-models': Record<string, never>;
@@ -454,12 +478,69 @@ export interface IpcResponses {
       title: string;
       createdAt: string;
       url: string;
+      headSha: string;
+      headBranch: string;
     }>;
   };
   'github:create-pr': {
     number: number;
     title: string;
     url: string;
+  };
+  'github:get-pr': {
+    number: number;
+    title: string;
+    body: string;
+    url: string;
+    state: string;
+    draft: boolean;
+    user: string;
+    base: { ref: string; sha: string; label: string };
+    head: {
+      ref: string;
+      sha: string;
+      label: string;
+      owner: string;
+      repo: string;
+      cloneUrl: string;
+      isFork: boolean;
+    };
+    createdAt: string;
+    updatedAt: string;
+    mergeable: boolean | null;
+    labels: Array<{ name: string; color: string }>;
+    requestedReviewers: string[];
+  };
+  'github:pr-files': {
+    files: Array<{
+      filename: string;
+      status: string;
+      additions: number;
+      deletions: number;
+      changes: number;
+      patch?: string;
+      previousFilename?: string;
+    }>;
+  };
+  'github:pr-diff': { diff: string };
+  'github:request-reviewers': void;
+  'github:set-pr-labels': void;
+  'github:list-reviews': {
+    reviews: Array<{
+      id: number;
+      user: string;
+      state: string;
+      body: string;
+      submittedAt: string | null;
+    }>;
+  };
+  'github:submit-review': {
+    id: number;
+    state: string;
+    body: string;
+  };
+  'github:list-labels': {
+    labels: Array<{ name: string; color: string; description: string }>;
   };
   'github:list-my-repos': {
     repos: Array<{

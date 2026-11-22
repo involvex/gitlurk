@@ -99,7 +99,7 @@ Add tag creation and listing:
 
 ## GitHub Integration
 
-### 8. Create Pull Request from UI — 🟡 PARTIAL
+### 8. Create Pull Request from UI — ✅ DONE
 
 **Priority: High** | **Complexity: Medium**
 
@@ -110,8 +110,7 @@ Currently PRs are only listed. Add a "Create PR" flow:
 - Draft PR option
 - Reviewers and labels assignment
 
-> **Have:** `CreatePrDialog.tsx` + `github:create-pr` (title/body/head/base/draft) from Pull Request panel and command palette.
-> **Missing:** reviewers and labels assignment.
+> Implemented `CreatePrDialog.tsx` + `github:create-pr` with optional reviewers (`github:request-reviewers`) and labels (`github:set-pr-labels` / `github:list-labels`). Opens the new PR in the in-app detail view after create.
 
 ### 9. Issue Management — ❌ NOT STARTED
 
@@ -138,7 +137,7 @@ A dedicated CI/CD panel beyond the current "watch run" feature:
 > **Have:** run list, structured job/step breakdown with timing, live log tab, and re-run failed jobs (`GhRunWatchDialog.tsx`, `dev:gh-run-view`, `dev:gh-run-rerun --failed`).
 > **Missing:** workflow YAML viewer, workflow/run filters.
 
-### 11. Code Review in App — ❌ NOT STARTED
+### 11. Code Review in App — 🟡 PARTIAL
 
 **Priority: High** | **Complexity: High**
 
@@ -149,7 +148,8 @@ Full PR review experience:
 - Approve / request changes / comment
 - View existing review comments
 
-> Blocked by #41 (PR Detail View).
+> **Have:** PR file diffs in `PrDetailView.tsx`; submit Comment / Approve / Request changes via `github:submit-review`; list existing reviews via `github:list-reviews`.
+> **Missing:** inline review comments and suggested changes.
 
 ### 12. Fork Management — 🟡 PARTIAL
 
@@ -516,11 +516,13 @@ First-run experience:
 
 ## Recently Added
 
-### 41. PR Detail View — ❌ NOT STARTED
+### 41. PR Detail View — ✅ DONE
 
 **Priority: High** | **Complexity: Medium**
 
 View a PR's metadata, description, and diff inside the app using `gh pr view --json` + `gh pr diff`. Prerequisite for #11 (Code Review).
+
+> Implemented `PrDetailView.tsx` via GitHub REST (`github:get-pr`, `github:pr-files`, `github:pr-diff`) with checkout, checks matched to `head.sha`, and review actions. Opened from the PR list and after create.
 
 ### 42. Commit Amend & Fixup — 🟡 PARTIAL
 
@@ -583,11 +585,14 @@ Aggregate ahead/behind/dirty status badges across all pinned repos in the sideba
 
 > Implemented `ReposDashboardView` with expandable cards, ahead/behind, CI runs, branch status, and multi-repo background refresh.
 
-### 51. Clickable Notifications Deep Links — ❌ NOT STARTED
+### 51. Clickable Notifications Deep Links — 🟡 PARTIAL
 
 **Priority: Medium** | **Complexity: Low**
 
 Clicking an OS notification or tray item focuses the relevant run/PR/repo (extends `tray-action` event pattern).
+
+> **Have:** In-app Discover notification clicks for PullRequest subjects focus the matching local repo and open `PrDetailView` (`dispatcher.openNotification` + `parseGitHubPullUrl`). Tray still opens the notifications tab.
+> **Missing:** OS desktop notification click → deep link; tray item → specific PR/run.
 
 ### 52. Plugin-contributed Commands — ❌ NOT STARTED
 
@@ -669,7 +674,7 @@ _No known bugs currently tracked._
 | Category                    | Total  | Done   | Partial | Not started |
 | --------------------------- | ------ | ------ | ------- | ----------- |
 | Git Operations              | 7      | 4      | 2       | 1           |
-| GitHub Integration          | 5      | 0      | 3       | 2           |
+| GitHub Integration          | 5      | 1      | 3       | 1           |
 | UI/UX Improvements          | 6      | 1      | 3       | 2           |
 | AI Features                 | 3      | 0      | 1       | 2           |
 | Developer Experience        | 4      | 0      | 1       | 3           |
@@ -677,9 +682,9 @@ _No known bugs currently tracked._
 | Security & Privacy          | 2      | 0      | 0       | 2           |
 | Integration & Extensibility | 4      | 0      | 0       | 4           |
 | Polish & Quality of Life    | 6      | 4      | 1       | 1           |
-| Recently Added              | 17     | 8      | 1       | 8           |
-| **Total**                   | **57** | **19** | **12**  | **26**      |
+| Recently Added              | 17     | 9      | 2       | 6           |
+| **Total**                   | **57** | **21** | **13**  | **23**      |
 
 ---
 
-_Last updated: 2026-11-15_
+_Last updated: 2026-11-22_

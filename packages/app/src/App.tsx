@@ -10,6 +10,7 @@ import { CreatePrDialog } from './components/CreatePrDialog';
 import { BranchPanel } from './components/BranchPanel';
 import { StashPanel } from './components/StashPanel';
 import { PullRequestPanel } from './components/PullRequestPanel';
+import { PrDetailView } from './components/PrDetailView';
 import { TerminalPane } from './components/TerminalPane';
 import { PluginsPanel } from './components/PluginsPanel';
 import { AuthDialog } from './components/AuthDialog';
@@ -157,6 +158,14 @@ export function App() {
                   >
                     Dashboard
                   </button>
+                  {workspaceTab === 'pull-request' ? (
+                    <button
+                      type="button"
+                      className="rounded bg-primary/20 px-2 py-1 text-xs text-primary"
+                    >
+                      Pull request
+                    </button>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -248,6 +257,8 @@ export function App() {
                 <OverviewView />
               ) : workspaceTab === 'history' ? (
                 <HistoryPanel />
+              ) : workspaceTab === 'pull-request' ? (
+                <PrDetailView />
               ) : (
                 <ChangesView />
               )}
@@ -261,9 +272,15 @@ export function App() {
                     className="flex shrink-0 flex-col border-l border-border"
                     style={{ width: rightRailWidth }}
                   >
-                    <BranchPanel />
-                    <StashPanel />
-                    <PullRequestPanel />
+                    {workspaceTab === 'pull-request' ? (
+                      <PullRequestPanel />
+                    ) : (
+                      <>
+                        <BranchPanel />
+                        <StashPanel />
+                        <PullRequestPanel />
+                      </>
+                    )}
                   </div>
                 </>
               ) : null}
