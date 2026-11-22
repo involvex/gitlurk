@@ -1,4 +1,4 @@
-import { parseGitHubRemoteUrl } from '@gitlurk/shared';
+import { parseGitHubRemoteUrl, parseGitHubPullUrl } from '@gitlurk/shared';
 import type { ExternalTool } from '@gitlurk/shared';
 import { defaultExternalTools } from '@gitlurk/shared';
 import {
@@ -411,7 +411,15 @@ export const dispatcher = {
             repo: parsed.repo,
             limit: 5,
           });
-          ciRuns = runs;
+          ciRuns = runs.map((r) => ({
+            id: r.id,
+            status: r.status,
+            conclusion: r.conclusion,
+            workflow: r.workflow,
+            title: r.title,
+            createdAt: r.createdAt,
+            url: r.url,
+          }));
         }
       } catch {
         // CI listing requires auth / GitHub remote.
@@ -1156,6 +1164,8 @@ export const dispatcher = {
     head: string;
     base: string;
     draft?: boolean;
+    reviewers?: string[];
+    labels?: string[];
   }) {
     const path = getStore().activeRepoPath;
     if (!path) {
@@ -1182,9 +1192,30 @@ export const dispatcher = {
         base: input.base,
         draft: input.draft,
       });
+      const reviewers = (input.reviewers ?? [])
+        .map((r) => r.trim())
+        .filter(Boolean);
+      const labels = (input.labels ?? []).map((l) => l.trim()).filter(Boolean);
+      if (reviewers.length > 0) {
+        await ipcInvoke('github:request-reviewers', {
+          owner: parsed.owner,
+          repo: parsed.repo,
+          number: pr.number,
+          reviewers,
+        });
+      }
+      if (labels.length > 0) {
+        await ipcInvoke('github:set-pr-labels', {
+          owner: parsed.owner,
+          repo: parsed.repo,
+          number: pr.number,
+          labels,
+        });
+      }
       getStore().setShowCreatePrDialog(false);
       getStore().showToast(`Created PR #${pr.number}`);
       await dispatcher.refreshPullRequests();
+      await dispatcher.openPullRequest(pr.number, parsed.owner, parsed.repo);
       return pr;
     } catch (error) {
       getStore().setError(
@@ -1195,6 +1226,311 @@ export const dispatcher = {
       return null;
     } finally {
       getStore().setGitOpLoading(false);
+    }
+  },
+
+  async resolveActiveGitHubRepo(): Promise<{
+    owner: string;
+    repo: string;
+  } | null> {
+    const path = getStore().activeRepoPath;
+    if (!path) return null;
+    try {
+      const { url } = await ipcInvoke('git:get-remote-origin', { path });
+      if (!url) return null;
+      return parseGitHubRemoteUrl(url);
+    } catch {
+      return null;
+    }
+  },
+
+  async findLocalRepoForGitHub(
+    owner: string,
+    repo: string,
+  ): Promise<string | null> {
+    const target = `${owner}/${repo}`.toLowerCase();
+    const repos = getStore().repos;
+    for (const r of repos) {
+      try {
+        const { url } = await ipcInvoke('git:get-remote-origin', {
+          path: r.path,
+        });
+        const parsed = url ? parseGitHubRemoteUrl(url) : null;
+        if (
+          parsed &&
+          `${parsed.owner}/${parsed.repo}`.toLowerCase() === target
+        ) {
+          return r.path;
+        }
+      } catch {
+        // skip repos without a readable origin
+      }
+    }
+    return null;
+  },
+
+  async openPullRequest(number: number, owner?: string, repo?: string) {
+    let resolvedOwner = owner;
+    let resolvedRepo = repo;
+    if (!resolvedOwner || !resolvedRepo) {
+      const parsed = await dispatcher.resolveActiveGitHubRepo();
+      if (!parsed) {
+        getStore().setError('No GitHub remote configured for this repository');
+        return;
+      }
+      resolvedOwner = parsed.owner;
+      resolvedRepo = parsed.repo;
+    }
+
+    getStore().setActivePull(number, resolvedOwner, resolvedRepo);
+    getStore().setAppMode('workspace');
+    getStore().setWorkspaceTab('pull-request');
+    await dispatcher.refreshPullRequestDetail();
+  },
+
+  closePullRequestDetail() {
+    getStore().clearPullDetail();
+    if (getStore().workspaceTab === 'pull-request') {
+      getStore().setWorkspaceTab('changes');
+    }
+  },
+
+  async refreshPullRequestDetail() {
+    const store = getStore();
+    const number = store.activePullNumber;
+    const owner = store.activePullOwner;
+    const repo = store.activePullRepo;
+    if (number == null || !owner || !repo) return;
+
+    store.setPullDetailLoading(true);
+    store.setError(null);
+    try {
+      const [detail, filesResult, reviewsResult, runsResult] =
+        await Promise.all([
+          ipcInvoke('github:get-pr', { owner, repo, number }),
+          ipcInvoke('github:pr-files', { owner, repo, number }),
+          ipcInvoke('github:list-reviews', { owner, repo, number }),
+          ipcInvoke('github:list-runs', { owner, repo, limit: 30 }),
+        ]);
+      const headSha = detail.head.sha.toLowerCase();
+      const matchingRuns = runsResult.runs.filter(
+        (r) =>
+          r.headSha &&
+          (r.headSha.toLowerCase() === headSha ||
+            r.headSha.toLowerCase().startsWith(headSha.slice(0, 7))),
+      );
+      store.setPullDetail(detail);
+      store.setPullFiles(filesResult.files);
+      store.setPullReviews(reviewsResult.reviews);
+      store.setPullChecks(
+        matchingRuns.length > 0 ? matchingRuns : runsResult.runs.slice(0, 5),
+      );
+      const selected = store.pullSelectedFile;
+      if (selected && !filesResult.files.some((f) => f.filename === selected)) {
+        store.setPullSelectedFile(filesResult.files[0]?.filename ?? null);
+      } else if (!selected && filesResult.files[0]) {
+        store.setPullSelectedFile(filesResult.files[0].filename);
+      }
+    } catch (error) {
+      store.setError(
+        error instanceof Error ? error.message : 'Failed to load pull request',
+      );
+    } finally {
+      store.setPullDetailLoading(false);
+    }
+  },
+
+  async checkoutPullRequestBranch() {
+    const path = getStore().activeRepoPath;
+    const detail = getStore().pullDetail;
+    const owner = getStore().activePullOwner;
+    const repo = getStore().activePullRepo;
+    if (!path || !detail || !owner || !repo) {
+      getStore().setError('Open a pull request first');
+      return;
+    }
+
+    getStore().setGitOpLoading(true);
+    getStore().setError(null);
+    try {
+      const { url: originUrl } = await ipcInvoke('git:get-remote-origin', {
+        path,
+      });
+      const origin = originUrl ? parseGitHubRemoteUrl(originUrl) : null;
+      if (
+        !origin ||
+        origin.owner.toLowerCase() !== owner.toLowerCase() ||
+        origin.repo.toLowerCase() !== repo.toLowerCase()
+      ) {
+        throw new Error(
+          `Active folder is not ${owner}/${repo}. Open that repository first.`,
+        );
+      }
+
+      const headRef = detail.head.ref;
+      if (!detail.head.isFork) {
+        await ipcInvoke('git:fetch', {
+          path,
+          remote: 'origin',
+          refspec: headRef,
+        });
+        await ipcInvoke('git:branch-checkout', {
+          path,
+          name: headRef,
+          startPoint: `origin/${headRef}`,
+        });
+      } else {
+        const remoteName = detail.head.owner
+          .toLowerCase()
+          .replace(/[^a-z0-9._-]+/g, '-');
+        try {
+          await ipcInvoke('git:remote-add', {
+            path,
+            name: remoteName,
+            url: detail.head.cloneUrl,
+          });
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          if (!/already exists/i.test(message)) {
+            throw error;
+          }
+        }
+        await ipcInvoke('git:fetch', {
+          path,
+          remote: remoteName,
+          refspec: headRef,
+        });
+        await ipcInvoke('git:branch-checkout', {
+          path,
+          name: headRef,
+          startPoint: `${remoteName}/${headRef}`,
+        });
+      }
+      await dispatcher.refreshStatus();
+      await dispatcher.refreshBranches();
+      getStore().showToast(`Checked out ${headRef}`);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to check out pull request branch',
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
+    }
+  },
+
+  async submitPullRequestReview(input: {
+    event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+    body?: string;
+  }) {
+    const number = getStore().activePullNumber;
+    const owner = getStore().activePullOwner;
+    const repo = getStore().activePullRepo;
+    if (number == null || !owner || !repo) {
+      getStore().setError('Open a pull request first');
+      return;
+    }
+    getStore().setGitOpLoading(true);
+    getStore().setError(null);
+    try {
+      await ipcInvoke('github:submit-review', {
+        owner,
+        repo,
+        number,
+        body: input.body,
+        event: input.event,
+      });
+      const label =
+        input.event === 'APPROVE'
+          ? 'Approved'
+          : input.event === 'REQUEST_CHANGES'
+            ? 'Requested changes'
+            : 'Commented';
+      getStore().showToast(`${label} on PR #${number}`);
+      await dispatcher.refreshPullRequestDetail();
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Failed to submit review',
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
+    }
+  },
+
+  async openNotification(notification: {
+    id: string;
+    url: string;
+    subjectType: string;
+    unread: boolean;
+    repo: string;
+  }) {
+    const isPull =
+      notification.subjectType.toLowerCase() === 'pullrequest' ||
+      /\/pull\/\d+/i.test(notification.url);
+    if (!isPull) {
+      await ipcInvoke('shell:open-external', { url: notification.url });
+      if (notification.unread) {
+        try {
+          await ipcInvoke('github:mark-notification-read', {
+            id: notification.id,
+          });
+        } catch {
+          // ignore mark-read failures when opening externally
+        }
+      }
+      return;
+    }
+
+    const parsed =
+      parseGitHubPullUrl(notification.url) ??
+      (() => {
+        const remote = parseGitHubRemoteUrl(notification.repo);
+        const match = notification.url.match(/\/pull\/(\d+)/i);
+        if (!remote || !match) return null;
+        return {
+          owner: remote.owner,
+          repo: remote.repo,
+          number: Number(match[1]),
+        };
+      })();
+
+    if (!parsed) {
+      await ipcInvoke('shell:open-external', { url: notification.url });
+      return;
+    }
+
+    const localPath = await dispatcher.findLocalRepoForGitHub(
+      parsed.owner,
+      parsed.repo,
+    );
+    if (localPath) {
+      if (getStore().activeRepoPath !== localPath) {
+        await dispatcher.selectRepo(localPath);
+      }
+      await dispatcher.openPullRequest(
+        parsed.number,
+        parsed.owner,
+        parsed.repo,
+      );
+    } else {
+      getStore().showToast(
+        `No local clone of ${parsed.owner}/${parsed.repo}; opening on GitHub`,
+      );
+      await ipcInvoke('shell:open-external', { url: notification.url });
+    }
+
+    if (notification.unread) {
+      try {
+        await ipcInvoke('github:mark-notification-read', {
+          id: notification.id,
+        });
+        const unread = Math.max(0, getStore().unreadNotifications - 1);
+        getStore().setUnreadNotifications(unread);
+      } catch {
+        // ignore
+      }
     }
   },
 
@@ -1442,13 +1778,13 @@ export const dispatcher = {
     }
   },
 
-  async watchCiRun(path: string) {
+  async watchCiRun(path: string, runId?: string) {
     const store = getStore();
     store.setGhRunWatchPath(path);
     store.clearGhRunWatchLog();
     store.setGhRunWatchRunning(true);
     store.setShowGhRunWatch(true);
-    void dispatcher.loadCiRunView(path);
+    void dispatcher.loadCiRunView(path, runId);
     try {
       const version = await ipcInvoke('dev:gh-version', {});
       if (!version.installed) {
@@ -1458,7 +1794,10 @@ export const dispatcher = {
         );
         return;
       }
-      await ipcInvoke('dev:gh-run-watch', { path });
+      await ipcInvoke('dev:gh-run-watch', {
+        path,
+        runId: runId || undefined,
+      });
     } catch (error) {
       store.setGhRunWatchRunning(false);
       store.appendGhRunWatchLog(
@@ -1467,12 +1806,13 @@ export const dispatcher = {
     }
   },
 
-  async loadCiRunView(path?: string | null) {
+  async loadCiRunView(path?: string | null, runId?: string) {
     const store = getStore();
     store.setGhRunViewLoading(true);
     try {
       const view = await ipcInvoke('dev:gh-run-view', {
         path: path ?? undefined,
+        runId: runId || undefined,
       });
       getStore().setGhRunView(view);
     } catch (error) {

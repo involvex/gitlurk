@@ -89,3 +89,28 @@ export function parseGitHubRemoteUrl(
 
   return null;
 }
+
+/** Parse a github.com pull request URL into owner/repo/number. */
+export function parseGitHubPullUrl(
+  url: string,
+): { owner: string; repo: string; number: number } | null {
+  try {
+    const u = new URL(url);
+    if (!ALLOWED_HOSTS.has(u.hostname)) {
+      return null;
+    }
+    const match = u.pathname.match(
+      /^\/([\w.-]+)\/([\w.-]+)\/pull\/(\d+)(?:\/|$)/i,
+    );
+    if (!match) return null;
+    const number = Number(match[3]);
+    if (!Number.isFinite(number) || number <= 0) return null;
+    return {
+      owner: match[1] ?? '',
+      repo: match[2] ?? '',
+      number,
+    };
+  } catch {
+    return null;
+  }
+}

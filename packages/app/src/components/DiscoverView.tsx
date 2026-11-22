@@ -354,7 +354,21 @@ export function DiscoverView() {
                 >
                   <button
                     type="button"
-                    onClick={() => openUrl(n.url)}
+                    onClick={() => {
+                      void (async () => {
+                        const wasUnread = n.unread;
+                        await dispatcher.openNotification(n);
+                        if (wasUnread) {
+                          setNotifications((prev) =>
+                            prev.map((item) =>
+                              item.id === n.id
+                                ? { ...item, unread: false }
+                                : item,
+                            ),
+                          );
+                        }
+                      })();
+                    }}
                     className="flex min-w-0 flex-1 items-start gap-3 text-left"
                   >
                     <Avatar src={n.avatarUrl} label={n.repo} />

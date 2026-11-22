@@ -109,9 +109,12 @@ pub fn git_branch_checkout(
     state: State<'_, AppState>,
     path: String,
     name: String,
+    start_point: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let dir = validate_repo_path(&path)?;
-    state.git.branch_checkout(&dir, &name)?;
+    state
+        .git
+        .branch_checkout(&dir, &name, start_point.as_deref())?;
     Ok(serde_json::json!({ "name": name }))
 }
 
@@ -235,9 +238,14 @@ pub fn git_stash_apply(
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub fn git_fetch(state: State<'_, AppState>, path: String) -> Result<(), String> {
+pub fn git_fetch(
+    state: State<'_, AppState>,
+    path: String,
+    remote: Option<String>,
+    refspec: Option<String>,
+) -> Result<(), String> {
     let dir = validate_repo_path(&path)?;
-    state.git.fetch(&dir)
+    state.git.fetch(&dir, remote.as_deref(), refspec.as_deref())
 }
 
 #[tauri::command(rename_all = "camelCase")]

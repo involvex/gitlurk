@@ -3,6 +3,7 @@ import {
   parseAppUrl,
   buildOpenRepoUrl,
   parseGitHubRemoteUrl,
+  parseGitHubPullUrl,
 } from '../protocol/parse-app-url.js';
 import {
   validateRepoPath,
@@ -80,6 +81,37 @@ describe('parseGitHubRemoteUrl', () => {
     expect(parseGitHubRemoteUrl('https://gitlab.com/owner/repo')).toBeNull();
     expect(parseGitHubRemoteUrl('not a url')).toBeNull();
     expect(parseGitHubRemoteUrl('')).toBeNull();
+  });
+});
+
+describe('parseGitHubPullUrl', () => {
+  test('parses pull request html url', () => {
+    expect(parseGitHubPullUrl('https://github.com/owner/repo/pull/42')).toEqual(
+      {
+        owner: 'owner',
+        repo: 'repo',
+        number: 42,
+      },
+    );
+  });
+
+  test('parses pull url with trailing path', () => {
+    expect(
+      parseGitHubPullUrl('https://github.com/owner/repo/pull/7/files'),
+    ).toEqual({
+      owner: 'owner',
+      repo: 'repo',
+      number: 7,
+    });
+  });
+
+  test('rejects non-pull urls', () => {
+    expect(
+      parseGitHubPullUrl('https://github.com/owner/repo/issues/1'),
+    ).toBeNull();
+    expect(
+      parseGitHubPullUrl('https://gitlab.com/owner/repo/pull/1'),
+    ).toBeNull();
   });
 });
 
