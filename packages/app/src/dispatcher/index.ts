@@ -1,7 +1,4 @@
-import {
-  parseGitHubRemoteUrl,
-  parseGitHubPullUrl,
-} from '@gitlurk/shared';
+import { parseGitHubRemoteUrl, parseGitHubPullUrl } from '@gitlurk/shared';
 import type { ExternalTool } from '@gitlurk/shared';
 import { defaultExternalTools } from '@gitlurk/shared';
 import {
@@ -1272,11 +1269,7 @@ export const dispatcher = {
     return null;
   },
 
-  async openPullRequest(
-    number: number,
-    owner?: string,
-    repo?: string,
-  ) {
+  async openPullRequest(number: number, owner?: string, repo?: string) {
     let resolvedOwner = owner;
     let resolvedRepo = repo;
     if (!resolvedOwner || !resolvedRepo) {
@@ -1333,19 +1326,14 @@ export const dispatcher = {
         matchingRuns.length > 0 ? matchingRuns : runsResult.runs.slice(0, 5),
       );
       const selected = store.pullSelectedFile;
-      if (
-        selected &&
-        !filesResult.files.some((f) => f.filename === selected)
-      ) {
+      if (selected && !filesResult.files.some((f) => f.filename === selected)) {
         store.setPullSelectedFile(filesResult.files[0]?.filename ?? null);
       } else if (!selected && filesResult.files[0]) {
         store.setPullSelectedFile(filesResult.files[0].filename);
       }
     } catch (error) {
       store.setError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to load pull request',
+        error instanceof Error ? error.message : 'Failed to load pull request',
       );
     } finally {
       store.setPullDetailLoading(false);

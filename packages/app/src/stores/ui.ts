@@ -7,11 +7,7 @@ export type ThemePreset =
   'github-dark' | 'github-light' | 'dim' | 'high-contrast';
 export type AppMode = 'workspace' | 'discover';
 export type WorkspaceTab =
-  | 'overview'
-  | 'changes'
-  | 'history'
-  | 'dashboard'
-  | 'pull-request';
+  'overview' | 'changes' | 'history' | 'dashboard' | 'pull-request';
 export type DiscoverTab =
   'notifications' | 'feed' | 'explore' | 'trending' | 'my-repos';
 export type AiProvider = 'opencode' | 'kilo';

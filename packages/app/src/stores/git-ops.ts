@@ -18,8 +18,10 @@ export interface PullRequest {
 
 export type PullRequestDetail = IpcResponses['github:get-pr'];
 export type PullRequestFile = IpcResponses['github:pr-files']['files'][number];
-export type PullRequestReview = IpcResponses['github:list-reviews']['reviews'][number];
-export type PullRequestCheckRun = IpcResponses['github:list-runs']['runs'][number];
+export type PullRequestReview =
+  IpcResponses['github:list-reviews']['reviews'][number];
+export type PullRequestCheckRun =
+  IpcResponses['github:list-runs']['runs'][number];
 
 export type DiffKind = 'staged' | 'unstaged' | 'untracked';
 

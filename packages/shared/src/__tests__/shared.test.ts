@@ -86,13 +86,13 @@ describe('parseGitHubRemoteUrl', () => {
 
 describe('parseGitHubPullUrl', () => {
   test('parses pull request html url', () => {
-    expect(
-      parseGitHubPullUrl('https://github.com/owner/repo/pull/42'),
-    ).toEqual({
-      owner: 'owner',
-      repo: 'repo',
-      number: 42,
-    });
+    expect(parseGitHubPullUrl('https://github.com/owner/repo/pull/42')).toEqual(
+      {
+        owner: 'owner',
+        repo: 'repo',
+        number: 42,
+      },
+    );
   });
 
   test('parses pull url with trailing path', () => {

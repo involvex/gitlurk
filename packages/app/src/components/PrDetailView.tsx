@@ -123,9 +123,13 @@ export function PrDetailView() {
             </div>
             <p className="mt-1 text-xs text-muted">
               {detail.user} wants to merge{' '}
-              <span className="font-mono text-foreground">{detail.head.label}</span>{' '}
+              <span className="font-mono text-foreground">
+                {detail.head.label}
+              </span>{' '}
               into{' '}
-              <span className="font-mono text-foreground">{detail.base.label}</span>
+              <span className="font-mono text-foreground">
+                {detail.base.label}
+              </span>
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -194,7 +198,9 @@ export function PrDetailView() {
                     <button
                       type="button"
                       onClick={() =>
-                        useAppStore.getState().setPullSelectedFile(file.filename)
+                        useAppStore
+                          .getState()
+                          .setPullSelectedFile(file.filename)
                       }
                       className={`flex w-full flex-col rounded px-2 py-1.5 text-left text-[11px] ${
                         selectedFile === file.filename
@@ -202,7 +208,9 @@ export function PrDetailView() {
                           : 'hover:bg-surface-elevated'
                       }`}
                     >
-                      <span className="truncate font-mono">{file.filename}</span>
+                      <span className="truncate font-mono">
+                        {file.filename}
+                      </span>
                       <span className="text-muted">
                         {file.status} · +{file.additions} −{file.deletions}
                       </span>
@@ -216,10 +224,12 @@ export function PrDetailView() {
                 <p className="p-4 text-sm text-muted">Select a file</p>
               ) : !selected.patch ? (
                 <div className="p-4 text-sm text-muted">
-                  <p className="font-mono text-foreground">{selected.filename}</p>
+                  <p className="font-mono text-foreground">
+                    {selected.filename}
+                  </p>
                   <p className="mt-2">
-                    No text patch available (binary or too large). Open on GitHub
-                    to review this file.
+                    No text patch available (binary or too large). Open on
+                    GitHub to review this file.
                   </p>
                 </div>
               ) : (
@@ -238,7 +248,9 @@ export function PrDetailView() {
           <section className="border-b border-border p-3">
             <h3 className="text-xs font-semibold">Checks</h3>
             {checks.length === 0 ? (
-              <p className="mt-2 text-[11px] text-muted">No workflow runs found</p>
+              <p className="mt-2 text-[11px] text-muted">
+                No workflow runs found
+              </p>
             ) : (
               <ul className="mt-2 space-y-1.5">
                 {checks.map((run) => (
