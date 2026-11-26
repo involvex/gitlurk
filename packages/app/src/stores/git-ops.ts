@@ -20,6 +20,8 @@ export type PullRequestDetail = IpcResponses['github:get-pr'];
 export type PullRequestFile = IpcResponses['github:pr-files']['files'][number];
 export type PullRequestReview =
   IpcResponses['github:list-reviews']['reviews'][number];
+export type PullRequestReviewComment =
+  IpcResponses['github:list-review-comments']['comments'][number];
 export type PullRequestCheckRun =
   IpcResponses['github:list-runs']['runs'][number];
 
@@ -66,6 +68,7 @@ export interface GitOpsSlice {
   pullDetail: PullRequestDetail | null;
   pullFiles: PullRequestFile[];
   pullReviews: PullRequestReview[];
+  pullReviewComments: PullRequestReviewComment[];
   pullChecks: PullRequestCheckRun[];
   pullSelectedFile: string | null;
   pullDetailLoading: boolean;
@@ -100,6 +103,7 @@ export interface GitOpsSlice {
   setPullDetail: (detail: PullRequestDetail | null) => void;
   setPullFiles: (files: PullRequestFile[]) => void;
   setPullReviews: (reviews: PullRequestReview[]) => void;
+  setPullReviewComments: (comments: PullRequestReviewComment[]) => void;
   setPullChecks: (checks: PullRequestCheckRun[]) => void;
   setPullSelectedFile: (file: string | null) => void;
   setPullDetailLoading: (loading: boolean) => void;
@@ -138,6 +142,7 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   pullDetail: null,
   pullFiles: [],
   pullReviews: [],
+  pullReviewComments: [],
   pullChecks: [],
   pullSelectedFile: null,
   pullDetailLoading: false,
@@ -173,6 +178,7 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   setPullDetail: (pullDetail) => set({ pullDetail }),
   setPullFiles: (pullFiles) => set({ pullFiles }),
   setPullReviews: (pullReviews) => set({ pullReviews }),
+  setPullReviewComments: (pullReviewComments) => set({ pullReviewComments }),
   setPullChecks: (pullChecks) => set({ pullChecks }),
   setPullSelectedFile: (pullSelectedFile) => set({ pullSelectedFile }),
   setPullDetailLoading: (pullDetailLoading) => set({ pullDetailLoading }),
@@ -184,6 +190,7 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
       pullDetail: null,
       pullFiles: [],
       pullReviews: [],
+      pullReviewComments: [],
       pullChecks: [],
       pullSelectedFile: null,
       pullDetailLoading: false,

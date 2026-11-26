@@ -148,8 +148,8 @@ Full PR review experience:
 - Approve / request changes / comment
 - View existing review comments
 
-> **Have:** PR file diffs in `PrDetailView.tsx`; submit Comment / Approve / Request changes via `github:submit-review`; list existing reviews via `github:list-reviews`.
-> **Missing:** inline review comments and suggested changes.
+> **Have:** PR file diffs in `PrDetailView.tsx`; submit Comment / Approve / Request changes via `github:submit-review`; list existing reviews via `github:list-reviews`; list and post line comments via `github:list-review-comments` + review `comments` array (DiffView + widget composer).
+> **Missing:** suggested changes.
 
 ### 12. Fork Management — 🟡 PARTIAL
 
@@ -687,4 +687,4 @@ _No known bugs currently tracked._
 
 ---
 
-_Last updated: 2026-11-22_
+_Last updated: 2026-11-26_

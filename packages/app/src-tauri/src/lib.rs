@@ -509,6 +509,7 @@ pub fn run() {
             commands::github::github_request_reviewers,
             commands::github::github_set_pr_labels,
             commands::github::github_list_reviews,
+            commands::github::github_list_review_comments,
             commands::github::github_submit_review,
             commands::github::github_list_labels,
             commands::ai::ai_set_api_key,

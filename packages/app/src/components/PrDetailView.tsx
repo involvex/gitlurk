@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { DiffView, DiffModeEnum } from '@git-diff-view/react';
+import { DiffView, DiffModeEnum, SplitSide } from '@git-diff-view/react';
 import '@git-diff-view/react/styles/diff-view.css';
 import { dispatcher } from '../dispatcher';
 import { useAppStore } from '../stores';
+import type { PullRequestReviewComment } from '../stores/git-ops';
 
 function reviewStateLabel(state: string): string {
   switch (state.toUpperCase()) {
@@ -32,11 +33,117 @@ function checkBadge(status: string, conclusion: string | null): string {
   return status;
 }
 
+function sideLabel(side: 'LEFT' | 'RIGHT' | null): string {
+  if (side === 'LEFT') return 'old';
+  if (side === 'RIGHT') return 'new';
+  return '';
+}
+
+type CommentExtend = {
+  comments: PullRequestReviewComment[];
+};
+
+function LineCommentComposer({
+  path,
+  line,
+  side,
+  onClose,
+}: {
+  path: string;
+  line: number;
+  side: 'LEFT' | 'RIGHT';
+  onClose: () => void;
+}) {
+  const [body, setBody] = useState('');
+  const gitLoading = useAppStore((s) => s.loading);
+
+  return (
+    <div className="m-1 rounded-md border border-border bg-surface p-2 shadow-sm">
+      <p className="mb-1 text-[10px] text-muted">
+        Comment on {sideLabel(side)} line {line}
+      </p>
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        rows={3}
+        autoFocus
+        placeholder="Leave a line comment…"
+        className="w-full rounded-md border border-border bg-surface-elevated px-2 py-1.5 text-xs text-foreground"
+      />
+      <div className="mt-1.5 flex justify-end gap-1.5">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md border border-border px-2 py-1 text-[11px] hover:bg-surface-elevated"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={gitLoading || !body.trim()}
+          onClick={() => {
+            void dispatcher
+              .submitPullRequestReview({
+                event: 'COMMENT',
+                body: body.trim(),
+                comments: [
+                  {
+                    path,
+                    body: body.trim(),
+                    line,
+                    side,
+                    subjectType: 'line',
+                  },
+                ],
+              })
+              .then(() => {
+                setBody('');
+                onClose();
+              });
+          }}
+          className="rounded-md bg-primary/20 px-2 py-1 text-[11px] text-primary hover:bg-primary/30 disabled:opacity-50"
+        >
+          Comment
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ExistingLineComments({ data }: { data: CommentExtend }) {
+  return (
+    <div className="mx-1 mb-1 space-y-1.5 border-l-2 border-primary/40 pl-2">
+      {data.comments.map((comment) => (
+        <div
+          key={comment.id}
+          className="rounded border border-border bg-surface px-2 py-1.5 text-[11px]"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium">{comment.user}</span>
+            <a
+              href={comment.htmlUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-muted hover:text-primary"
+            >
+              GitHub
+            </a>
+          </div>
+          <p className="mt-1 whitespace-pre-wrap text-foreground">
+            {comment.body}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PrDetailView() {
   const loading = useAppStore((s) => s.pullDetailLoading);
   const detail = useAppStore((s) => s.pullDetail);
   const files = useAppStore((s) => s.pullFiles);
   const reviews = useAppStore((s) => s.pullReviews);
+  const reviewComments = useAppStore((s) => s.pullReviewComments);
   const checks = useAppStore((s) => s.pullChecks);
   const selectedFile = useAppStore((s) => s.pullSelectedFile);
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
@@ -45,11 +152,42 @@ export function PrDetailView() {
   const pullNumber = useAppStore((s) => s.activePullNumber);
 
   const [reviewBody, setReviewBody] = useState('');
+  const [widget, setWidget] = useState<{
+    lineNumber: number;
+    side: SplitSide;
+  } | null>(null);
 
   const selected = useMemo(
     () => files.find((f) => f.filename === selectedFile) ?? null,
     [files, selectedFile],
   );
+
+  const fileComments = useMemo(
+    () =>
+      selected
+        ? reviewComments.filter((c) => c.path === selected.filename)
+        : [],
+    [reviewComments, selected],
+  );
+
+  const extendData = useMemo(() => {
+    const oldFile: Record<string, { data: CommentExtend }> = {};
+    const newFile: Record<string, { data: CommentExtend }> = {};
+    for (const comment of fileComments) {
+      const line = comment.line ?? comment.originalLine;
+      if (line == null) continue;
+      const key = String(line);
+      const side = comment.side ?? 'RIGHT';
+      const bucket = side === 'LEFT' ? oldFile : newFile;
+      const existing = bucket[key];
+      if (existing) {
+        existing.data.comments.push(comment);
+      } else {
+        bucket[key] = { data: { comments: [comment] } };
+      }
+    }
+    return { oldFile, newFile };
+  }, [fileComments]);
 
   const patchForView = useMemo(() => {
     if (!selected?.patch) return null;
@@ -193,30 +331,39 @@ export function PrDetailView() {
                 Files ({files.length})
               </div>
               <ul className="p-1">
-                {files.map((file) => (
-                  <li key={file.filename}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        useAppStore
-                          .getState()
-                          .setPullSelectedFile(file.filename)
-                      }
-                      className={`flex w-full flex-col rounded px-2 py-1.5 text-left text-[11px] ${
-                        selectedFile === file.filename
-                          ? 'bg-primary/15 text-primary'
-                          : 'hover:bg-surface-elevated'
-                      }`}
-                    >
-                      <span className="truncate font-mono">
-                        {file.filename}
-                      </span>
-                      <span className="text-muted">
-                        {file.status} · +{file.additions} −{file.deletions}
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                {files.map((file) => {
+                  const count = reviewComments.filter(
+                    (c) => c.path === file.filename,
+                  ).length;
+                  return (
+                    <li key={file.filename}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          useAppStore
+                            .getState()
+                            .setPullSelectedFile(file.filename);
+                          setWidget(null);
+                        }}
+                        className={`flex w-full flex-col rounded px-2 py-1.5 text-left text-[11px] ${
+                          selectedFile === file.filename
+                            ? 'bg-primary/15 text-primary'
+                            : 'hover:bg-surface-elevated'
+                        }`}
+                      >
+                        <span className="truncate font-mono">
+                          {file.filename}
+                        </span>
+                        <span className="text-muted">
+                          {file.status} · +{file.additions} −{file.deletions}
+                          {count > 0
+                            ? ` · ${count} comment${count === 1 ? '' : 's'}`
+                            : ''}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </aside>
             <div className="min-h-0 min-w-0 flex-1 overflow-auto p-2">
@@ -231,13 +378,63 @@ export function PrDetailView() {
                     No text patch available (binary or too large). Open on
                     GitHub to review this file.
                   </p>
+                  {fileComments.length > 0 ? (
+                    <ul className="mt-3 space-y-2">
+                      {fileComments.map((comment) => (
+                        <li
+                          key={comment.id}
+                          className="rounded border border-border px-2 py-1.5 text-[11px] text-foreground"
+                        >
+                          <span className="font-medium">{comment.user}</span>
+                          {comment.line != null ? (
+                            <span className="text-muted">
+                              {' '}
+                              · line {comment.line}
+                            </span>
+                          ) : null}
+                          <p className="mt-1 whitespace-pre-wrap">
+                            {comment.body}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
               ) : (
-                <DiffView
+                <DiffView<CommentExtend>
                   data={{ hunks: [patchForView ?? selected.patch] }}
                   diffViewMode={DiffModeEnum.Split}
                   diffViewHighlight
                   diffViewTheme={resolvedTheme}
+                  diffViewAddWidget
+                  extendData={extendData}
+                  renderExtendLine={({ data }) => (
+                    <ExistingLineComments data={data} />
+                  )}
+                  onAddWidgetClick={(lineNumber, side) => {
+                    setWidget({ lineNumber, side });
+                  }}
+                  renderWidgetLine={({ lineNumber, side, onClose }) => {
+                    if (
+                      !widget ||
+                      widget.lineNumber !== lineNumber ||
+                      widget.side !== side ||
+                      !selected
+                    ) {
+                      return null;
+                    }
+                    return (
+                      <LineCommentComposer
+                        path={selected.filename}
+                        line={lineNumber}
+                        side={side === SplitSide.old ? 'LEFT' : 'RIGHT'}
+                        onClose={() => {
+                          setWidget(null);
+                          onClose();
+                        }}
+                      />
+                    );
+                  }}
                 />
               )}
             </div>
@@ -276,6 +473,42 @@ export function PrDetailView() {
                         </span>
                       </span>
                     </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="border-b border-border p-3">
+            <h3 className="text-xs font-semibold">
+              Line comments ({fileComments.length}
+              {selected ? ` in file` : ''})
+            </h3>
+            {!selected ? (
+              <p className="mt-2 text-[11px] text-muted">Select a file</p>
+            ) : fileComments.length === 0 ? (
+              <p className="mt-2 text-[11px] text-muted">
+                No line comments on this file. Click + on a diff line to add
+                one.
+              </p>
+            ) : (
+              <ul className="mt-2 max-h-48 space-y-2 overflow-auto">
+                {fileComments.map((comment) => (
+                  <li
+                    key={comment.id}
+                    className="rounded border border-border px-2 py-1.5 text-[11px]"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{comment.user}</span>
+                      <span className="text-muted">
+                        {comment.line != null
+                          ? `L${comment.line}${sideLabel(comment.side) ? ` (${sideLabel(comment.side)})` : ''}`
+                          : 'file'}
+                      </span>
+                    </div>
+                    <p className="mt-1 whitespace-pre-wrap text-muted">
+                      {comment.body}
+                    </p>
                   </li>
                 ))}
               </ul>
