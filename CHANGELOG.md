@@ -4,6 +4,8 @@ All notable changes to GitLurk Desktop.
 
 ## [Unreleased]
 
+- feat(app): add inline pull request review comments ([ccf0270](https://github.com/involvex/gitlurk/commit/ccf0270))
+- v0.1.7 ([f8cc9eb](https://github.com/involvex/gitlurk/commit/f8cc9eb))
 - formatting ([5eeedc0](https://github.com/involvex/gitlurk/commit/5eeedc0))
 - feat(app): close the in-app pull request loop ([95a7dc7](https://github.com/involvex/gitlurk/commit/95a7dc7))
 - chore(deps): bump Tauri/JS packages and switch typecheck to bun check ([4c8004a](https://github.com/involvex/gitlurk/commit/4c8004a))

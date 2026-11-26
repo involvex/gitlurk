@@ -1,6 +1,6 @@
 [package]
 name = "gitlurk-desktop"
-version = "0.1.7"
+version = "0.1.8"
 description = "GitLurk Desktop - Windows Git client"
 authors = ["GitLurk"]
 edition = "2021"
