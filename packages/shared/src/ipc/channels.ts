@@ -183,12 +183,25 @@ export interface IpcChannels {
     labels: string[];
   };
   'github:list-reviews': { owner: string; repo: string; number: number };
+  'github:list-review-comments': {
+    owner: string;
+    repo: string;
+    number: number;
+  };
   'github:submit-review': {
     owner: string;
     repo: string;
     number: number;
     body?: string;
     event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+    commitId?: string;
+    comments?: Array<{
+      path: string;
+      body: string;
+      line: number;
+      side: 'LEFT' | 'RIGHT';
+      subjectType?: 'line' | 'file';
+    }>;
   };
   'github:list-labels': { owner: string; repo: string };
   'ai:set-api-key': { provider: 'opencode' | 'kilo'; key: string };
@@ -532,6 +545,20 @@ export interface IpcResponses {
       state: string;
       body: string;
       submittedAt: string | null;
+    }>;
+  };
+  'github:list-review-comments': {
+    comments: Array<{
+      id: number;
+      user: string;
+      body: string;
+      path: string;
+      line: number | null;
+      originalLine: number | null;
+      side: 'LEFT' | 'RIGHT' | null;
+      createdAt: string;
+      htmlUrl: string;
+      inReplyToId: number | null;
     }>;
   };
   'github:submit-review': {

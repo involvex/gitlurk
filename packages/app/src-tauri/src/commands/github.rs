@@ -932,6 +932,94 @@ pub fn github_list_reviews(
     Ok(serde_json::json!({ "reviews": reviews }))
 }
 
+#[derive(Deserialize)]
+struct ReviewCommentUser {
+    login: String,
+}
+
+#[derive(Deserialize)]
+struct ReviewCommentItem {
+    id: u64,
+    user: Option<ReviewCommentUser>,
+    #[serde(default)]
+    body: String,
+    path: String,
+    #[serde(default)]
+    line: Option<u64>,
+    #[serde(default)]
+    original_line: Option<u64>,
+    #[serde(default)]
+    side: Option<String>,
+    #[serde(default)]
+    created_at: String,
+    #[serde(default)]
+    html_url: String,
+    #[serde(default)]
+    in_reply_to_id: Option<u64>,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_list_review_comments(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    number: u64,
+) -> Result<serde_json::Value, String> {
+    let token = require_token(&state)?;
+    let client = github_client();
+    let request = auth_headers(
+        client.get(format!(
+            "https://api.github.com/repos/{owner}/{repo}/pulls/{number}/comments?per_page=100"
+        )),
+        Some(&token),
+    );
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "GitHub list review comments error: {}",
+            response.status()
+        ));
+    }
+    let items: Vec<ReviewCommentItem> = response.json().map_err(|e| e.to_string())?;
+    let comments: Vec<serde_json::Value> = items
+        .into_iter()
+        .map(|c| {
+            let side = c.side.and_then(|s| {
+                let upper = s.to_uppercase();
+                if upper == "LEFT" || upper == "RIGHT" {
+                    Some(upper)
+                } else {
+                    None
+                }
+            });
+            serde_json::json!({
+                "id": c.id,
+                "user": c.user.map(|u| u.login).unwrap_or_else(|| "unknown".into()),
+                "body": c.body,
+                "path": c.path,
+                "line": c.line,
+                "originalLine": c.original_line,
+                "side": side,
+                "createdAt": c.created_at,
+                "htmlUrl": c.html_url,
+                "inReplyToId": c.in_reply_to_id,
+            })
+        })
+        .collect();
+    Ok(serde_json::json!({ "comments": comments }))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmitReviewComment {
+    path: String,
+    body: String,
+    line: u64,
+    side: String,
+    #[serde(default)]
+    subject_type: Option<String>,
+}
+
 #[tauri::command(rename_all = "camelCase")]
 pub fn github_submit_review(
     state: State<'_, AppState>,
@@ -940,6 +1028,8 @@ pub fn github_submit_review(
     number: u64,
     body: Option<String>,
     event: String,
+    commit_id: Option<String>,
+    comments: Option<Vec<SubmitReviewComment>>,
 ) -> Result<serde_json::Value, String> {
     let event_upper = event.to_uppercase();
     if !matches!(
@@ -948,27 +1038,81 @@ pub fn github_submit_review(
     ) {
         return Err("Review event must be APPROVE, REQUEST_CHANGES, or COMMENT".into());
     }
-    let token = require_token(&state)?;
-    let client = github_client();
-    let mut payload = serde_json::json!({ "event": event_upper });
-    if let Some(body) = body {
-        if !body.trim().is_empty() {
-            payload
-                .as_object_mut()
-                .unwrap()
-                .insert("body".into(), serde_json::Value::String(body));
+
+    let line_comments = comments.unwrap_or_default();
+    for comment in &line_comments {
+        if comment.body.trim().is_empty() {
+            return Err("Line comments require a non-empty body".into());
+        }
+        let side = comment.side.to_uppercase();
+        if side != "LEFT" && side != "RIGHT" {
+            return Err("Line comment side must be LEFT or RIGHT".into());
+        }
+        if comment.line == 0 {
+            return Err("Line comment line must be a positive number".into());
         }
     }
-    // REQUEST_CHANGES and COMMENT require a body per GitHub API.
-    if matches!(event.to_uppercase().as_str(), "REQUEST_CHANGES" | "COMMENT")
-        && payload
-            .get("body")
-            .and_then(|v| v.as_str())
-            .map(|s| s.trim().is_empty())
-            .unwrap_or(true)
+
+    let mut body_text = body.unwrap_or_default();
+    // REQUEST_CHANGES and COMMENT require a top-level body. When the summary
+    // box is empty but line comments exist, reuse the first line comment.
+    if body_text.trim().is_empty()
+        && matches!(event_upper.as_str(), "REQUEST_CHANGES" | "COMMENT")
+        && !line_comments.is_empty()
+    {
+        body_text = line_comments[0].body.clone();
+    }
+    if matches!(event_upper.as_str(), "REQUEST_CHANGES" | "COMMENT")
+        && body_text.trim().is_empty()
     {
         return Err("A review body is required for Comment and Request changes".into());
     }
+
+    let token = require_token(&state)?;
+    let client = github_client();
+    let mut payload = serde_json::json!({ "event": event_upper });
+    let payload_obj = payload.as_object_mut().unwrap();
+
+    if let Some(commit_id) = commit_id {
+        if !commit_id.trim().is_empty() {
+            payload_obj.insert(
+                "commit_id".into(),
+                serde_json::Value::String(commit_id.trim().to_string()),
+            );
+        }
+    }
+    if !body_text.trim().is_empty() {
+        payload_obj.insert(
+            "body".into(),
+            serde_json::Value::String(body_text),
+        );
+    }
+
+    if !line_comments.is_empty() {
+        let api_comments: Vec<serde_json::Value> = line_comments
+            .into_iter()
+            .map(|c| {
+                let mut obj = serde_json::json!({
+                    "path": c.path,
+                    "body": c.body,
+                    "line": c.line,
+                    "side": c.side.to_uppercase(),
+                });
+                if let Some(subject_type) = c.subject_type {
+                    let st = subject_type.to_lowercase();
+                    if st == "line" || st == "file" {
+                        obj.as_object_mut().unwrap().insert(
+                            "subject_type".into(),
+                            serde_json::Value::String(st),
+                        );
+                    }
+                }
+                obj
+            })
+            .collect();
+        payload_obj.insert("comments".into(), serde_json::Value::Array(api_comments));
+    }
+
     let request = auth_headers(
         client
             .post(format!(

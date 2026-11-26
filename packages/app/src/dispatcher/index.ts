@@ -1305,11 +1305,12 @@ export const dispatcher = {
     store.setPullDetailLoading(true);
     store.setError(null);
     try {
-      const [detail, filesResult, reviewsResult, runsResult] =
+      const [detail, filesResult, reviewsResult, commentsResult, runsResult] =
         await Promise.all([
           ipcInvoke('github:get-pr', { owner, repo, number }),
           ipcInvoke('github:pr-files', { owner, repo, number }),
           ipcInvoke('github:list-reviews', { owner, repo, number }),
+          ipcInvoke('github:list-review-comments', { owner, repo, number }),
           ipcInvoke('github:list-runs', { owner, repo, limit: 30 }),
         ]);
       const headSha = detail.head.sha.toLowerCase();
@@ -1322,6 +1323,7 @@ export const dispatcher = {
       store.setPullDetail(detail);
       store.setPullFiles(filesResult.files);
       store.setPullReviews(reviewsResult.reviews);
+      store.setPullReviewComments(commentsResult.comments);
       store.setPullChecks(
         matchingRuns.length > 0 ? matchingRuns : runsResult.runs.slice(0, 5),
       );
@@ -1424,10 +1426,18 @@ export const dispatcher = {
   async submitPullRequestReview(input: {
     event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
     body?: string;
+    comments?: Array<{
+      path: string;
+      body: string;
+      line: number;
+      side: 'LEFT' | 'RIGHT';
+      subjectType?: 'line' | 'file';
+    }>;
   }) {
     const number = getStore().activePullNumber;
     const owner = getStore().activePullOwner;
     const repo = getStore().activePullRepo;
+    const commitId = getStore().pullDetail?.head.sha;
     if (number == null || !owner || !repo) {
       getStore().setError('Open a pull request first');
       return;
@@ -1441,13 +1451,17 @@ export const dispatcher = {
         number,
         body: input.body,
         event: input.event,
+        commitId,
+        comments: input.comments,
       });
       const label =
         input.event === 'APPROVE'
           ? 'Approved'
           : input.event === 'REQUEST_CHANGES'
             ? 'Requested changes'
-            : 'Commented';
+            : input.comments && input.comments.length > 0
+              ? 'Posted line comment'
+              : 'Commented';
       getStore().showToast(`${label} on PR #${number}`);
       await dispatcher.refreshPullRequestDetail();
     } catch (error) {

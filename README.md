@@ -29,7 +29,7 @@ Stage, unstage, and discard files — per-file, per-hunk, or in bulk. Commit, pu
 
 Connect your GitHub account to manage pull requests, notifications, and explore repositories without leaving the app.
 
-- **Pull Requests** — list open PRs for any repo with one click to open in browser
+- **Pull Requests** — list, create, review diffs, leave line comments, and approve or request changes in-app
 - **Notifications** — desktop toasts and in-app notification panel with mark-as-read
 - **Discover Hub** — activity feed, repository search, trending repos, and your repos
 - **Device Flow auth** — secure OAuth sign-in via GitHub.com, tokens stored in Windows Credential Manager
