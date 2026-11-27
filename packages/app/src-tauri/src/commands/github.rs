@@ -30,6 +30,32 @@ fn require_token(state: &AppState) -> Result<String, String> {
         .ok_or_else(|| "Sign in to GitHub to use Discover".into())
 }
 
+fn github_api_error(prefix: &str, status: reqwest::StatusCode, body: &str) -> String {
+    let message = serde_json::from_str::<serde_json::Value>(body)
+        .ok()
+        .and_then(|v| {
+            v.get("message")
+                .and_then(|m| m.as_str())
+                .map(|s| s.to_string())
+        });
+    let detail = message.unwrap_or_else(|| {
+        let trimmed = body.trim();
+        if trimmed.is_empty() {
+            status.to_string()
+        } else if trimmed.len() > 280 {
+            format!("{}…", &trimmed[..280])
+        } else {
+            trimmed.to_string()
+        }
+    });
+    if status.as_u16() == 403 {
+        return format!(
+            "{prefix}: {detail}. If this persists, sign out and sign in again to refresh GitHub permissions."
+        );
+    }
+    format!("{prefix}: {detail}")
+}
+
 #[derive(Deserialize)]
 struct PullRequestItem {
     number: u64,
@@ -1132,6 +1158,137 @@ pub fn github_submit_review(
         "id": review.id,
         "state": review.state,
         "body": review.body.unwrap_or_default(),
+    }))
+}
+
+#[derive(Deserialize)]
+struct MergePullResponse {
+    sha: String,
+    merged: bool,
+    #[serde(default)]
+    message: Option<String>,
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_merge_pr(
+    state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    number: u64,
+    merge_method: String,
+    commit_title: Option<String>,
+    commit_message: Option<String>,
+    sha: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let method = merge_method.to_lowercase();
+    if !matches!(method.as_str(), "merge" | "squash" | "rebase") {
+        return Err("mergeMethod must be merge, squash, or rebase".into());
+    }
+
+    let token = require_token(&state)?;
+    let client = github_client();
+    let mut payload = serde_json::json!({ "merge_method": method });
+    let payload_obj = payload.as_object_mut().unwrap();
+    if let Some(title) = commit_title {
+        if !title.trim().is_empty() {
+            payload_obj.insert(
+                "commit_title".into(),
+                serde_json::Value::String(title.trim().to_string()),
+            );
+        }
+    }
+    if let Some(message) = commit_message {
+        if !message.trim().is_empty() {
+            payload_obj.insert(
+                "commit_message".into(),
+                serde_json::Value::String(message.trim().to_string()),
+            );
+        }
+    }
+    if let Some(sha) = sha {
+        if !sha.trim().is_empty() {
+            payload_obj.insert(
+                "sha".into(),
+                serde_json::Value::String(sha.trim().to_string()),
+            );
+        }
+    }
+
+    let request = auth_headers(
+        client
+            .put(format!(
+                "https://api.github.com/repos/{owner}/{repo}/pulls/{number}/merge"
+            ))
+            .json(&payload),
+        Some(&token),
+    );
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let detail = response.text().unwrap_or_default();
+        return Err(github_api_error("Merge pull request failed", status, &detail));
+    }
+    let merged: MergePullResponse = response.json().map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "sha": merged.sha,
+        "merged": merged.merged,
+        "message": merged.message.unwrap_or_else(|| "Pull request merged".into()),
+    }))
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn github_update_pr(
+    app_state: State<'_, AppState>,
+    owner: String,
+    repo: String,
+    number: u64,
+    state: Option<String>,
+    draft: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    if state.is_none() && draft.is_none() {
+        return Err("Provide state and/or draft to update the pull request".into());
+    }
+    if let Some(ref s) = state {
+        let lower = s.to_lowercase();
+        if lower != "open" && lower != "closed" {
+            return Err("state must be open or closed".into());
+        }
+    }
+
+    let token = require_token(&app_state)?;
+    let client = github_client();
+    let mut payload = serde_json::Map::new();
+    if let Some(s) = state {
+        payload.insert(
+            "state".into(),
+            serde_json::Value::String(s.to_lowercase()),
+        );
+    }
+    if let Some(draft) = draft {
+        payload.insert("draft".into(), serde_json::Value::Bool(draft));
+    }
+
+    let request = auth_headers(
+        client
+            .patch(format!(
+                "https://api.github.com/repos/{owner}/{repo}/pulls/{number}"
+            ))
+            .json(&serde_json::Value::Object(payload)),
+        Some(&token),
+    );
+    let response = request.send().map_err(|e| e.to_string())?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let detail = response.text().unwrap_or_default();
+        return Err(github_api_error("Update pull request failed", status, &detail));
+    }
+    let pr: PullRequestDetail = response.json().map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "number": pr.number,
+        "state": pr.state,
+        "draft": pr.draft.unwrap_or(false),
+        "title": pr.title,
+        "url": pr.html_url,
     }))
 }
 

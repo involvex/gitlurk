@@ -203,6 +203,22 @@ export interface IpcChannels {
       subjectType?: 'line' | 'file';
     }>;
   };
+  'github:merge-pr': {
+    owner: string;
+    repo: string;
+    number: number;
+    mergeMethod: 'merge' | 'squash' | 'rebase';
+    commitTitle?: string;
+    commitMessage?: string;
+    sha?: string;
+  };
+  'github:update-pr': {
+    owner: string;
+    repo: string;
+    number: number;
+    state?: 'open' | 'closed';
+    draft?: boolean;
+  };
   'github:list-labels': { owner: string; repo: string };
   'ai:set-api-key': { provider: 'opencode' | 'kilo'; key: string };
   'ai:has-api-key': { provider: 'opencode' | 'kilo' };
@@ -565,6 +581,18 @@ export interface IpcResponses {
     id: number;
     state: string;
     body: string;
+  };
+  'github:merge-pr': {
+    sha: string;
+    merged: boolean;
+    message: string;
+  };
+  'github:update-pr': {
+    number: number;
+    state: string;
+    draft: boolean;
+    title: string;
+    url: string;
   };
   'github:list-labels': {
     labels: Array<{ name: string; color: string; description: string }>;

@@ -147,8 +147,9 @@ Full PR review experience:
 - Add inline comments on code
 - Approve / request changes / comment
 - View existing review comments
+- Merge / close / reopen from the detail view
 
-> **Have:** PR file diffs in `PrDetailView.tsx`; submit Comment / Approve / Request changes via `github:submit-review`; list existing reviews via `github:list-reviews`; list and post line comments via `github:list-review-comments` + review `comments` array (DiffView + widget composer).
+> **Have:** PR file diffs in `PrDetailView.tsx`; submit Comment / Approve / Request changes via `github:submit-review`; list existing reviews via `github:list-reviews`; list and post line comments via `github:list-review-comments` + review `comments` array (DiffView + widget composer); merge (merge/squash/rebase), close, reopen, and ready-for-review via `github:merge-pr` / `github:update-pr` with mergeable gating.
 > **Missing:** suggested changes.
 
 ### 12. Fork Management — 🟡 PARTIAL
@@ -687,4 +688,4 @@ _No known bugs currently tracked._
 
 ---
 
-_Last updated: 2026-11-26_
+_Last updated: 2026-11-27_

@@ -17,6 +17,11 @@ import {
   toWslPath,
   toolsForTarget,
 } from '../external-tools.js';
+import type { IpcChannel, IpcChannels, IpcResponses } from '../ipc/channels.js';
+
+function assertChannel<K extends IpcChannel>(_channel: K): void {
+  // Compile-time guard that K is a declared IPC channel.
+}
 
 describe('parseAppUrl', () => {
   test('parses openRepo for github.com', () => {
@@ -180,5 +185,46 @@ describe('external tools', () => {
     const items = menuItemsForTools(tools, 'file');
     expect(items.every((i) => i.id.startsWith('tool:'))).toBe(true);
     expect(items.length).toBeGreaterThan(0);
+  });
+});
+
+describe('github PR lifecycle channels', () => {
+  test('declares merge-pr and update-pr request/response shapes', () => {
+    assertChannel('github:merge-pr');
+    assertChannel('github:update-pr');
+
+    const mergeReq = {
+      owner: 'o',
+      repo: 'r',
+      number: 1,
+      mergeMethod: 'squash',
+      commitTitle: 'title',
+      commitMessage: 'body',
+      sha: 'abc',
+    } satisfies IpcChannels['github:merge-pr'];
+    const mergeRes = {
+      sha: 'def',
+      merged: true,
+      message: 'ok',
+    } satisfies IpcResponses['github:merge-pr'];
+    const updateReq = {
+      owner: 'o',
+      repo: 'r',
+      number: 1,
+      state: 'closed',
+      draft: false,
+    } satisfies IpcChannels['github:update-pr'];
+    const updateRes = {
+      number: 1,
+      state: 'closed',
+      draft: false,
+      title: 't',
+      url: 'https://github.com/o/r/pull/1',
+    } satisfies IpcResponses['github:update-pr'];
+
+    expect(mergeReq.mergeMethod).toBe('squash');
+    expect(mergeRes.merged).toBe(true);
+    expect(updateReq.state).toBe('closed');
+    expect(updateRes.number).toBe(1);
   });
 });

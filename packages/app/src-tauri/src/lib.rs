@@ -511,6 +511,8 @@ pub fn run() {
             commands::github::github_list_reviews,
             commands::github::github_list_review_comments,
             commands::github::github_submit_review,
+            commands::github::github_merge_pr,
+            commands::github::github_update_pr,
             commands::github::github_list_labels,
             commands::ai::ai_set_api_key,
             commands::ai::ai_has_api_key,

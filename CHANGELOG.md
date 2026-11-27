@@ -4,11 +4,19 @@ All notable changes to GitLurk Desktop.
 
 ## [Unreleased]
 
+- feat(app): merge, close, and reopen pull requests from the detail view
+
+## [v0.1.8](https://github.com/involvex/gitlurk/compare/v0.1.7...v0.1.8) - 2026-11-27
+
 - feat(app): add inline pull request review comments ([ccf0270](https://github.com/involvex/gitlurk/commit/ccf0270))
-- v0.1.7 ([f8cc9eb](https://github.com/involvex/gitlurk/commit/f8cc9eb))
-- formatting ([5eeedc0](https://github.com/involvex/gitlurk/commit/5eeedc0))
+- v0.1.8 ([2ac3d35](https://github.com/involvex/gitlurk/commit/2ac3d35))
+
+## [v0.1.7](https://github.com/involvex/gitlurk/compare/v0.1.6...v0.1.7) - 2026-11-27
+
 - feat(app): close the in-app pull request loop ([95a7dc7](https://github.com/involvex/gitlurk/commit/95a7dc7))
 - chore(deps): bump Tauri/JS packages and switch typecheck to bun check ([4c8004a](https://github.com/involvex/gitlurk/commit/4c8004a))
+- formatting ([5eeedc0](https://github.com/involvex/gitlurk/commit/5eeedc0))
+- v0.1.7 ([f8cc9eb](https://github.com/involvex/gitlurk/commit/f8cc9eb))
 
 ## [v0.1.6](https://github.com/involvex/gitlurk/releases/tag/v0.1.6) - 2026-11-15
 
