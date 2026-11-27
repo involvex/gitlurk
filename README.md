@@ -6,7 +6,7 @@
   <img src="assets/ui.png" alt="GitLurk Desktop main workspace" width="800">
 </p>
 
-[![Version](https://img.shields.io/badge/version-0.1.5-blue)](https://github.com/involvex/gitlurk/releases)
+[![Version](https://img.shields.io/badge/version-0.1.8-blue)](https://github.com/involvex/gitlurk/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/involvex/gitlurk)
 
@@ -29,7 +29,7 @@ Stage, unstage, and discard files — per-file, per-hunk, or in bulk. Commit, pu
 
 Connect your GitHub account to manage pull requests, notifications, and explore repositories without leaving the app.
 
-- **Pull Requests** — list, create, review diffs, leave line comments, and approve or request changes in-app
+- **Pull Requests** — list, create, review diffs, leave line comments, approve or request changes, and merge/close/reopen in-app
 - **Notifications** — desktop toasts and in-app notification panel with mark-as-read
 - **Discover Hub** — activity feed, repository search, trending repos, and your repos
 - **Device Flow auth** — secure OAuth sign-in via GitHub.com, tokens stored in Windows Credential Manager

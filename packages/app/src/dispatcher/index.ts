@@ -9,6 +9,7 @@ import {
 import { ipcInvoke, onEvent, runningInTauri } from '../ipc/client';
 import { checkForUpdate, downloadAndInstallUpdate } from '../ipc/updater';
 import { matchesHotkey } from '../lib/hotkeys';
+import { formatPullActionError } from '../lib/pr-actions';
 import { useAppStore } from '../stores';
 import type { AiProvider } from '../stores/ui';
 import type { DiffKind } from '../stores/git-ops';
@@ -1467,6 +1468,89 @@ export const dispatcher = {
     } catch (error) {
       getStore().setError(
         error instanceof Error ? error.message : 'Failed to submit review',
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
+    }
+  },
+
+  async mergePullRequest(input: {
+    mergeMethod: 'merge' | 'squash' | 'rebase';
+    commitTitle?: string;
+    commitMessage?: string;
+  }) {
+    const number = getStore().activePullNumber;
+    const owner = getStore().activePullOwner;
+    const repo = getStore().activePullRepo;
+    const detail = getStore().pullDetail;
+    if (number == null || !owner || !repo || !detail) {
+      getStore().setError('Open a pull request first');
+      return;
+    }
+    getStore().setGitOpLoading(true);
+    getStore().setError(null);
+    try {
+      const result = await ipcInvoke('github:merge-pr', {
+        owner,
+        repo,
+        number,
+        mergeMethod: input.mergeMethod,
+        commitTitle: input.commitTitle,
+        commitMessage: input.commitMessage,
+        sha: detail.head.sha,
+      });
+      getStore().showToast(
+        result.message || `Merged PR #${number} (${result.sha.slice(0, 7)})`,
+      );
+      await dispatcher.refreshPullRequestDetail();
+      await dispatcher.refreshPullRequests();
+      await dispatcher.refreshStatus();
+      await dispatcher.refreshBranches();
+    } catch (error) {
+      getStore().setError(
+        formatPullActionError(error, 'Failed to merge pull request'),
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
+    }
+  },
+
+  async updatePullRequest(input: {
+    state?: 'open' | 'closed';
+    draft?: boolean;
+  }) {
+    const number = getStore().activePullNumber;
+    const owner = getStore().activePullOwner;
+    const repo = getStore().activePullRepo;
+    if (number == null || !owner || !repo) {
+      getStore().setError('Open a pull request first');
+      return;
+    }
+    if (input.state == null && input.draft == null) {
+      getStore().setError('Nothing to update on the pull request');
+      return;
+    }
+    getStore().setGitOpLoading(true);
+    getStore().setError(null);
+    try {
+      const result = await ipcInvoke('github:update-pr', {
+        owner,
+        repo,
+        number,
+        state: input.state,
+        draft: input.draft,
+      });
+      let toast = `Updated PR #${result.number}`;
+      if (input.state === 'closed') toast = `Closed PR #${result.number}`;
+      else if (input.state === 'open') toast = `Reopened PR #${result.number}`;
+      else if (input.draft === false)
+        toast = `Marked PR #${result.number} ready for review`;
+      getStore().showToast(toast);
+      await dispatcher.refreshPullRequestDetail();
+      await dispatcher.refreshPullRequests();
+    } catch (error) {
+      getStore().setError(
+        formatPullActionError(error, 'Failed to update pull request'),
       );
     } finally {
       getStore().setGitOpLoading(false);

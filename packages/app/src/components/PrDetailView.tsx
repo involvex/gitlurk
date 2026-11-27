@@ -2,8 +2,14 @@ import { useMemo, useState } from 'react';
 import { DiffView, DiffModeEnum, SplitSide } from '@git-diff-view/react';
 import '@git-diff-view/react/styles/diff-view.css';
 import { dispatcher } from '../dispatcher';
+import {
+  getPullMergeGate,
+  mergeMethodLabel,
+  type MergeMethod,
+} from '../lib/pr-actions';
 import { useAppStore } from '../stores';
 import type { PullRequestReviewComment } from '../stores/git-ops';
+import { ConfirmDialog } from './ConfirmDialog';
 
 function reviewStateLabel(state: string): string {
   switch (state.toUpperCase()) {
@@ -156,10 +162,35 @@ export function PrDetailView() {
     lineNumber: number;
     side: SplitSide;
   } | null>(null);
+  const [mergeMethod, setMergeMethod] = useState<MergeMethod>('merge');
+  const [confirmAction, setConfirmAction] = useState<
+    'merge' | 'close' | 'reopen' | 'ready' | null
+  >(null);
 
   const selected = useMemo(
     () => files.find((f) => f.filename === selectedFile) ?? null,
     [files, selectedFile],
+  );
+
+  const checksRunning = useMemo(
+    () =>
+      checks.some(
+        (run) => run.status === 'in_progress' || run.status === 'queued',
+      ),
+    [checks],
+  );
+
+  const mergeGate = useMemo(
+    () =>
+      detail
+        ? getPullMergeGate({
+            state: detail.state,
+            draft: detail.draft,
+            mergeable: detail.mergeable,
+            checksRunning,
+          })
+        : null,
+    [detail, checksRunning],
   );
 
   const fileComments = useMemo(
@@ -271,6 +302,73 @@ export function PrDetailView() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {mergeGate ? (
+              <span
+                className={`rounded px-1.5 py-0.5 text-[10px] ${
+                  mergeGate.canMerge
+                    ? 'bg-accent/20 text-accent'
+                    : 'bg-muted/30 text-muted'
+                }`}
+                title={mergeGate.reason ?? undefined}
+              >
+                {mergeGate.label}
+              </span>
+            ) : null}
+            {detail.state === 'open' && !detail.draft ? (
+              <>
+                <select
+                  value={mergeMethod}
+                  onChange={(e) =>
+                    setMergeMethod(e.target.value as MergeMethod)
+                  }
+                  disabled={gitLoading || !mergeGate?.canMerge}
+                  className="rounded-md border border-border bg-surface px-2 py-1 text-xs disabled:opacity-50"
+                  aria-label="Merge method"
+                >
+                  <option value="merge">Merge commit</option>
+                  <option value="squash">Squash</option>
+                  <option value="rebase">Rebase</option>
+                </select>
+                <button
+                  type="button"
+                  disabled={gitLoading || !mergeGate?.canMerge}
+                  onClick={() => setConfirmAction('merge')}
+                  className="rounded-md bg-accent/20 px-2.5 py-1 text-xs text-accent hover:bg-accent/30 disabled:opacity-50"
+                  title={mergeGate?.reason ?? undefined}
+                >
+                  Merge
+                </button>
+              </>
+            ) : null}
+            {detail.state === 'open' && detail.draft ? (
+              <button
+                type="button"
+                disabled={gitLoading}
+                onClick={() => setConfirmAction('ready')}
+                className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+              >
+                Ready for review
+              </button>
+            ) : null}
+            {detail.state === 'open' ? (
+              <button
+                type="button"
+                disabled={gitLoading}
+                onClick={() => setConfirmAction('close')}
+                className="rounded-md border border-border px-2.5 py-1 text-xs text-danger hover:bg-danger/10 disabled:opacity-50"
+              >
+                Close
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={gitLoading}
+                onClick={() => setConfirmAction('reopen')}
+                className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+              >
+                Reopen
+              </button>
+            )}
             <button
               type="button"
               disabled={gitLoading}
@@ -602,6 +700,55 @@ export function PrDetailView() {
           </section>
         </aside>
       </div>
+
+      {confirmAction === 'merge' ? (
+        <ConfirmDialog
+          title={`Merge #${detail.number}?`}
+          message={`${mergeMethodLabel(mergeMethod)} into ${detail.base.ref}. This cannot be undone from GitLurk.`}
+          confirmLabel="Merge"
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => {
+            setConfirmAction(null);
+            void dispatcher.mergePullRequest({ mergeMethod });
+          }}
+        />
+      ) : null}
+      {confirmAction === 'close' ? (
+        <ConfirmDialog
+          title={`Close #${detail.number}?`}
+          message="The pull request will be closed without merging."
+          confirmLabel="Close PR"
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => {
+            setConfirmAction(null);
+            void dispatcher.updatePullRequest({ state: 'closed' });
+          }}
+        />
+      ) : null}
+      {confirmAction === 'reopen' ? (
+        <ConfirmDialog
+          title={`Reopen #${detail.number}?`}
+          message="The pull request will be marked open again."
+          confirmLabel="Reopen"
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => {
+            setConfirmAction(null);
+            void dispatcher.updatePullRequest({ state: 'open' });
+          }}
+        />
+      ) : null}
+      {confirmAction === 'ready' ? (
+        <ConfirmDialog
+          title={`Mark #${detail.number} ready for review?`}
+          message="The draft flag will be cleared so reviewers can approve and merge."
+          confirmLabel="Ready for review"
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => {
+            setConfirmAction(null);
+            void dispatcher.updatePullRequest({ draft: false });
+          }}
+        />
+      ) : null}
     </div>
   );
 }
