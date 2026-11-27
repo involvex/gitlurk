@@ -19,10 +19,6 @@ import {
 } from '../external-tools.js';
 import type { IpcChannel, IpcChannels, IpcResponses } from '../ipc/channels.js';
 
-function assertChannel<K extends IpcChannel>(_channel: K): void {
-  // Compile-time guard that K is a declared IPC channel.
-}
-
 describe('parseAppUrl', () => {
   test('parses openRepo for github.com', () => {
     const action = parseAppUrl(
@@ -190,8 +186,10 @@ describe('external tools', () => {
 
 describe('github PR lifecycle channels', () => {
   test('declares merge-pr and update-pr request/response shapes', () => {
-    assertChannel('github:merge-pr');
-    assertChannel('github:update-pr');
+    const mergeChannel: IpcChannel = 'github:merge-pr';
+    const updateChannel: IpcChannel = 'github:update-pr';
+    expect(mergeChannel).toBe('github:merge-pr');
+    expect(updateChannel).toBe('github:update-pr');
 
     const mergeReq = {
       owner: 'o',
