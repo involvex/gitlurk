@@ -12,7 +12,9 @@ On pull request diffs, line comments now support **Suggest change**: it inserts 
 
 PR detail also has a **Raw unified** toggle that loads the full GitHub unified diff via `github:pr-diff` when you want the whole patch at once.
 
-In Settings → Developer, **Get gh config** reads a single key back through `gh config get` (and Set verifies via the same path). Try it in the latest build: https://github.com/involvex/gitlurk
+In Settings → Developer, **Get gh config** reads a single key back through `gh config get` (and Set verifies via the same path).
+
+**Capture screenshot** (Developer panel or command palette) saves a PNG of the primary monitor after you pick a folder. Try it in the latest build: https://github.com/involvex/gitlurk
 
 ## Free channels (pick one)
 

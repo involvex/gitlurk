@@ -594,6 +594,29 @@ export const dispatcher = {
     }
   },
 
+  async captureScreenshot() {
+    try {
+      const dir = await ipcInvoke('dialog:save-directory', {
+        title: 'Choose folder for screenshot',
+      });
+      if (!dir) return;
+      const stamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, '-')
+        .replace('T', '_')
+        .slice(0, 19);
+      const sep = dir.includes('\\') ? '\\' : '/';
+      const base = dir.replace(/[\\/]+$/, '');
+      const savePath = `${base}${sep}gitlurk-screenshot-${stamp}.png`;
+      await ipcInvoke('screenshot:capture', { savePath });
+      getStore().showToast(`Screenshot saved to ${savePath}`);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error ? error.message : 'Screenshot capture failed',
+      );
+    }
+  },
+
   async importSettings() {
     try {
       const filePath = await ipcInvoke('dialog:open-file', {
