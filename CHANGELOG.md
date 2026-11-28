@@ -4,6 +4,7 @@ All notable changes to GitLurk Desktop.
 
 ## [Unreleased]
 
+- docs(roadmap): refresh suggestions roadmap with verified v0.2.x backlog and corrected status/stats
 - fix(shared): clear unused-var lint in channel shape test ([6f5d85b](https://github.com/involvex/gitlurk/commit/6f5d85b))
 - feat(app): merge, close, and reopen PRs from the detail view ([176176f](https://github.com/involvex/gitlurk/commit/176176f))
 

@@ -6,7 +6,7 @@
   <img src="assets/ui.png" alt="GitLurk Desktop main workspace" width="800">
 </p>
 
-[![Version](https://img.shields.io/badge/version-0.1.8-blue)](https://github.com/involvex/gitlurk/releases)
+[![Version](https://img.shields.io/badge/version-0.1.9-blue)](https://github.com/involvex/gitlurk/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/involvex/gitlurk)
 
