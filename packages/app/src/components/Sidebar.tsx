@@ -52,16 +52,24 @@ export function Sidebar() {
       items.push({ id: 'sep-tools', label: '', separator: true });
       items.push(...toolItems);
     }
+    const target = menu?.data
+      ? repos.find((r) => r.path === menu.data)
+      : undefined;
+    const notificationsOn = target?.notificationsEnabled !== false;
     items.push(
       { id: 'sep-rest', label: '', separator: true },
       { id: 'copy-path', label: 'Copy Path' },
       { id: 'gitignore', label: 'Edit .gitignore' },
       { id: 'github', label: 'Open on GitHub' },
       { id: 'watch', label: 'Watch CI run' },
+      {
+        id: 'toggle-notifications',
+        label: notificationsOn ? 'Mute notifications' : 'Unmute notifications',
+      },
       { id: 'remove', label: 'Remove from list', danger: true },
     );
     return items;
-  }, [externalTools]);
+  }, [externalTools, menu?.data, repos]);
 
   return (
     <aside
@@ -244,6 +252,12 @@ export function Sidebar() {
             void dispatcher.openRepoOnGitHub(path);
           } else if (id === 'watch') {
             void dispatcher.watchCiRun(path);
+          } else if (id === 'toggle-notifications') {
+            const repo = useAppStore
+              .getState()
+              .repos.find((r) => r.path === path);
+            const enabled = repo?.notificationsEnabled !== false;
+            void dispatcher.setRepoNotificationsEnabled(path, !enabled);
           } else if (id === 'remove') {
             void dispatcher.removeRepo(path);
           }

@@ -23,7 +23,7 @@ _Each item below was checked against the codebase on 2026-11-28. "Anchor" names 
 | 16  | File-type icons in tree — ✅ DONE           | S      | `FileTypeIcon` + `resolveFileIcon` in Overview tree                                                                               | Extension/name map; open-in-editor already existed          |
 | 29  | GPG signing config toggles — ✅ DONE        | S–M    | Developer panel **Commit signing** loads/saves via `dev:git-config-get/set`                                                       | Key detection/verification still deferred                   |
 | 33  | External diff/merge tool presets — ✅ DONE  | S      | Settings → Tools presets write git config via `dev:git-config-set`; may enable matching ExternalTool                              | Keeps shell:run-tool `{path}` allowlist; git uses `$LOCAL`  |
-| 37  | Per-repo notification preferences           | S      | `RepoEntry`/settings plumbing exists; `maybeNotify` call sites in dispatcher                                                      | Add per-repo opt-out field; default enabled                 |
+| 37  | Per-repo notification preferences — ✅ DONE | S      | `RepoEntry.notificationsEnabled` + Settings list + sidebar mute; gates fetch `maybeNotify` and muted GitHub threads               | Needs cached `githubFullName` for GH thread mute            |
 | 42  | Fixup commits                               | S      | `git:commit-amend` exists; `HistoryPanel` has confirm patterns                                                                    | Add `git:commit-fixup` channel/command + UI picker          |
 | 44  | Per-file history                            | S      | `git:log` has `range?` but no path; `GitService::log` builds args                                                                 | Add `path` param and push `-- <file>` as separate arg       |
 | 45  | Branch cleanup (merged/stale)               | S      | `git:branch-list`, `ConfirmDialog`, generic `GitService::exec`                                                                    | Add delete/merged-branches channels; protect current branch |
@@ -547,8 +547,8 @@ Enhance the notification system:
 - Custom notification sounds
 - Notification preferences per repo
 
-> **Have:** OS notifications on new unread notifications, tray menu; sound preference persisted in Rust `Settings` with WebAudio playback (`playNotificationSound`).
-> **Missing:** per-repo notification preferences.
+> **Have:** OS notifications on new unread notifications, tray menu; sound preference persisted in Rust `Settings` with WebAudio playback (`playNotificationSound`); **per-repo mute** via `notificationsEnabled` on `RepoEntry` (Settings → General list + sidebar context menu). Muted repos skip fetch ahead/behind OS notify; GitHub poll skips threads whose `owner/repo` matches a muted repo’s cached `githubFullName`.
+> **Missing:** finer-grained prefs (PRs vs CI only); CI-failure desktop notifications (separate backlog row).
 
 ### 38. Export/Import Settings — ✅ DONE
 

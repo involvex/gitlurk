@@ -329,3 +329,4 @@ See [ROADMAP.md](ROADMAP.md) (`## Now` is the next shippable item). Feature back
 - Overview tree icons come from `resolveFileIcon` / `FileTypeIcon` (no icon-font dependency).
 - GPG signing toggles in Developer panel use `dev:git-config-get/set` only; no keyring/key-list IPC yet.
 - Diff/merge presets live in `@gitlurk/shared` (`diffMergePresets`); Apply writes global git config and may enable a matching ExternalTool.
+- Per-repo `notificationsEnabled` (default true) on `RepoEntry`; mute gates fetch OS notify and GitHub threads matched by cached `githubFullName`.
