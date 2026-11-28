@@ -37,9 +37,22 @@ async function persistRepos() {
     aheadCount: r.aheadCount,
     behindCount: r.behindCount,
     lastFetchedAt: r.lastFetchedAt,
+    notificationsEnabled: r.notificationsEnabled,
+    githubFullName: r.githubFullName,
     ciRuns: r.ciRuns,
   }));
   await ipcInvoke('app:save-repos', { repos });
+}
+
+/** GitHub `owner/repo` full names muted for OS notifications. */
+function mutedGithubFullNames(): Set<string> {
+  const muted = new Set<string>();
+  for (const repo of getStore().repos) {
+    if (repo.notificationsEnabled === false && repo.githubFullName) {
+      muted.add(repo.githubFullName.toLowerCase());
+    }
+  }
+  return muted;
 }
 
 function sleep(ms: number) {
@@ -129,6 +142,8 @@ interface PersistedReposPayload {
     aheadCount?: number | null;
     behindCount?: number | null;
     lastFetchedAt?: string | null;
+    notificationsEnabled?: boolean;
+    githubFullName?: string | null;
     ciRuns?: Array<{
       id: string;
       status: string;
@@ -183,6 +198,8 @@ function applyPersistedState(
       aheadCount: entry.aheadCount ?? null,
       behindCount: entry.behindCount ?? null,
       lastFetchedAt: entry.lastFetchedAt ?? null,
+      notificationsEnabled: entry.notificationsEnabled !== false,
+      githubFullName: entry.githubFullName ?? null,
       ciRuns: entry.ciRuns ?? [],
       isFetching: false,
     })),
@@ -307,14 +324,20 @@ export const dispatcher = {
         });
         const prev = getStore().unreadNotifications;
         getStore().setUnreadNotifications(result.unreadCount);
+        const muted = mutedGithubFullNames();
+        const unmutedUnread = result.notifications.filter(
+          (n) =>
+            n.unread && (!n.repo || !muted.has(String(n.repo).toLowerCase())),
+        ).length;
         if (
+          unmutedUnread > 0 &&
           result.unreadCount > prev &&
           result.unreadCount > lastNotifiedUnread
         ) {
           lastNotifiedUnread = result.unreadCount;
           await maybeNotify(
             'GitLurk',
-            `${result.unreadCount} unread GitHub notification${result.unreadCount === 1 ? '' : 's'}`,
+            `${unmutedUnread} unread GitHub notification${unmutedUnread === 1 ? '' : 's'}`,
           );
           if (getStore().notificationSoundEnabled) {
             playNotificationSound();
@@ -403,9 +426,14 @@ export const dispatcher = {
         url: string;
       }> = store.repos.find((r) => r.path === path)?.ciRuns ?? [];
 
+      let githubFullName: string | null =
+        store.repos.find((r) => r.path === path)?.githubFullName ?? null;
       try {
         const { url } = await ipcInvoke('git:get-remote-origin', { path });
         const parsed = url ? parseGitHubRemoteUrl(url) : null;
+        if (parsed) {
+          githubFullName = `${parsed.owner}/${parsed.repo}`;
+        }
         if (parsed && store.username) {
           const { runs } = await ipcInvoke('github:list-runs', {
             owner: parsed.owner,
@@ -436,22 +464,26 @@ export const dispatcher = {
         currentBranch,
         upstreamBranch,
         dirty,
+        githubFullName,
       });
       await persistRepos();
 
       if (options?.notify) {
-        const parts: string[] = [];
-        if (behind && behind > 0) {
-          parts.push(`${behind} commit(s) behind`);
-        }
-        if (ahead && ahead > 0) {
-          parts.push(`${ahead} unpushed commit(s)`);
-        }
-        if (parts.length > 0) {
-          const name = path.split(/[/\\]/).pop() ?? path;
-          const message = `${name}: ${parts.join(', ')}`;
-          store.showToast(message);
-          await maybeNotify('GitLurk', message);
+        const repo = getStore().repos.find((r) => r.path === path);
+        if (repo?.notificationsEnabled !== false) {
+          const parts: string[] = [];
+          if (behind && behind > 0) {
+            parts.push(`${behind} commit(s) behind`);
+          }
+          if (ahead && ahead > 0) {
+            parts.push(`${ahead} unpushed commit(s)`);
+          }
+          if (parts.length > 0) {
+            const name = path.split(/[/\\]/).pop() ?? path;
+            const message = `${name}: ${parts.join(', ')}`;
+            store.showToast(message);
+            await maybeNotify('GitLurk', message);
+          }
         }
       }
     } catch (error) {
@@ -2076,6 +2108,16 @@ export const dispatcher = {
   async toggleRepoPin(path: string) {
     getStore().toggleRepoPin(path);
     await persistRepos();
+  },
+
+  async setRepoNotificationsEnabled(path: string, enabled: boolean) {
+    getStore().setRepoNotificationsEnabled(path, enabled);
+    await persistRepos();
+    getStore().showToast(
+      enabled
+        ? 'Notifications enabled for this repository'
+        : 'Notifications muted for this repository',
+    );
   },
 
   async stageFiles(files: string[]) {

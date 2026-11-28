@@ -21,6 +21,10 @@ pub struct RepoCiRun {
     pub url: String,
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoEntry {
@@ -37,6 +41,12 @@ pub struct RepoEntry {
     pub last_fetched_at: Option<String>,
     #[serde(default)]
     pub ci_runs: Vec<RepoCiRun>,
+    /// When false, skip OS notifications for this repo (fetch + matching GitHub threads).
+    #[serde(default = "default_true")]
+    pub notifications_enabled: bool,
+    /// Cached `owner/repo` from origin when known (used to mute GitHub notification threads).
+    #[serde(default)]
+    pub github_full_name: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -76,6 +86,8 @@ fn read_repos_file(state: &AppState) -> ReposFile {
                     behind_count: None,
                     last_fetched_at: None,
                     ci_runs: Vec::new(),
+                    notifications_enabled: true,
+                    github_full_name: None,
                 })
                 .collect(),
         };

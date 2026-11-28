@@ -44,6 +44,8 @@ export interface IpcChannels {
       aheadCount?: number | null;
       behindCount?: number | null;
       lastFetchedAt?: string | null;
+      notificationsEnabled?: boolean;
+      githubFullName?: string | null;
       ciRuns?: Array<{
         id: string;
         status: string;
@@ -313,6 +315,8 @@ export interface IpcResponses {
       aheadCount?: number | null;
       behindCount?: number | null;
       lastFetchedAt?: string | null;
+      notificationsEnabled?: boolean;
+      githubFullName?: string | null;
       ciRuns?: Array<{
         id: string;
         status: string;

@@ -22,7 +22,9 @@ The repository Overview tree now shows file-type icons by extension and common n
 
 Settings → Developer → **Commit signing** can load and save `commit.gpgSign`, `gpg.format`, and `user.signingKey` without editing git config by hand.
 
-Settings → Tools → **Git diff / merge presets** one-click configures global `git difftool` / `git mergetool` for VS Code, Cursor, WinMerge, Beyond Compare, or Meld. Try it in the latest build: https://github.com/involvex/gitlurk
+Settings → Tools → **Git diff / merge presets** one-click configures global `git difftool` / `git mergetool` for VS Code, Cursor, WinMerge, Beyond Compare, or Meld.
+
+Mute noisy repositories under Settings → General **Per-repository notifications**, or from the sidebar context menu — fetch alerts and matching GitHub notification threads stay quiet. Try it in the latest build: https://github.com/involvex/gitlurk
 
 ## Free channels (pick one)
 

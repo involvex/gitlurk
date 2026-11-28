@@ -74,6 +74,7 @@ export function SettingsDialog() {
   const hotkeyShowApp = useAppStore((s) => s.hotkeyShowApp);
   const hotkeyCommandPalette = useAppStore((s) => s.hotkeyCommandPalette);
   const externalTools = useAppStore((s) => s.externalTools);
+  const repos = useAppStore((s) => s.repos);
 
   const [tab, setTab] = useState<SettingsTab>('general');
   const [provider, setProvider] = useState<AiProvider>(aiProvider);
@@ -554,6 +555,42 @@ export function SettingsDialog() {
                 </span>
               </span>
             </label>
+
+            <div className="space-y-2 rounded-md border border-border p-3">
+              <p className="text-sm font-medium">
+                Per-repository notifications
+              </p>
+              <p className="text-xs text-muted">
+                Mute individual repos for fetch/ahead alerts and matching GitHub
+                notification threads. Also available from the sidebar context
+                menu.
+              </p>
+              {repos.length === 0 ? (
+                <p className="text-xs text-muted">No repositories open yet.</p>
+              ) : (
+                <ul className="max-h-40 space-y-1 overflow-auto text-xs">
+                  {repos.map((repo) => (
+                    <li key={repo.path}>
+                      <label className="flex cursor-pointer items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={repo.notificationsEnabled !== false}
+                          onChange={(e) => {
+                            void dispatcher.setRepoNotificationsEnabled(
+                              repo.path,
+                              e.target.checked,
+                            );
+                          }}
+                        />
+                        <span className="truncate" title={repo.path}>
+                          {repo.name}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             <label className="flex cursor-pointer items-start gap-3">
               <input
