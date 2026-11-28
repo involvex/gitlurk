@@ -18,7 +18,9 @@ In Settings → Developer, **Get gh config** reads a single key back through `gh
 
 The command palette also searches repo files as you type and opens a match in your file editor (or Explorer).
 
-The repository Overview tree now shows file-type icons by extension and common names (TS, Markdown, lockfiles, folders, and more). Try it in the latest build: https://github.com/involvex/gitlurk
+The repository Overview tree now shows file-type icons by extension and common names (TS, Markdown, lockfiles, folders, and more).
+
+Settings → Developer → **Commit signing** can load and save `commit.gpgSign`, `gpg.format`, and `user.signingKey` without editing git config by hand. Try it in the latest build: https://github.com/involvex/gitlurk
 
 ## Free channels (pick one)
 

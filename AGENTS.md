@@ -327,3 +327,4 @@ See [ROADMAP.md](ROADMAP.md) (`## Now` is the next shippable item). Feature back
 - Screenshot capture uses `dialog:save-directory` then `screenshot:capture` with a timestamped PNG path (no save-file dialog yet).
 - Palette file search walks `fs:list-dir` via `collectRepoFilePaths` (skips node_modules/.git, caps 2000); opens with first file external tool or Explorer.
 - Overview tree icons come from `resolveFileIcon` / `FileTypeIcon` (no icon-font dependency).
+- GPG signing toggles in Developer panel use `dev:git-config-get/set` only; no keyring/key-list IPC yet.

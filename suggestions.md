@@ -12,24 +12,24 @@ _Each item below was checked against the codebase on 2026-11-28. "Anchor" names 
 
 ### v0.2.0 — Parity & polish (mostly frontend, low risk)
 
-| #   | Item                                        | Effort | Anchor (proof it's doable)                                                                                                        | Caveat                                                        |
-| --- | ------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| 4   | History pagination ("Load older") — ✅ DONE | S      | `dispatcher.loadOlderCommits()` grows `git log -n` prefix; `HistoryPanel` Load older button; Rust cap 2000                        | Graph layout receives full loaded prefix                      |
-| 11  | PR "suggested changes" — ✅ DONE            | S      | `LineCommentComposer` **Suggest change** + `lib/pr-suggestion.ts` inserts ```suggestion fence via existing `github:submit-review` | Single-line seed from patch; no new API field                 |
-| —   | Raw unified PR diff toggle — ✅ DONE        | S      | `PrDetailView` Per-file / Raw unified toggle; `dispatcher.loadPullRequestRawDiff` → `github:pr-diff`                              | Lazy-loaded; cleared on PR refresh                            |
-| —   | gh config read-back — ✅ DONE               | S      | DeveloperPanel **Get gh config** + set read-back via `dev:gh-config-get`                                                          | List/set already existed                                      |
-| —   | Screenshot capture — ✅ DONE                | S      | `dispatcher.captureScreenshot` → `dialog:save-directory` + `screenshot:capture`; Developer panel + palette                        | PNG named with timestamp in chosen folder                     |
-| 13  | Palette file-search — ✅ DONE               | S      | `CommandPalette` indexes via `collectRepoFilePaths` + `listRepoDir`; opens with file tool or Explorer                             | Caps walk at 2000 files; shows top 40 matches                 |
-| 16  | File-type icons in tree — ✅ DONE           | S      | `FileTypeIcon` + `resolveFileIcon` in Overview tree                                                                               | Extension/name map; open-in-editor already existed            |
-| 29  | GPG signing config toggles                  | S–M    | `dev:git-config-set/get` can set `commit.gpgSign`, `gpg.format`, `user.signingKey`                                                | Key detection/verification needs small Rust wrappers if added |
-| 33  | External diff/merge tool presets            | S      | `ExternalTool` + `shell:run-tool` placeholders + `dev:git-config-set`                                                             | Keep allowlist/placeholder validation intact                  |
-| 37  | Per-repo notification preferences           | S      | `RepoEntry`/settings plumbing exists; `maybeNotify` call sites in dispatcher                                                      | Add per-repo opt-out field; default enabled                   |
-| 42  | Fixup commits                               | S      | `git:commit-amend` exists; `HistoryPanel` has confirm patterns                                                                    | Add `git:commit-fixup` channel/command + UI picker            |
-| 44  | Per-file history                            | S      | `git:log` has `range?` but no path; `GitService::log` builds args                                                                 | Add `path` param and push `-- <file>` as separate arg         |
-| 45  | Branch cleanup (merged/stale)               | S      | `git:branch-list`, `ConfirmDialog`, generic `GitService::exec`                                                                    | Add delete/merged-branches channels; protect current branch   |
-| 52  | Plugin-contributed commands                 | S–M    | Plugin manifest/SDK declare `contributes.commands`; Rust `plugin_host.rs` ignores them and invoke is hardcoded                    | Extend manifest parsing + command listing + palette wiring    |
-| 10  | Workflow YAML viewer + run filters          | S–M    | `fs:list-dir`/`fs:read-file` can read `.github/workflows/*.yml`; `GhRunWatchDialog` tabs exist                                    | Add workflow/status filter UI and file viewer tab             |
-| —   | CI-failure desktop notifications _(new)_    | S      | Existing 60s notification polling + `sendNotification` in dispatcher; CI run data already fetched                                 | Detect new failed runs; no new Rust command required          |
+| #   | Item                                        | Effort | Anchor (proof it's doable)                                                                                                        | Caveat                                                      |
+| --- | ------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| 4   | History pagination ("Load older") — ✅ DONE | S      | `dispatcher.loadOlderCommits()` grows `git log -n` prefix; `HistoryPanel` Load older button; Rust cap 2000                        | Graph layout receives full loaded prefix                    |
+| 11  | PR "suggested changes" — ✅ DONE            | S      | `LineCommentComposer` **Suggest change** + `lib/pr-suggestion.ts` inserts ```suggestion fence via existing `github:submit-review` | Single-line seed from patch; no new API field               |
+| —   | Raw unified PR diff toggle — ✅ DONE        | S      | `PrDetailView` Per-file / Raw unified toggle; `dispatcher.loadPullRequestRawDiff` → `github:pr-diff`                              | Lazy-loaded; cleared on PR refresh                          |
+| —   | gh config read-back — ✅ DONE               | S      | DeveloperPanel **Get gh config** + set read-back via `dev:gh-config-get`                                                          | List/set already existed                                    |
+| —   | Screenshot capture — ✅ DONE                | S      | `dispatcher.captureScreenshot` → `dialog:save-directory` + `screenshot:capture`; Developer panel + palette                        | PNG named with timestamp in chosen folder                   |
+| 13  | Palette file-search — ✅ DONE               | S      | `CommandPalette` indexes via `collectRepoFilePaths` + `listRepoDir`; opens with file tool or Explorer                             | Caps walk at 2000 files; shows top 40 matches               |
+| 16  | File-type icons in tree — ✅ DONE           | S      | `FileTypeIcon` + `resolveFileIcon` in Overview tree                                                                               | Extension/name map; open-in-editor already existed          |
+| 29  | GPG signing config toggles — ✅ DONE        | S–M    | Developer panel **Commit signing** loads/saves via `dev:git-config-get/set`                                                       | Key detection/verification still deferred                   |
+| 33  | External diff/merge tool presets            | S      | `ExternalTool` + `shell:run-tool` placeholders + `dev:git-config-set`                                                             | Keep allowlist/placeholder validation intact                |
+| 37  | Per-repo notification preferences           | S      | `RepoEntry`/settings plumbing exists; `maybeNotify` call sites in dispatcher                                                      | Add per-repo opt-out field; default enabled                 |
+| 42  | Fixup commits                               | S      | `git:commit-amend` exists; `HistoryPanel` has confirm patterns                                                                    | Add `git:commit-fixup` channel/command + UI picker          |
+| 44  | Per-file history                            | S      | `git:log` has `range?` but no path; `GitService::log` builds args                                                                 | Add `path` param and push `-- <file>` as separate arg       |
+| 45  | Branch cleanup (merged/stale)               | S      | `git:branch-list`, `ConfirmDialog`, generic `GitService::exec`                                                                    | Add delete/merged-branches channels; protect current branch |
+| 52  | Plugin-contributed commands                 | S–M    | Plugin manifest/SDK declare `contributes.commands`; Rust `plugin_host.rs` ignores them and invoke is hardcoded                    | Extend manifest parsing + command listing + palette wiring  |
+| 10  | Workflow YAML viewer + run filters          | S–M    | `fs:list-dir`/`fs:read-file` can read `.github/workflows/*.yml`; `GhRunWatchDialog` tabs exist                                    | Add workflow/status filter UI and file viewer tab           |
+| —   | CI-failure desktop notifications _(new)_    | S      | Existing 60s notification polling + `sendNotification` in dispatcher; CI run data already fetched                                 | Detect new failed runs; no new Rust command required        |
 
 ### v0.2.1 — Git depth (small, well-understood Rust commands)
 
@@ -437,7 +437,7 @@ Watch file system changes:
 
 ## Security & Privacy
 
-### 29. GPG Signing Support — ❌ NOT STARTED
+### 29. GPG Signing Support — 🟡 PARTIAL
 
 **Priority: Medium** | **Complexity: Medium**
 
@@ -446,6 +446,9 @@ Sign commits and tags with GPG keys:
 - Detect available GPG keys
 - Sign commits automatically
 - Verify signatures on incoming commits
+
+> **Have:** Developer panel **Commit signing** toggles for `commit.gpgSign`, `gpg.format`, and `user.signingKey` via existing `dev:git-config-get/set` (scope shared with Git config).
+> **Missing:** key detection/listing and signature verification UI.
 
 ### 30. Secret Scanning — ❌ NOT STARTED
 
@@ -750,11 +753,11 @@ _No known bugs currently tracked._
 | AI Features                 | 3      | 0      | 1       | 2           |
 | Developer Experience        | 4      | 0      | 1       | 3           |
 | Performance & Reliability   | 3      | 2      | 0       | 1           |
-| Security & Privacy          | 2      | 0      | 0       | 2           |
+| Security & Privacy          | 2      | 0      | 1       | 1           |
 | Integration & Extensibility | 4      | 0      | 0       | 4           |
 | Polish & Quality of Life    | 6      | 4      | 1       | 1           |
 | Recently Added              | 17     | 7      | 4       | 6           |
-| **Total**                   | **57** | **22** | **12**  | **23**      |
+| **Total**                   | **57** | **22** | **13**  | **22**      |
 
 ---
 

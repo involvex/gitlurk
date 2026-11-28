@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ipcInvoke } from '../ipc/client';
 import { dispatcher } from '../dispatcher';
+import {
+  isGitTruthy,
+  normalizeGpgFormat,
+  type GpgFormat,
+} from '../lib/gpg-config';
 import { useAppStore } from '../stores';
 
 type ConfigScope = 'global' | 'local' | 'system';
@@ -40,6 +45,10 @@ export function DeveloperPanel() {
   const [newGitValue, setNewGitValue] = useState('');
   const [newGhKey, setNewGhKey] = useState('');
   const [newGhValue, setNewGhValue] = useState('');
+  const [gpgLoaded, setGpgLoaded] = useState(false);
+  const [gpgSign, setGpgSign] = useState(false);
+  const [gpgFormat, setGpgFormat] = useState<GpgFormat>('');
+  const [signingKey, setSigningKey] = useState('');
   const [releaseTag, setReleaseTag] = useState('');
   const [releaseTitle, setReleaseTitle] = useState('');
   const [releaseNotes, setReleaseNotes] = useState('');
@@ -125,6 +134,46 @@ export function DeveloperPanel() {
         err instanceof Error ? err.message : 'Failed to load git config',
       );
       setGitConfig([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [gitScope, repoPath, activeRepoPath]);
+
+  const loadGpgConfig = useCallback(async () => {
+    if (gitScope === 'local' && !activeRepoPath) {
+      setStatus('Select a repository for local signing config.');
+      return;
+    }
+    setLoading(true);
+    setStatus(null);
+    try {
+      const scope = gitScope;
+      const path = repoPath;
+      const [sign, format, key] = await Promise.all([
+        ipcInvoke('dev:git-config-get', {
+          key: 'commit.gpgSign',
+          scope,
+          path,
+        }),
+        ipcInvoke('dev:git-config-get', {
+          key: 'gpg.format',
+          scope,
+          path,
+        }),
+        ipcInvoke('dev:git-config-get', {
+          key: 'user.signingKey',
+          scope,
+          path,
+        }),
+      ]);
+      setGpgSign(isGitTruthy(sign.value));
+      setGpgFormat(normalizeGpgFormat(format.value));
+      setSigningKey(key.value ?? '');
+      setGpgLoaded(true);
+    } catch (err) {
+      setStatus(
+        err instanceof Error ? err.message : 'Failed to load signing config',
+      );
     } finally {
       setLoading(false);
     }
@@ -433,6 +482,7 @@ export function DeveloperPanel() {
                 setGitScope(e.target.value as ConfigScope);
                 setGitLoaded(false);
                 setGitConfig([]);
+                setGpgLoaded(false);
               }}
               className="rounded border border-border bg-surface-elevated px-2 py-1 text-xs"
             >
@@ -522,6 +572,104 @@ export function DeveloperPanel() {
               </button>
             </div>
           </>
+        )}
+      </section>
+
+      <section className="rounded-md border border-border p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold">Commit signing</h3>
+          <button
+            type="button"
+            disabled={loading || busy}
+            onClick={() => void loadGpgConfig()}
+            className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+          >
+            {gpgLoaded ? 'Refresh' : 'Load'}
+          </button>
+        </div>
+        <p className="mb-2 text-xs text-muted">
+          Reads and writes <span className="font-mono">commit.gpgSign</span>,{' '}
+          <span className="font-mono">gpg.format</span>, and{' '}
+          <span className="font-mono">user.signingKey</span> for the Git config
+          scope selected above. Key detection is not included yet.
+        </p>
+        {!gpgLoaded ? (
+          <p className="text-xs text-muted">
+            Click Load to read the current signing settings.
+          </p>
+        ) : (
+          <div className="space-y-2 text-xs">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={gpgSign}
+                onChange={(e) => setGpgSign(e.target.checked)}
+                className="rounded border-border"
+              />
+              <span>
+                Sign commits (<span className="font-mono">commit.gpgSign</span>)
+              </span>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-muted">
+                Format (<span className="font-mono">gpg.format</span>)
+              </span>
+              <select
+                value={gpgFormat}
+                onChange={(e) => setGpgFormat(e.target.value as GpgFormat)}
+                className="rounded border border-border bg-surface-elevated px-2 py-1"
+              >
+                <option value="">Default (openpgp)</option>
+                <option value="openpgp">openpgp</option>
+                <option value="ssh">ssh</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-muted">
+                Signing key (<span className="font-mono">user.signingKey</span>)
+              </span>
+              <input
+                value={signingKey}
+                onChange={(e) => setSigningKey(e.target.value)}
+                placeholder="GPG key id or SSH key path"
+                className="rounded border border-border bg-surface-elevated px-2 py-1 font-mono"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={busy || (gitScope === 'local' && !activeRepoPath)}
+              onClick={() =>
+                void runAction('Signing config saved', async () => {
+                  const scope = gitScope;
+                  const path = repoPath;
+                  await ipcInvoke('dev:git-config-set', {
+                    key: 'commit.gpgSign',
+                    value: gpgSign ? 'true' : 'false',
+                    scope,
+                    path,
+                  });
+                  if (gpgFormat) {
+                    await ipcInvoke('dev:git-config-set', {
+                      key: 'gpg.format',
+                      value: gpgFormat,
+                      scope,
+                      path,
+                    });
+                  }
+                  await ipcInvoke('dev:git-config-set', {
+                    key: 'user.signingKey',
+                    value: signingKey.trim(),
+                    scope,
+                    path,
+                  });
+                  await loadGpgConfig();
+                })
+              }
+              className="rounded bg-accent px-2 py-1 text-xs text-white disabled:opacity-50"
+            >
+              Save signing config
+            </button>
+          </div>
         )}
       </section>
 
