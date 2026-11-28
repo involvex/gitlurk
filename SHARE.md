@@ -2,11 +2,13 @@
 
 ## Audience
 
-Windows Git users and GitHub Desktop alternatives who want a clearer commit history without leaving the app.
+Windows Git users and GitHub Desktop alternatives who review PRs in-app.
 
 ## Announcement
 
-GitLurk Desktop History can load older commits beyond the first page. Use **Load older** at the bottom of the History list to grow the branch graph in place (same topology prefix, up to 2000 commits). Try it in the latest build from the repo: https://github.com/involvex/gitlurk
+GitLurk Desktop History can load older commits beyond the first page. Use **Load older** at the bottom of the History list to grow the branch graph in place (same topology prefix, up to 2000 commits).
+
+On pull request diffs, line comments now support **Suggest change**: it inserts a GitHub ```suggestion fence seeded from the patch line so reviewers can propose an edit without leaving the app. Try both in the latest build: https://github.com/involvex/gitlurk
 
 ## Free channels (pick one)
 

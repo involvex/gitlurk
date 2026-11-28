@@ -15,7 +15,7 @@ _Each item below was checked against the codebase on 2026-11-28. "Anchor" names 
 | #   | Item                                           | Effort | Anchor (proof it's doable)                                                                                                                  | Caveat                                                                      |
 | --- | ---------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | 4   | History pagination ("Load older") — ✅ DONE    | S      | `dispatcher.loadOlderCommits()` grows `git log -n` prefix; `HistoryPanel` Load older button; Rust cap 2000                                  | Graph layout receives full loaded prefix                                    |
-| 11  | PR "suggested changes"                         | S      | `LineCommentComposer` in `PrDetailView.tsx` posts via `dispatcher.submitPullRequestReview` -> `github:submit-review` with `comments[].body` | Wrap selected line in a GitHub ```suggestion fenced block; no new API field |
+| 11  | PR "suggested changes" — ✅ DONE               | S      | `LineCommentComposer` **Suggest change** + `lib/pr-suggestion.ts` inserts ```suggestion fence via existing `github:submit-review`           | Single-line seed from patch; no new API field                               |
 | —   | Raw unified PR diff toggle _(new)_             | S      | `github:pr-diff` is typed in `packages/shared/src/ipc/channels.ts` and implemented in `commands/github.rs`, but never invoked from UI       | Pure frontend wiring in `PrDetailView.tsx` / `DiffPanel.tsx`                |
 | —   | gh config read-back in Developer panel _(new)_ | S      | `dev:gh-config-get` typed + implemented in `commands/developer.rs`, not called from UI                                                      | DeveloperPanel already has list/set                                         |
 | —   | Screenshot capture action _(new)_              | S      | `screenshot:capture` typed + implemented in `commands/screenshot.rs`, not called from UI                                                    | Add save-path flow via existing dialog                                      |
@@ -216,8 +216,8 @@ Full PR review experience:
 - View existing review comments
 - Merge / close / reopen from the detail view
 
-> **Have:** PR file diffs in `PrDetailView.tsx`; submit Comment / Approve / Request changes via `github:submit-review`; list existing reviews via `github:list-reviews`; list and post line comments via `github:list-review-comments` + review `comments` array (DiffView + widget composer); merge (merge/squash/rebase), close, reopen, and ready-for-review via `github:merge-pr` / `github:update-pr` with mergeable gating.
-> **Missing:** suggested changes.
+> **Have:** PR file diffs in `PrDetailView.tsx`; submit Comment / Approve / Request changes via `github:submit-review`; list existing reviews via `github:list-reviews`; list and post line comments via `github:list-review-comments` + review `comments` array (DiffView + widget composer); **Suggest change** inserts a GitHub ```suggestion fence seeded from the patch line (`lib/pr-suggestion.ts`); merge (merge/squash/rebase), close, reopen, and ready-for-review via `github:merge-pr` / `github:update-pr` with mergeable gating.
+> **Missing:** multi-line suggestion ranges.
 
 ### 12. Fork Management — 🟡 PARTIAL
 
