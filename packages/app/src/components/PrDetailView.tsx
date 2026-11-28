@@ -7,6 +7,7 @@ import {
   mergeMethodLabel,
   type MergeMethod,
 } from '../lib/pr-actions';
+import { extractPatchLine, insertSuggestion } from '../lib/pr-suggestion';
 import { useAppStore } from '../stores';
 import type { PullRequestReviewComment } from '../stores/git-ops';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -53,15 +54,19 @@ function LineCommentComposer({
   path,
   line,
   side,
+  lineText,
   onClose,
 }: {
   path: string;
   line: number;
   side: 'LEFT' | 'RIGHT';
+  /** Current file line text from the PR patch; seeds a suggestion fence. */
+  lineText: string | null;
   onClose: () => void;
 }) {
   const [body, setBody] = useState('');
   const gitLoading = useAppStore((s) => s.loading);
+  const canSuggest = lineText != null;
 
   return (
     <div className="m-1 rounded-md border border-border bg-surface p-2 shadow-sm">
@@ -84,6 +89,20 @@ function LineCommentComposer({
         >
           Cancel
         </button>
+        {canSuggest ? (
+          <button
+            type="button"
+            disabled={gitLoading}
+            title="Insert a GitHub suggested-change fence seeded with this line"
+            onClick={() => {
+              if (lineText == null) return;
+              setBody((prev) => insertSuggestion(prev, lineText));
+            }}
+            className="rounded-md border border-border px-2 py-1 text-[11px] hover:bg-surface-elevated disabled:opacity-50"
+          >
+            Suggest change
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={gitLoading || !body.trim()}
@@ -521,11 +540,21 @@ export function PrDetailView() {
                     ) {
                       return null;
                     }
+                    const commentSide =
+                      side === SplitSide.old ? 'LEFT' : 'RIGHT';
+                    const lineText = selected.patch
+                      ? extractPatchLine(
+                          selected.patch,
+                          lineNumber,
+                          commentSide,
+                        )
+                      : null;
                     return (
                       <LineCommentComposer
                         path={selected.filename}
                         line={lineNumber}
-                        side={side === SplitSide.old ? 'LEFT' : 'RIGHT'}
+                        side={commentSide}
+                        lineText={lineText}
                         onClose={() => {
                           setWidget(null);
                           onClose();
