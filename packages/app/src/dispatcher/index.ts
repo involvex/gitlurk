@@ -2262,9 +2262,7 @@ export const dispatcher = {
       );
     } catch (error) {
       store.setError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to load older commits',
+        error instanceof Error ? error.message : 'Failed to load older commits',
       );
     } finally {
       store.setCommitLogLoading(false);
