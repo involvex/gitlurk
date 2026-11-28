@@ -9,6 +9,7 @@ import { ResizeHandle } from './ResizeHandle';
 import { GitignoreEditor } from './GitignoreEditor';
 import { BoundContextMenu } from './ContextMenu';
 import type { ContextMenuItem } from './ContextMenu';
+import { FileTypeIcon } from './FileTypeIcon';
 import { useContextMenuState } from '../hooks/useContextMenuState';
 
 type FsEntry = {
@@ -69,9 +70,10 @@ function TreeNode({
         }`}
         style={{ paddingLeft: `${8 + depth * 12}px` }}
       >
-        <span className="w-3 shrink-0 text-muted">
-          {isDir ? (isOpen ? '▾' : '▸') : '·'}
+        <span className="w-3 shrink-0 text-center text-[9px] text-muted">
+          {isDir ? (isOpen ? '▾' : '▸') : ''}
         </span>
+        <FileTypeIcon name={entry.name} kind={entry.kind} open={isOpen} />
         <span className="truncate">{entry.name}</span>
       </button>
       {isDir && isOpen ? (
