@@ -72,6 +72,10 @@ export interface GitOpsSlice {
   pullChecks: PullRequestCheckRun[];
   pullSelectedFile: string | null;
   pullDetailLoading: boolean;
+  /** Full unified diff from `github:pr-diff` (lazy-loaded). */
+  pullRawDiff: string | null;
+  pullRawDiffLoading: boolean;
+  pullShowRawDiff: boolean;
   loading: boolean;
   error: string | null;
   commitMessage: string;
@@ -110,6 +114,9 @@ export interface GitOpsSlice {
   setPullChecks: (checks: PullRequestCheckRun[]) => void;
   setPullSelectedFile: (file: string | null) => void;
   setPullDetailLoading: (loading: boolean) => void;
+  setPullRawDiff: (diff: string | null) => void;
+  setPullRawDiffLoading: (loading: boolean) => void;
+  setPullShowRawDiff: (show: boolean) => void;
   clearPullDetail: () => void;
   setGitOpLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -152,6 +159,9 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   pullChecks: [],
   pullSelectedFile: null,
   pullDetailLoading: false,
+  pullRawDiff: null,
+  pullRawDiffLoading: false,
+  pullShowRawDiff: false,
   loading: false,
   error: null,
   commitMessage: '',
@@ -191,6 +201,9 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   setPullChecks: (pullChecks) => set({ pullChecks }),
   setPullSelectedFile: (pullSelectedFile) => set({ pullSelectedFile }),
   setPullDetailLoading: (pullDetailLoading) => set({ pullDetailLoading }),
+  setPullRawDiff: (pullRawDiff) => set({ pullRawDiff }),
+  setPullRawDiffLoading: (pullRawDiffLoading) => set({ pullRawDiffLoading }),
+  setPullShowRawDiff: (pullShowRawDiff) => set({ pullShowRawDiff }),
   clearPullDetail: () =>
     set({
       activePullNumber: null,
@@ -203,6 +216,9 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
       pullChecks: [],
       pullSelectedFile: null,
       pullDetailLoading: false,
+      pullRawDiff: null,
+      pullRawDiffLoading: false,
+      pullShowRawDiff: false,
     }),
   setGitOpLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),

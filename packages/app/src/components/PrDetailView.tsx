@@ -171,6 +171,9 @@ export function PrDetailView() {
   const reviewComments = useAppStore((s) => s.pullReviewComments);
   const checks = useAppStore((s) => s.pullChecks);
   const selectedFile = useAppStore((s) => s.pullSelectedFile);
+  const pullShowRawDiff = useAppStore((s) => s.pullShowRawDiff);
+  const pullRawDiff = useAppStore((s) => s.pullRawDiff);
+  const pullRawDiffLoading = useAppStore((s) => s.pullRawDiffLoading);
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
   const gitLoading = useAppStore((s) => s.loading);
   const resolvedTheme = useAppStore((s) => s.resolvedTheme);
@@ -442,129 +445,177 @@ export function PrDetailView() {
             </div>
           ) : null}
 
-          <div className="flex min-h-0 flex-1">
-            <aside className="w-56 shrink-0 overflow-auto border-r border-border">
-              <div className="sticky top-0 border-b border-border bg-surface px-3 py-2 text-xs font-semibold">
-                Files ({files.length})
-              </div>
-              <ul className="p-1">
-                {files.map((file) => {
-                  const count = reviewComments.filter(
-                    (c) => c.path === file.filename,
-                  ).length;
-                  return (
-                    <li key={file.filename}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          useAppStore
-                            .getState()
-                            .setPullSelectedFile(file.filename);
-                          setWidget(null);
-                        }}
-                        className={`flex w-full flex-col rounded px-2 py-1.5 text-left text-[11px] ${
-                          selectedFile === file.filename
-                            ? 'bg-primary/15 text-primary'
-                            : 'hover:bg-surface-elevated'
-                        }`}
-                      >
-                        <span className="truncate font-mono">
-                          {file.filename}
-                        </span>
-                        <span className="text-muted">
-                          {file.status} · +{file.additions} −{file.deletions}
-                          {count > 0
-                            ? ` · ${count} comment${count === 1 ? '' : 's'}`
-                            : ''}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </aside>
-            <div className="min-h-0 min-w-0 flex-1 overflow-auto p-2">
-              {!selected ? (
-                <p className="p-4 text-sm text-muted">Select a file</p>
-              ) : !selected.patch ? (
-                <div className="p-4 text-sm text-muted">
-                  <p className="font-mono text-foreground">
-                    {selected.filename}
-                  </p>
-                  <p className="mt-2">
-                    No text patch available (binary or too large). Open on
-                    GitHub to review this file.
-                  </p>
-                  {fileComments.length > 0 ? (
-                    <ul className="mt-3 space-y-2">
-                      {fileComments.map((comment) => (
-                        <li
-                          key={comment.id}
-                          className="rounded border border-border px-2 py-1.5 text-[11px] text-foreground"
-                        >
-                          <span className="font-medium">{comment.user}</span>
-                          {comment.line != null ? (
-                            <span className="text-muted">
-                              {' '}
-                              · line {comment.line}
-                            </span>
-                          ) : null}
-                          <p className="mt-1 whitespace-pre-wrap">
-                            {comment.body}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              ) : (
-                <DiffView<CommentExtend>
-                  data={{ hunks: [patchForView ?? selected.patch] }}
-                  diffViewMode={DiffModeEnum.Split}
-                  diffViewHighlight
-                  diffViewTheme={resolvedTheme}
-                  diffViewAddWidget
-                  extendData={extendData}
-                  renderExtendLine={({ data }) => (
-                    <ExistingLineComments data={data} />
-                  )}
-                  onAddWidgetClick={(lineNumber, side) => {
-                    setWidget({ lineNumber, side });
-                  }}
-                  renderWidgetLine={({ lineNumber, side, onClose }) => {
-                    if (
-                      !widget ||
-                      widget.lineNumber !== lineNumber ||
-                      widget.side !== side ||
-                      !selected
-                    ) {
-                      return null;
-                    }
-                    const commentSide =
-                      side === SplitSide.old ? 'LEFT' : 'RIGHT';
-                    const lineText = selected.patch
-                      ? extractPatchLine(
-                          selected.patch,
-                          lineNumber,
-                          commentSide,
-                        )
-                      : null;
-                    return (
-                      <LineCommentComposer
-                        path={selected.filename}
-                        line={lineNumber}
-                        side={commentSide}
-                        lineText={lineText}
-                        onClose={() => {
-                          setWidget(null);
-                          onClose();
-                        }}
-                      />
-                    );
-                  }}
-                />
-              )}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1.5">
+              <button
+                type="button"
+                onClick={() => void dispatcher.setPullShowRawDiff(false)}
+                className={`rounded px-2 py-0.5 text-[11px] ${
+                  !pullShowRawDiff
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted hover:bg-surface-elevated'
+                }`}
+              >
+                Per-file
+              </button>
+              <button
+                type="button"
+                onClick={() => void dispatcher.setPullShowRawDiff(true)}
+                className={`rounded px-2 py-0.5 text-[11px] ${
+                  pullShowRawDiff
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted hover:bg-surface-elevated'
+                }`}
+                title="Show the full unified PR diff from GitHub"
+              >
+                Raw unified
+              </button>
             </div>
+            {pullShowRawDiff ? (
+              <div className="min-h-0 flex-1 overflow-auto p-2">
+                {pullRawDiffLoading ? (
+                  <p className="p-4 text-sm text-muted">
+                    Loading unified diff…
+                  </p>
+                ) : pullRawDiff == null || pullRawDiff.trim() === '' ? (
+                  <p className="p-4 text-sm text-muted">
+                    No unified diff available
+                  </p>
+                ) : (
+                  <pre className="overflow-auto rounded-md border border-border bg-surface-elevated p-3 font-mono text-[11px] leading-relaxed text-foreground whitespace-pre">
+                    {pullRawDiff}
+                  </pre>
+                )}
+              </div>
+            ) : (
+              <div className="flex min-h-0 flex-1">
+                <aside className="w-56 shrink-0 overflow-auto border-r border-border">
+                  <div className="sticky top-0 border-b border-border bg-surface px-3 py-2 text-xs font-semibold">
+                    Files ({files.length})
+                  </div>
+                  <ul className="p-1">
+                    {files.map((file) => {
+                      const count = reviewComments.filter(
+                        (c) => c.path === file.filename,
+                      ).length;
+                      return (
+                        <li key={file.filename}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              useAppStore
+                                .getState()
+                                .setPullSelectedFile(file.filename);
+                              setWidget(null);
+                            }}
+                            className={`flex w-full flex-col rounded px-2 py-1.5 text-left text-[11px] ${
+                              selectedFile === file.filename
+                                ? 'bg-primary/15 text-primary'
+                                : 'hover:bg-surface-elevated'
+                            }`}
+                          >
+                            <span className="truncate font-mono">
+                              {file.filename}
+                            </span>
+                            <span className="text-muted">
+                              {file.status} · +{file.additions} −
+                              {file.deletions}
+                              {count > 0
+                                ? ` · ${count} comment${count === 1 ? '' : 's'}`
+                                : ''}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </aside>
+                <div className="min-h-0 min-w-0 flex-1 overflow-auto p-2">
+                  {!selected ? (
+                    <p className="p-4 text-sm text-muted">Select a file</p>
+                  ) : !selected.patch ? (
+                    <div className="p-4 text-sm text-muted">
+                      <p className="font-mono text-foreground">
+                        {selected.filename}
+                      </p>
+                      <p className="mt-2">
+                        No text patch available (binary or too large). Open on
+                        GitHub to review this file.
+                      </p>
+                      {fileComments.length > 0 ? (
+                        <ul className="mt-3 space-y-2">
+                          {fileComments.map((comment) => (
+                            <li
+                              key={comment.id}
+                              className="rounded border border-border px-2 py-1.5 text-[11px] text-foreground"
+                            >
+                              <span className="font-medium">
+                                {comment.user}
+                              </span>
+                              {comment.line != null ? (
+                                <span className="text-muted">
+                                  {' '}
+                                  · line {comment.line}
+                                </span>
+                              ) : null}
+                              <p className="mt-1 whitespace-pre-wrap">
+                                {comment.body}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <DiffView<CommentExtend>
+                      data={{ hunks: [patchForView ?? selected.patch] }}
+                      diffViewMode={DiffModeEnum.Split}
+                      diffViewHighlight
+                      diffViewTheme={resolvedTheme}
+                      diffViewAddWidget
+                      extendData={extendData}
+                      renderExtendLine={({ data }) => (
+                        <ExistingLineComments data={data} />
+                      )}
+                      onAddWidgetClick={(lineNumber, side) => {
+                        setWidget({ lineNumber, side });
+                      }}
+                      renderWidgetLine={({ lineNumber, side, onClose }) => {
+                        if (
+                          !widget ||
+                          widget.lineNumber !== lineNumber ||
+                          widget.side !== side ||
+                          !selected
+                        ) {
+                          return null;
+                        }
+                        const commentSide =
+                          side === SplitSide.old ? 'LEFT' : 'RIGHT';
+                        const lineText = selected.patch
+                          ? extractPatchLine(
+                              selected.patch,
+                              lineNumber,
+                              commentSide,
+                            )
+                          : null;
+                        return (
+                          <LineCommentComposer
+                            path={selected.filename}
+                            line={lineNumber}
+                            side={commentSide}
+                            lineText={lineText}
+                            onClose={() => {
+                              setWidget(null);
+                              onClose();
+                            }}
+                          />
+                        );
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
