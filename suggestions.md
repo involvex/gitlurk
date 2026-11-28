@@ -19,7 +19,7 @@ _Each item below was checked against the codebase on 2026-11-28. "Anchor" names 
 | —   | Raw unified PR diff toggle — ✅ DONE        | S      | `PrDetailView` Per-file / Raw unified toggle; `dispatcher.loadPullRequestRawDiff` → `github:pr-diff`                              | Lazy-loaded; cleared on PR refresh                                  |
 | —   | gh config read-back — ✅ DONE               | S      | DeveloperPanel **Get gh config** + set read-back via `dev:gh-config-get`                                                          | List/set already existed                                            |
 | —   | Screenshot capture — ✅ DONE                | S      | `dispatcher.captureScreenshot` → `dialog:save-directory` + `screenshot:capture`; Developer panel + palette                        | PNG named with timestamp in chosen folder                           |
-| 13  | Palette file-search entries                 | S      | `dispatcher.listRepoDir` + `readRepoFile`; `CommandPalette.tsx` command list is static/dynamic today                              | Ctrl+Enter quick-commit already exists in `ChangesView.tsx`         |
+| 13  | Palette file-search — ✅ DONE               | S      | `CommandPalette` indexes via `collectRepoFilePaths` + `listRepoDir`; opens with file tool or Explorer                             | Caps walk at 2000 files; shows top 40 matches                       |
 | 16  | File-type icons in tree                     | S      | `OverviewView.TreeNode` currently renders generic glyphs                                                                          | Open-in-editor already exists via external tools / `shell:run-tool` |
 | 29  | GPG signing config toggles                  | S–M    | `dev:git-config-set/get` can set `commit.gpgSign`, `gpg.format`, `user.signingKey`                                                | Key detection/verification needs small Rust wrappers if added       |
 | 33  | External diff/merge tool presets            | S      | `ExternalTool` + `shell:run-tool` placeholders + `dev:git-config-set`                                                             | Keep allowlist/placeholder validation intact                        |
@@ -236,7 +236,7 @@ Extend the existing fork feature:
 
 ## UI/UX Improvements
 
-### 13. Keyboard Shortcuts — 🟡 PARTIAL
+### 13. Keyboard Shortcuts — ✅ DONE
 
 **Priority: High** | **Complexity: Medium**
 
@@ -249,8 +249,8 @@ Add customizable keyboard shortcuts:
 - `F5` — Refresh status
 - `Ctrl+K` — Quick file search
 
-> **Have:** F5 refresh, Ctrl+B sidebar, Ctrl+Shift+C focus commit box, Ctrl+Shift+G pull, Ctrl+K/Ctrl+Shift+P palette (customizable), global Ctrl+Alt+G show-app, Ctrl+Enter quick commit in `ChangesView.tsx` (textarea keydown).
-> **Missing:** palette file-search entries.
+> **Have:** F5 refresh, Ctrl+B sidebar, Ctrl+Shift+C focus commit box, Ctrl+Shift+G pull, Ctrl+K/Ctrl+Shift+P palette (customizable) with **file-search entries** (`lib/repo-file-index.ts`), global Ctrl+Alt+G show-app, Ctrl+Enter quick commit in `ChangesView.tsx` (textarea keydown).
+> **Missing:** nothing for the listed shortcuts / palette file search.
 
 ### 14. Command Palette — ✅ DONE
 
@@ -262,7 +262,7 @@ A Spotlight-style command palette for quick access:
 - Recently used repos
 - Quick actions (commit, pull, push, checkout)
 
-> Implemented in `CommandPalette.tsx` — ~14 commands + dynamic repo/branch entries, token scoring, arrow-key nav.
+> Implemented in `CommandPalette.tsx` — commands + dynamic repo/branch/file entries (`lib/repo-file-index.ts`), token scoring, arrow-key nav.
 
 ### 15. Multi-Repository Workspace — ❌ NOT STARTED
 
@@ -746,7 +746,7 @@ _No known bugs currently tracked._
 | --------------------------- | ------ | ------ | ------- | ----------- |
 | Git Operations              | 7      | 5      | 1       | 1           |
 | GitHub Integration          | 5      | 1      | 3       | 1           |
-| UI/UX Improvements          | 6      | 1      | 3       | 2           |
+| UI/UX Improvements          | 6      | 2      | 2       | 2           |
 | AI Features                 | 3      | 0      | 1       | 2           |
 | Developer Experience        | 4      | 0      | 1       | 3           |
 | Performance & Reliability   | 3      | 2      | 0       | 1           |
@@ -754,7 +754,7 @@ _No known bugs currently tracked._
 | Integration & Extensibility | 4      | 0      | 0       | 4           |
 | Polish & Quality of Life    | 6      | 4      | 1       | 1           |
 | Recently Added              | 17     | 7      | 4       | 6           |
-| **Total**                   | **57** | **20** | **14**  | **23**      |
+| **Total**                   | **57** | **21** | **13**  | **23**      |
 
 ---
 
