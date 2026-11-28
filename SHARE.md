@@ -20,7 +20,9 @@ The command palette also searches repo files as you type and opens a match in yo
 
 The repository Overview tree now shows file-type icons by extension and common names (TS, Markdown, lockfiles, folders, and more).
 
-Settings → Developer → **Commit signing** can load and save `commit.gpgSign`, `gpg.format`, and `user.signingKey` without editing git config by hand. Try it in the latest build: https://github.com/involvex/gitlurk
+Settings → Developer → **Commit signing** can load and save `commit.gpgSign`, `gpg.format`, and `user.signingKey` without editing git config by hand.
+
+Settings → Tools → **Git diff / merge presets** one-click configures global `git difftool` / `git mergetool` for VS Code, Cursor, WinMerge, Beyond Compare, or Meld. Try it in the latest build: https://github.com/involvex/gitlurk
 
 ## Free channels (pick one)
 

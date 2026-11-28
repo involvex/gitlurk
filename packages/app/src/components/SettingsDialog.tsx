@@ -4,7 +4,7 @@ import type {
   ExternalToolKind,
   ExternalToolTarget,
 } from '@gitlurk/shared';
-import { resetBuiltinTools } from '@gitlurk/shared';
+import { diffMergePresets, resetBuiltinTools } from '@gitlurk/shared';
 import { ipcInvoke } from '../ipc/client';
 import { dispatcher } from '../dispatcher';
 import { hotkeyFromEvent } from '../lib/hotkeys';
@@ -733,6 +733,48 @@ export function SettingsDialog() {
           </div>
         ) : tab === 'tools' ? (
           <div className="space-y-4">
+            <div className="space-y-2 rounded-md border border-border p-3">
+              <h3 className="text-sm font-semibold">
+                Git diff / merge presets
+              </h3>
+              <p className="text-xs text-muted">
+                Writes global <code className="text-foreground">diff.tool</code>{' '}
+                / <code className="text-foreground">merge.tool</code> config for{' '}
+                <code className="text-foreground">git difftool</code> and{' '}
+                <code className="text-foreground">git mergetool</code>. Uses
+                git&apos;s <code className="text-foreground">$LOCAL</code> /{' '}
+                <code className="text-foreground">$REMOTE</code> tokens (not{' '}
+                <code className="text-foreground">{'{path}'}</code>). VS Code /
+                Cursor also enable the matching external tool below.
+              </p>
+              <ul className="divide-y divide-border rounded-md border border-border">
+                {diffMergePresets().map((preset) => (
+                  <li
+                    key={preset.id}
+                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {preset.label}
+                      </p>
+                      <p className="truncate text-[10px] text-muted">
+                        {preset.description}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void dispatcher.applyDiffMergePreset(preset.id)
+                      }
+                      className="shrink-0 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-surface-elevated"
+                    >
+                      Apply
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <p className="text-xs text-muted">
               Custom CLI tools appear in right-click menus and the command
               palette once enabled below (off by default). Placeholders:{' '}

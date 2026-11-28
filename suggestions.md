@@ -22,7 +22,7 @@ _Each item below was checked against the codebase on 2026-11-28. "Anchor" names 
 | 13  | Palette file-search — ✅ DONE               | S      | `CommandPalette` indexes via `collectRepoFilePaths` + `listRepoDir`; opens with file tool or Explorer                             | Caps walk at 2000 files; shows top 40 matches               |
 | 16  | File-type icons in tree — ✅ DONE           | S      | `FileTypeIcon` + `resolveFileIcon` in Overview tree                                                                               | Extension/name map; open-in-editor already existed          |
 | 29  | GPG signing config toggles — ✅ DONE        | S–M    | Developer panel **Commit signing** loads/saves via `dev:git-config-get/set`                                                       | Key detection/verification still deferred                   |
-| 33  | External diff/merge tool presets            | S      | `ExternalTool` + `shell:run-tool` placeholders + `dev:git-config-set`                                                             | Keep allowlist/placeholder validation intact                |
+| 33  | External diff/merge tool presets — ✅ DONE  | S      | Settings → Tools presets write git config via `dev:git-config-set`; may enable matching ExternalTool                              | Keeps shell:run-tool `{path}` allowlist; git uses `$LOCAL`  |
 | 37  | Per-repo notification preferences           | S      | `RepoEntry`/settings plumbing exists; `maybeNotify` call sites in dispatcher                                                      | Add per-repo opt-out field; default enabled                 |
 | 42  | Fixup commits                               | S      | `git:commit-amend` exists; `HistoryPanel` has confirm patterns                                                                    | Add `git:commit-fixup` channel/command + UI picker          |
 | 44  | Per-file history                            | S      | `git:log` has `range?` but no path; `GitService::log` builds args                                                                 | Add `path` param and push `-- <file>` as separate arg       |
@@ -484,7 +484,7 @@ Manage git worktrees:
 - List active worktrees
 - Remove worktrees
 
-### 33. External Diff Tool Integration — ❌ NOT STARTED
+### 33. External Diff Tool Integration — 🟡 PARTIAL
 
 **Priority: Low** | **Complexity: Low**
 
@@ -493,6 +493,9 @@ Launch external diff tools:
 - Configure custom diff tool (Beyond Compare, VS Code, etc.)
 - Configure custom merge tool
 - Open in external editor
+
+> **Have:** Settings → Tools **Git diff / merge presets** (VS Code, Cursor, WinMerge, Beyond Compare, Meld) write global `diff.tool` / `merge.tool` (+ cmd) via `dev:git-config-set`; VS Code/Cursor also enable the matching ExternalTool. Placeholders stay git `$LOCAL`/`$REMOTE` (not shell:run-tool).
+> **Missing:** in-app “Open in difftool” for a changed file; path pickers for WinMerge/BC installs.
 
 ### 34. SSH Key Management — ❌ NOT STARTED
 
@@ -754,10 +757,10 @@ _No known bugs currently tracked._
 | Developer Experience        | 4      | 0      | 1       | 3           |
 | Performance & Reliability   | 3      | 2      | 0       | 1           |
 | Security & Privacy          | 2      | 0      | 1       | 1           |
-| Integration & Extensibility | 4      | 0      | 0       | 4           |
+| Integration & Extensibility | 4      | 0      | 1       | 3           |
 | Polish & Quality of Life    | 6      | 4      | 1       | 1           |
 | Recently Added              | 17     | 7      | 4       | 6           |
-| **Total**                   | **57** | **22** | **13**  | **22**      |
+| **Total**                   | **57** | **22** | **14**  | **21**      |
 
 ---
 
