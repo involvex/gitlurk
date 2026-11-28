@@ -322,3 +322,4 @@ See [ROADMAP.md](ROADMAP.md) (`## Now` is the next shippable item). Feature back
 
 - `git:log` limit is clamped in Rust (`GitService::log`); History Load older raises that request in steps of 80 up to 2000.
 - PR suggested changes are comment-body fences only (`lib/pr-suggestion.ts`); no new GitHub API field.
+- PR raw unified diff is lazy via `github:pr-diff`; cleared when the PR detail refreshes.

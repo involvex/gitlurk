@@ -1328,11 +1328,15 @@ export const dispatcher = {
       store.setPullChecks(
         matchingRuns.length > 0 ? matchingRuns : runsResult.runs.slice(0, 5),
       );
+      store.setPullRawDiff(null);
       const selected = store.pullSelectedFile;
       if (selected && !filesResult.files.some((f) => f.filename === selected)) {
         store.setPullSelectedFile(filesResult.files[0]?.filename ?? null);
       } else if (!selected && filesResult.files[0]) {
         store.setPullSelectedFile(filesResult.files[0].filename);
+      }
+      if (store.pullShowRawDiff) {
+        await dispatcher.loadPullRequestRawDiff(true);
       }
     } catch (error) {
       store.setError(
@@ -1340,6 +1344,43 @@ export const dispatcher = {
       );
     } finally {
       store.setPullDetailLoading(false);
+    }
+  },
+
+  async loadPullRequestRawDiff(force = false) {
+    const store = getStore();
+    const number = store.activePullNumber;
+    const owner = store.activePullOwner;
+    const repo = store.activePullRepo;
+    if (number == null || !owner || !repo) {
+      store.setError('Open a pull request first');
+      return;
+    }
+    if (!force && store.pullRawDiff != null) return;
+    store.setPullRawDiffLoading(true);
+    store.setError(null);
+    try {
+      const { diff } = await ipcInvoke('github:pr-diff', {
+        owner,
+        repo,
+        number,
+      });
+      store.setPullRawDiff(diff);
+    } catch (error) {
+      store.setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to load unified PR diff',
+      );
+    } finally {
+      store.setPullRawDiffLoading(false);
+    }
+  },
+
+  async setPullShowRawDiff(show: boolean) {
+    getStore().setPullShowRawDiff(show);
+    if (show) {
+      await dispatcher.loadPullRequestRawDiff();
     }
   },
 
