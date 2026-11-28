@@ -159,18 +159,29 @@ export function DeveloperPanel() {
       <section className="rounded-md border border-border p-3">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold">Diagnostics</h3>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void dispatcher.exportDiagnostics()}
-            className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
-          >
-            Export diagnostics
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void dispatcher.captureScreenshot()}
+              className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+            >
+              Capture screenshot
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void dispatcher.exportDiagnostics()}
+              className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+            >
+              Export diagnostics
+            </button>
+          </div>
         </div>
         <p className="mt-1 text-xs text-muted">
-          Saves app/git/gh versions, an auth summary, and sanitized settings as
-          a JSON file — safe to attach to bug reports.
+          Screenshot saves a PNG of the primary monitor via the existing save
+          folder dialog. Diagnostics export app/git/gh versions, an auth
+          summary, and sanitized settings as JSON — safe for bug reports.
         </p>
       </section>
 

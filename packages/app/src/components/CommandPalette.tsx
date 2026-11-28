@@ -162,6 +162,13 @@ export function CommandPalette() {
         run: () => dispatcher.openWhatsNew(),
       },
       {
+        id: 'screenshot',
+        label: 'Capture screenshot',
+        group: 'App',
+        keywords: 'screenshot capture png monitor',
+        run: () => void dispatcher.captureScreenshot(),
+      },
+      {
         id: 'gitignore',
         label: 'Edit .gitignore',
         group: 'Git',

@@ -324,3 +324,4 @@ See [ROADMAP.md](ROADMAP.md) (`## Now` is the next shippable item). Feature back
 - PR suggested changes are comment-body fences only (`lib/pr-suggestion.ts`); no new GitHub API field.
 - PR raw unified diff is lazy via `github:pr-diff`; cleared when the PR detail refreshes.
 - Developer panel gh config Get uses `dev:gh-config-get`; Set also read-backs the key after write.
+- Screenshot capture uses `dialog:save-directory` then `screenshot:capture` with a timestamped PNG path (no save-file dialog yet).
