@@ -305,6 +305,44 @@ export function DeveloperPanel() {
               />
               <button
                 type="button"
+                disabled={busy || !newGhKey.trim()}
+                title="Read this key back via gh config get"
+                onClick={() => {
+                  void (async () => {
+                    const key = newGhKey.trim();
+                    if (!key) return;
+                    setBusy(true);
+                    setStatus(null);
+                    try {
+                      const { value } = await ipcInvoke('dev:gh-config-get', {
+                        key,
+                      });
+                      if (value == null) {
+                        setNewGhValue('');
+                        setStatus(`gh config: ${key} is unset`);
+                        showToast(`${key} is unset`);
+                        return;
+                      }
+                      setNewGhValue(value);
+                      setStatus(`gh config: ${key} = ${value}`);
+                      showToast(`Read ${key}`);
+                    } catch (err) {
+                      setStatus(
+                        err instanceof Error
+                          ? err.message
+                          : 'Failed to get gh config',
+                      );
+                    } finally {
+                      setBusy(false);
+                    }
+                  })();
+                }}
+                className="rounded border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+              >
+                Get gh config
+              </button>
+              <button
+                type="button"
                 disabled={busy || !newGhKey || !newGhValue}
                 onClick={() =>
                   void runAction('gh config updated', async () => {
@@ -312,12 +350,16 @@ export function DeveloperPanel() {
                       key: newGhKey,
                       value: newGhValue,
                     });
-                    setNewGhKey('');
-                    setNewGhValue('');
+                    const { value } = await ipcInvoke('dev:gh-config-get', {
+                      key: newGhKey.trim(),
+                    });
+                    if (value != null) {
+                      setNewGhValue(value);
+                    }
                     await loadDetails();
                   })
                 }
-                className="rounded bg-accent px-2 py-1 text-xs text-white disabled:opacity-50 sm:col-span-2"
+                className="rounded bg-accent px-2 py-1 text-xs text-white disabled:opacity-50"
               >
                 Set gh config
               </button>
@@ -346,11 +388,21 @@ export function DeveloperPanel() {
                 <ul className="max-h-28 space-y-1 overflow-auto text-[11px] text-muted">
                   {ghConfig.slice(0, 20).map((entry) => (
                     <li key={entry.key}>
-                      <span className="font-mono text-foreground">
-                        {entry.key}
-                      </span>
-                      {' = '}
-                      {entry.value}
+                      <button
+                        type="button"
+                        title="Load key into the form for Get / Set"
+                        onClick={() => {
+                          setNewGhKey(entry.key);
+                          setNewGhValue(entry.value);
+                        }}
+                        className="w-full rounded px-0.5 text-left hover:bg-surface-elevated"
+                      >
+                        <span className="font-mono text-foreground">
+                          {entry.key}
+                        </span>
+                        {' = '}
+                        {entry.value}
+                      </button>
                     </li>
                   ))}
                 </ul>

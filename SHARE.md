@@ -10,7 +10,9 @@ GitLurk Desktop History can load older commits beyond the first page. Use **Load
 
 On pull request diffs, line comments now support **Suggest change**: it inserts a GitHub ```suggestion fence seeded from the patch line so reviewers can propose an edit without leaving the app.
 
-PR detail also has a **Raw unified** toggle that loads the full GitHub unified diff via `github:pr-diff` when you want the whole patch at once. Try it in the latest build: https://github.com/involvex/gitlurk
+PR detail also has a **Raw unified** toggle that loads the full GitHub unified diff via `github:pr-diff` when you want the whole patch at once.
+
+In Settings → Developer, **Get gh config** reads a single key back through `gh config get` (and Set verifies via the same path). Try it in the latest build: https://github.com/involvex/gitlurk
 
 ## Free channels (pick one)
 
