@@ -4,7 +4,74 @@ A collection of features that can be implemented to enhance GitLurk Desktop.
 
 **Legend:** ✅ DONE · 🟡 PARTIAL · ❌ NOT STARTED
 
-_Audited against codebase on 2026-11-15._
+_Audited against codebase on 2026-11-28._
+
+## Roadmap — verified shippable backlog
+
+_Each item below was checked against the codebase on 2026-11-28. "Anchor" names existing code that makes it shippable. Effort: S = hours/days, M = ~1–2 weeks. This is a planning backlog, not a commitment to ship dates._
+
+### v0.2.0 — Parity & polish (mostly frontend, low risk)
+
+| #   | Item                                           | Effort | Anchor (proof it's doable)                                                                                                                  | Caveat                                                                      |
+| --- | ---------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 4   | History pagination ("Load older") — ✅ DONE    | S      | `dispatcher.loadOlderCommits()` grows `git log -n` prefix; `HistoryPanel` Load older button; Rust cap 2000                                  | Graph layout receives full loaded prefix                                    |
+| 11  | PR "suggested changes"                         | S      | `LineCommentComposer` in `PrDetailView.tsx` posts via `dispatcher.submitPullRequestReview` -> `github:submit-review` with `comments[].body` | Wrap selected line in a GitHub ```suggestion fenced block; no new API field |
+| —   | Raw unified PR diff toggle _(new)_             | S      | `github:pr-diff` is typed in `packages/shared/src/ipc/channels.ts` and implemented in `commands/github.rs`, but never invoked from UI       | Pure frontend wiring in `PrDetailView.tsx` / `DiffPanel.tsx`                |
+| —   | gh config read-back in Developer panel _(new)_ | S      | `dev:gh-config-get` typed + implemented in `commands/developer.rs`, not called from UI                                                      | DeveloperPanel already has list/set                                         |
+| —   | Screenshot capture action _(new)_              | S      | `screenshot:capture` typed + implemented in `commands/screenshot.rs`, not called from UI                                                    | Add save-path flow via existing dialog                                      |
+| 13  | Palette file-search entries                    | S      | `dispatcher.listRepoDir` + `readRepoFile`; `CommandPalette.tsx` command list is static/dynamic today                                        | Ctrl+Enter quick-commit already exists in `ChangesView.tsx`                 |
+| 16  | File-type icons in tree                        | S      | `OverviewView.TreeNode` currently renders generic glyphs                                                                                    | Open-in-editor already exists via external tools / `shell:run-tool`         |
+| 29  | GPG signing config toggles                     | S–M    | `dev:git-config-set/get` can set `commit.gpgSign`, `gpg.format`, `user.signingKey`                                                          | Key detection/verification needs small Rust wrappers if added               |
+| 33  | External diff/merge tool presets               | S      | `ExternalTool` + `shell:run-tool` placeholders + `dev:git-config-set`                                                                       | Keep allowlist/placeholder validation intact                                |
+| 37  | Per-repo notification preferences              | S      | `RepoEntry`/settings plumbing exists; `maybeNotify` call sites in dispatcher                                                                | Add per-repo opt-out field; default enabled                                 |
+| 42  | Fixup commits                                  | S      | `git:commit-amend` exists; `HistoryPanel` has confirm patterns                                                                              | Add `git:commit-fixup` channel/command + UI picker                          |
+| 44  | Per-file history                               | S      | `git:log` has `range?` but no path; `GitService::log` builds args                                                                           | Add `path` param and push `-- <file>` as separate arg                       |
+| 45  | Branch cleanup (merged/stale)                  | S      | `git:branch-list`, `ConfirmDialog`, generic `GitService::exec`                                                                              | Add delete/merged-branches channels; protect current branch                 |
+| 52  | Plugin-contributed commands                    | S–M    | Plugin manifest/SDK declare `contributes.commands`; Rust `plugin_host.rs` ignores them and invoke is hardcoded                              | Extend manifest parsing + command listing + palette wiring                  |
+| 10  | Workflow YAML viewer + run filters             | S–M    | `fs:list-dir`/`fs:read-file` can read `.github/workflows/*.yml`; `GhRunWatchDialog` tabs exist                                              | Add workflow/status filter UI and file viewer tab                           |
+| —   | CI-failure desktop notifications _(new)_       | S      | Existing 60s notification polling + `sendNotification` in dispatcher; CI run data already fetched                                           | Detect new failed runs; no new Rust command required                        |
+
+### v0.2.1 — Git depth (small, well-understood Rust commands)
+
+| #   | Item                                      | Effort | Anchor (proof it's doable)                                           | Caveat                                                      |
+| --- | ----------------------------------------- | ------ | -------------------------------------------------------------------- | ----------------------------------------------------------- |
+| 3   | Basic merge / rebase + abort              | M      | `GitService::exec()` + branch/confirm UI patterns                    | **Skip 3-way conflict viewer** for v0.2.x                   |
+| 23  | Submodule status / init / update          | M      | `git:clone {recurseSubmodules}` exists; `exec()` wrappers are cheap  | Add right-rail/panel UI and status parsing                  |
+| 32  | Worktree list / add / remove              | M      | `exec()` + `addRepo`/`selectRepo` can register worktree paths        | Path validation and watcher behavior need care              |
+| 43  | Blame view                                | M      | `git:show`/diff rendering exists; add `git blame --line-porcelain`   | New parser + gutter UI in `DiffPanel`                       |
+| 46  | Compare branches / refs                   | S–M    | `git:log range` already used for ahead/behind; `DiffView` exists     | Add `git:compare {a,b}` channel returning diff              |
+| 1   | Line-level staging in a hunk              | M      | `DiffPanel.splitDiffHunks` + `dispatcher.applyPatch(patch, mode)`    | Rebuild sub-patch with adjusted `@@` counts; no Rust change |
+| 24  | Git LFS status / install / track          | M      | Generic `GitService::exec`; UI patterns exist                        | Depends on external `git-lfs` binary                        |
+| 47  | Reflog undo after amend/revert            | M      | `exec('git reflog')` + confirm dialogs + existing revert/amend flows | Destructive action; require explicit confirmation           |
+| —   | Branch rename + remote management _(new)_ | S–M    | `git_service.rs` has branch/remote basics; `exec()` available        | Add list/remove/set-url/rename commands and UI              |
+| 21  | AI Git help dialog                        | S      | `ai.rs` chat-completions + keyring + model plumbing                  | No diff context required; simple prompt dialog              |
+| 20  | AI PR description generation              | S–M    | Reuse `build_diff_summary` and existing AI command patterns          | Add new `ai:generate-pr-description` channel/command        |
+
+### v0.2.2 — GitHub & platform depth
+
+| #   | Item                             | Effort | Anchor (proof it's doable)                                                        | Caveat                                                            |
+| --- | -------------------------------- | ------ | --------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 9   | Issue list / create / close      | M      | `github.rs` has reqwest + auth headers; issue labels endpoint already used        | Add REST commands/channels + Discover/Issues UI                   |
+| 12  | List forks + create PR from fork | M      | `dev:gh-repo-fork`/`sync`, `github:create-pr {head,base}` exist                   | Need `github:list-forks` and owner/head override support          |
+| 17  | Read-only visual branch graph    | M      | `CommitGraphRow` + `lib/graph-layout.ts` + `git log --graph` exist                | **Defer drag-and-drop merge/rebase**                              |
+| 19  | AI review of staged changes      | M      | `ai.rs` + `git:diff`/`git:show` + `build_diff_summary`                            | Render findings beside `DiffPanel`; advisory only                 |
+| 35  | Cross-repo name/commit search    | M      | `RepoEntry` store + `git:log` per repo; Discover remote search exists             | **Full-text code search deferred**                                |
+| 51  | Tray notification deep links     | M      | `dispatcher.openNotification` + `parseGitHubPullUrl` + tray-action handling exist | OS notification click needs Tauri v2 API verification             |
+| 30  | Secret scanning (advisory)       | S–M    | Staged diff text available via `git:diff`; commit flow has confirm points         | Regex-based advisory scanner; avoid false-certainty claims        |
+| 22  | Git hooks management             | M      | `dev:git-config-set core.hooksPath` + `fs:read-file` exist                        | **Do not relax `fs:write-file` blindly**; add scoped hook channel |
+| 49  | Drag & drop folder open          | M      | `dispatcher.openLocalRepo` + `git:is-repo` exist                                  | Tauri v2 `DataTransfer` file-path behavior needs verification     |
+
+### Deferred / blocked (not in v0.2.x)
+
+| #   | Item                                     | Why deferred/blocked                                                                                            | Revisit when                                                                    |
+| --- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 15  | Multi-repository workspace               | Requires refactoring many git flows off global `activeRepoPath`                                                 | After per-repo context refactor                                                 |
+| 25  | Interactive rebase editor                | Todo-list generation/edit/resume + conflict state machine is large                                              | After basic merge/rebase/conflict UX matures                                    |
+| 26  | Full offline support                     | Needs operation queue/sync semantics; architectural                                                             | After cache model designed; small cached-notifications slice possible sooner    |
+| 54  | End-to-end updates                       | UI complete; no signed `latest.json` publication in release pipeline; no auto-relaunch (`tauri-plugin-process`) | When release workflow publishes manifest + signed artifacts to updater endpoint |
+| 18  | Custom theme builder / per-repo override | Builder M, per-repo override L and schema/rerender complexity                                                   | After theme token model stabilized                                              |
+| 31  | Custom webhooks                          | Low value and extra security/surface area                                                                       | After core GitHub/Git parity backlog                                            |
+| 34  | SSH key management                       | Security-sensitive key generation/agent operations                                                              | After security review and scoped command design                                 |
 
 ---
 
@@ -46,7 +113,7 @@ Provide a visual rebase/merge workflow:
 - Show conflict resolution UI with 3-way merge view
 - Abort rebase/merge on conflict
 
-### 4. Git Log / History View — 🟡 PARTIAL
+### 4. Git Log / History View — ✅ DONE
 
 **Priority: High** | **Complexity: Medium**
 
@@ -57,8 +124,8 @@ Add a commit history viewer:
 - Click a commit to view its diff
 - Filter by author, date range, or message
 
-> **Have:** linear log + click-to-diff (`HistoryPanel.tsx`, `git:log`/`git:show`) and real SVG topology rendering (`CommitGraphRow.tsx` + `lib/graph-layout`). Filter by message/author/date/SHA added.
-> **Missing:** pagination beyond fixed limit of 80.
+> **Have:** linear log + click-to-diff (`HistoryPanel.tsx`, `git:log`/`git:show`) and real SVG topology rendering (`CommitGraphRow.tsx` + `lib/graph-layout`). Filter by message/author/date/SHA added. Pagination via **Load older** (grows `git log -n` prefix in steps of 80, cap 2000).
+> **Missing:** nothing for the basic history viewer.
 
 ### 5. Discard Changes (git checkout / git restore) — ✅ DONE
 
@@ -182,8 +249,8 @@ Add customizable keyboard shortcuts:
 - `F5` — Refresh status
 - `Ctrl+K` — Quick file search
 
-> **Have:** F5 refresh, Ctrl+B sidebar, Ctrl+Shift+C focus commit box, Ctrl+Shift+G pull, Ctrl+K/Ctrl+Shift+P palette (customizable), global Ctrl+Alt+G show-app.
-> **Missing:** true quick-commit action (Ctrl+Enter), palette file-search entries.
+> **Have:** F5 refresh, Ctrl+B sidebar, Ctrl+Shift+C focus commit box, Ctrl+Shift+G pull, Ctrl+K/Ctrl+Shift+P palette (customizable), global Ctrl+Alt+G show-app, Ctrl+Enter quick commit in `ChangesView.tsx` (textarea keydown).
+> **Missing:** palette file-search entries.
 
 ### 14. Command Palette — ✅ DONE
 
@@ -218,8 +285,8 @@ Add a file explorer panel:
 - Quick file search by name
 - Show file icons based on extension
 
-> **Have:** lazy-loaded tree + README/text preview in `OverviewView.tsx` (`fs:list-dir`/`fs:read-file`).
-> **Missing:** file-type icons, open-in-system-editor.
+> **Have:** lazy-loaded tree + README/text preview in `OverviewView.tsx` (`fs:list-dir`/`fs:read-file`); open-in-system-editor via external tools/context menu + `shell:run-tool`.
+> **Missing:** file-type icons.
 
 ### 17. Visual Branch Graph — ❌ NOT STARTED
 
@@ -595,11 +662,14 @@ Clicking an OS notification or tray item focuses the relevant run/PR/repo (exten
 > **Have:** In-app Discover notification clicks for PullRequest subjects focus the matching local repo and open `PrDetailView` (`dispatcher.openNotification` + `parseGitHubPullUrl`). Tray still opens the notifications tab.
 > **Missing:** OS desktop notification click → deep link; tray item → specific PR/run.
 
-### 52. Plugin-contributed Commands — ❌ NOT STARTED
+### 52. Plugin-contributed Commands — 🟡 PARTIAL
 
 **Priority: Low** | **Complexity: Medium**
 
 Plugins register entries into the Command Palette via manifest declarations.
+
+> **Have:** plugin manifest/SDK declare `contributes.commands` and plugin command registration in the SDK surface.
+> **Missing:** Rust plugin host/dispatcher/palette wiring is incomplete (host ignores contributed commands; invoke path is hardcoded).
 
 ### 53. Commit Revert + Copy SHA — ✅ DONE
 
@@ -624,7 +694,7 @@ Revert commits from the history view (`git revert --no-edit <sha>`), plus contex
 - Restart-to-install affordance
 
 > **Have:** minisign keypair generated; real pubkey embedded in `tauri.conf.json`; `UpdateDialog.tsx` with check/notes/progress/installed states via the plugin's JS API (`ipc/updater.ts`), wired into Settings + What's New.
-> **Missing:** end-to-end updates — `https://releases.gitlurk.dev/latest.json` must be published with signed artifacts by the release pipeline; no auto-relaunch (needs `tauri-plugin-process`).
+> **Missing:** end-to-end updates are blocked on release pipeline work (`latest.json` publication, signed artifact hosting at the updater endpoint) and auto-relaunch support (`tauri-plugin-process`). UI is complete in-app.
 
 ### 55. Image/Binary Diff Preview — ✅ DONE
 
@@ -674,7 +744,7 @@ _No known bugs currently tracked._
 
 | Category                    | Total  | Done   | Partial | Not started |
 | --------------------------- | ------ | ------ | ------- | ----------- |
-| Git Operations              | 7      | 4      | 2       | 1           |
+| Git Operations              | 7      | 5      | 1       | 1           |
 | GitHub Integration          | 5      | 1      | 3       | 1           |
 | UI/UX Improvements          | 6      | 1      | 3       | 2           |
 | AI Features                 | 3      | 0      | 1       | 2           |
@@ -683,9 +753,9 @@ _No known bugs currently tracked._
 | Security & Privacy          | 2      | 0      | 0       | 2           |
 | Integration & Extensibility | 4      | 0      | 0       | 4           |
 | Polish & Quality of Life    | 6      | 4      | 1       | 1           |
-| Recently Added              | 17     | 9      | 2       | 6           |
-| **Total**                   | **57** | **21** | **13**  | **23**      |
+| Recently Added              | 17     | 7      | 4       | 6           |
+| **Total**                   | **57** | **20** | **14**  | **23**      |
 
 ---
 
-_Last updated: 2026-11-27_
+_Last updated: 2026-11-28_

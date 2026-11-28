@@ -295,3 +295,29 @@ All steps must pass before merging.
 | `docs/security.md`                               | Security model documentation         |
 | `docs/plugin-spec.md`                            | Plugin specification                 |
 | `.env.example`                                   | Environment variable template        |
+
+---
+
+## Current work
+
+See [ROADMAP.md](ROADMAP.md) (`## Now` is the next shippable item). Feature backlog detail: [suggestions.md](suggestions.md).
+
+## Conventions
+
+- Prefer Bun for JS tooling; never npm/yarn/pnpm.
+- Conventional commits: `type(scope): description`.
+- Typed IPC only via `packages/app/src/ipc/client.ts`.
+
+## Gotchas
+
+- Full app needs `bun run tauri:dev` (Vite-only cannot exercise IPC).
+- Build `@gitlurk/shared` before dependent packages.
+- History graph needs a continuous `git log --graph` prefix; pagination grows `-n`, it does not use `--skip`.
+
+## Learned preferences
+
+- Ship one `ROADMAP.md` Now item per session; stop after the PR.
+
+## Learned workspace facts
+
+- `git:log` limit is clamped in Rust (`GitService::log`); History Load older raises that request in steps of 80 up to 2000.

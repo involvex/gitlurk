@@ -2224,11 +2224,48 @@ export const dispatcher = {
   async refreshCommitLog() {
     const path = getStore().activeRepoPath;
     if (!path) return;
+    const store = getStore();
+    const limit = store.commitLogLimit;
+    store.setCommitLogLoading(true);
     try {
-      const { entries } = await ipcInvoke('git:log', { path, limit: 80 });
-      getStore().setCommitLog(entries);
+      const { entries } = await ipcInvoke('git:log', { path, limit });
+      store.setCommitLog(entries);
+      store.setCommitLogHasMore(entries.length >= limit && limit < 2000);
     } catch {
-      getStore().setCommitLog([]);
+      if (limit <= 80) {
+        store.setCommitLog([]);
+        store.setCommitLogHasMore(false);
+      } else {
+        store.setError('Failed to refresh commit history');
+      }
+    } finally {
+      store.setCommitLogLoading(false);
+    }
+  },
+
+  async loadOlderCommits() {
+    const path = getStore().activeRepoPath;
+    if (!path) return;
+    const store = getStore();
+    if (store.commitLogLoading || !store.commitLogHasMore) return;
+    const nextLimit = Math.min(store.commitLogLimit + 80, 2000);
+    store.setCommitLogLoading(true);
+    try {
+      const { entries } = await ipcInvoke('git:log', {
+        path,
+        limit: nextLimit,
+      });
+      store.setCommitLog(entries);
+      store.setCommitLogLimit(nextLimit);
+      store.setCommitLogHasMore(
+        entries.length >= nextLimit && nextLimit < 2000,
+      );
+    } catch (error) {
+      store.setError(
+        error instanceof Error ? error.message : 'Failed to load older commits',
+      );
+    } finally {
+      store.setCommitLogLoading(false);
     }
   },
 
