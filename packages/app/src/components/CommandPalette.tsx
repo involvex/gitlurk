@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toolsForTarget } from '@gitlurk/shared';
 import { dispatcher } from '../dispatcher';
+import { joinRepoPath } from '../lib/paths';
+import { collectRepoFilePaths, scoreFilePath } from '../lib/repo-file-index';
 import { useAppStore } from '../stores';
 
 interface CommandItem {
@@ -8,8 +10,11 @@ interface CommandItem {
   label: string;
   group: string;
   keywords?: string;
+  scoreBoost?: number;
   run: () => void | Promise<void>;
 }
+
+const MAX_FILE_RESULTS = 40;
 
 function scoreMatch(query: string, item: CommandItem): number {
   const q = query.trim().toLowerCase();
@@ -19,6 +24,20 @@ function scoreMatch(query: string, item: CommandItem): number {
   if (haystack.includes(q)) return 10;
   const tokens = q.split(/\s+/).filter(Boolean);
   return tokens.every((t) => haystack.includes(t)) ? 5 : 0;
+}
+
+async function openRepoFile(repoRoot: string, relativePath: string) {
+  const absolute = joinRepoPath(repoRoot, relativePath);
+  const fileTools = toolsForTarget(
+    useAppStore.getState().externalTools,
+    'file',
+  );
+  const tool = fileTools[0];
+  if (tool) {
+    await dispatcher.runExternalTool(tool, absolute);
+    return;
+  }
+  await dispatcher.revealInExplorer(absolute);
 }
 
 export function CommandPalette() {
@@ -31,6 +50,9 @@ export function CommandPalette() {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [wasOpen, setWasOpen] = useState(false);
+  const [repoFiles, setRepoFiles] = useState<string[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [filesForRepo, setFilesForRepo] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   if (show !== wasOpen) {
@@ -40,6 +62,34 @@ export function CommandPalette() {
       setActiveIndex(0);
     }
   }
+
+  useEffect(() => {
+    if (!show || !activeRepoPath) {
+      if (!show) {
+        setRepoFiles([]);
+        setFilesForRepo(null);
+        setFilesLoading(false);
+      }
+      return;
+    }
+    if (filesForRepo === activeRepoPath) return;
+
+    let cancelled = false;
+    setFilesLoading(true);
+    void (async () => {
+      const files = await collectRepoFilePaths((relativePath) =>
+        dispatcher.listRepoDir(relativePath),
+      );
+      if (cancelled) return;
+      setRepoFiles(files);
+      setFilesForRepo(activeRepoPath);
+      setFilesLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [show, activeRepoPath, filesForRepo]);
 
   const commands = useMemo<CommandItem[]>(() => {
     const base: CommandItem[] = [
@@ -213,12 +263,40 @@ export function CommandPalette() {
       });
     }
 
+    const trimmed = query.trim();
+    if (activeRepoPath && trimmed) {
+      const fileHits = repoFiles
+        .map((path) => ({ path, score: scoreFilePath(trimmed, path) }))
+        .filter((entry) => entry.score > 0)
+        .sort((a, b) => b.score - a.score || a.path.localeCompare(b.path))
+        .slice(0, MAX_FILE_RESULTS);
+
+      for (const hit of fileHits) {
+        const repoRoot = activeRepoPath;
+        const relativePath = hit.path;
+        base.push({
+          id: `file-${relativePath}`,
+          label: relativePath,
+          group: 'Files',
+          keywords: relativePath,
+          scoreBoost: hit.score,
+          run: () => openRepoFile(repoRoot, relativePath),
+        });
+      }
+    }
+
     return base;
-  }, [repos, branches, externalTools, activeRepoPath]);
+  }, [repos, branches, externalTools, activeRepoPath, repoFiles, query]);
 
   const filtered = useMemo(() => {
     const scored = commands
-      .map((item) => ({ item, score: scoreMatch(query, item) }))
+      .map((item) => ({
+        item,
+        score:
+          item.group === 'Files' && item.scoreBoost != null
+            ? item.scoreBoost
+            : scoreMatch(query, item),
+      }))
       .filter((entry) => entry.score > 0)
       .sort(
         (a, b) => b.score - a.score || a.item.label.localeCompare(b.item.label),
@@ -271,7 +349,7 @@ export function CommandPalette() {
               useAppStore.getState().setShowCommandPalette(false);
             }
           }}
-          placeholder="Type a command…"
+          placeholder="Type a command or file path…"
           className="w-full border-b border-border bg-transparent px-4 py-3 text-sm outline-none"
         />
         <p className="border-b border-border px-4 py-1.5 text-[10px] text-muted">
@@ -279,11 +357,16 @@ export function CommandPalette() {
           {hotkeyCommandPalette && hotkeyCommandPalette !== 'Ctrl+K'
             ? ` · ${hotkeyCommandPalette}`
             : ''}
+          {activeRepoPath
+            ? filesLoading
+              ? ' · indexing files…'
+              : ` · ${repoFiles.length} files`
+            : ''}
         </p>
         <ul className="max-h-80 overflow-y-auto py-2">
           {filtered.length === 0 ? (
             <li className="px-4 py-2 text-xs text-muted">
-              No matching commands
+              No matching commands or files
             </li>
           ) : (
             filtered.map((item, index) => (

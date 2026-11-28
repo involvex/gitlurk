@@ -325,3 +325,4 @@ See [ROADMAP.md](ROADMAP.md) (`## Now` is the next shippable item). Feature back
 - PR raw unified diff is lazy via `github:pr-diff`; cleared when the PR detail refreshes.
 - Developer panel gh config Get uses `dev:gh-config-get`; Set also read-backs the key after write.
 - Screenshot capture uses `dialog:save-directory` then `screenshot:capture` with a timestamped PNG path (no save-file dialog yet).
+- Palette file search walks `fs:list-dir` via `collectRepoFilePaths` (skips node_modules/.git, caps 2000); opens with first file external tool or Explorer.

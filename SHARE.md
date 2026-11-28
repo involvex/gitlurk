@@ -14,7 +14,9 @@ PR detail also has a **Raw unified** toggle that loads the full GitHub unified d
 
 In Settings → Developer, **Get gh config** reads a single key back through `gh config get` (and Set verifies via the same path).
 
-**Capture screenshot** (Developer panel or command palette) saves a PNG of the primary monitor after you pick a folder. Try it in the latest build: https://github.com/involvex/gitlurk
+**Capture screenshot** (Developer panel or command palette) saves a PNG of the primary monitor after you pick a folder.
+
+The command palette also searches repo files as you type and opens a match in your file editor (or Explorer). Try it in the latest build: https://github.com/involvex/gitlurk
 
 ## Free channels (pick one)
 
