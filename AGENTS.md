@@ -328,3 +328,4 @@ See [ROADMAP.md](ROADMAP.md) (`## Now` is the next shippable item). Feature back
 - Palette file search walks `fs:list-dir` via `collectRepoFilePaths` (skips node_modules/.git, caps 2000); opens with first file external tool or Explorer.
 - Overview tree icons come from `resolveFileIcon` / `FileTypeIcon` (no icon-font dependency).
 - GPG signing toggles in Developer panel use `dev:git-config-get/set` only; no keyring/key-list IPC yet.
+- Diff/merge presets live in `@gitlurk/shared` (`diffMergePresets`); Apply writes global git config and may enable a matching ExternalTool.

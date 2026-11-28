@@ -17,6 +17,10 @@ import {
   toWslPath,
   toolsForTarget,
 } from '../external-tools.js';
+import {
+  diffMergePresets,
+  findDiffMergePreset,
+} from '../diff-merge-presets.js';
 import type { IpcChannel, IpcChannels, IpcResponses } from '../ipc/channels.js';
 
 describe('parseAppUrl', () => {
@@ -181,6 +185,36 @@ describe('external tools', () => {
     const items = menuItemsForTools(tools, 'file');
     expect(items.every((i) => i.id.startsWith('tool:'))).toBe(true);
     expect(items.length).toBeGreaterThan(0);
+  });
+});
+
+describe('diff/merge presets', () => {
+  test('lists known presets with git config keys', () => {
+    const presets = diffMergePresets();
+    expect(presets.length).toBeGreaterThanOrEqual(4);
+    for (const preset of presets) {
+      expect(preset.gitConfig.some((e) => e.key === 'diff.tool')).toBe(true);
+      expect(preset.gitConfig.some((e) => e.key === 'merge.tool')).toBe(true);
+      expect(
+        preset.gitConfig.every(
+          (e) =>
+            !e.value.includes('{path}') &&
+            !e.value.includes('{wslPath}') &&
+            !e.value.includes('{dir}') &&
+            !e.value.includes('{fileName}'),
+        ),
+      ).toBe(true);
+      const cmd = preset.gitConfig.find((e) => e.key.endsWith('.cmd'));
+      expect(
+        cmd?.value.includes('$LOCAL') || cmd?.value.includes('$REMOTE'),
+      ).toBe(true);
+    }
+  });
+
+  test('findDiffMergePreset returns vscode with external tool link', () => {
+    const vscode = findDiffMergePreset('vscode');
+    expect(vscode?.externalToolId).toBe('vscode');
+    expect(findDiffMergePreset('nope')).toBeUndefined();
   });
 });
 

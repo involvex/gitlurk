@@ -1,6 +1,6 @@
 import { parseGitHubRemoteUrl, parseGitHubPullUrl } from '@gitlurk/shared';
 import type { ExternalTool } from '@gitlurk/shared';
-import { defaultExternalTools } from '@gitlurk/shared';
+import { defaultExternalTools, findDiffMergePreset } from '@gitlurk/shared';
 import {
   isPermissionGranted,
   requestPermission,
@@ -1914,6 +1914,40 @@ export const dispatcher = {
   async setExternalTools(tools: ExternalTool[]) {
     getStore().setExternalTools(tools);
     await ipcInvoke('app:set-settings', { externalTools: tools });
+  },
+
+  /** Apply a git difftool/mergetool preset (global scope) and enable matching ExternalTool. */
+  async applyDiffMergePreset(presetId: string) {
+    const preset = findDiffMergePreset(presetId);
+    if (!preset) {
+      getStore().setError('Unknown diff/merge preset');
+      return;
+    }
+    try {
+      getStore().setGitOpLoading(true);
+      for (const entry of preset.gitConfig) {
+        await ipcInvoke('dev:git-config-set', {
+          key: entry.key,
+          value: entry.value,
+          scope: 'global',
+        });
+      }
+      if (preset.externalToolId) {
+        const tools = getStore().externalTools.map((t) =>
+          t.id === preset.externalToolId ? { ...t, enabled: true } : t,
+        );
+        await dispatcher.setExternalTools(tools);
+      }
+      getStore().showToast(`Applied ${preset.label} as git diff/merge tool`);
+    } catch (error) {
+      getStore().setError(
+        error instanceof Error
+          ? error.message
+          : `Failed to apply ${preset.label} preset`,
+      );
+    } finally {
+      getStore().setGitOpLoading(false);
+    }
   },
 
   async openRepoOnGitHub(path: string) {

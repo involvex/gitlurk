@@ -4,11 +4,11 @@ Shippable backlog for GitLurk Desktop. Detailed feature notes live in `suggestio
 
 ## Now
 
-- [ ] External diff/merge tool presets
+- [ ] Per-repo notification preferences
 
 ## Later
 
-- [ ] Remaining v0.2.0 rows in `suggestions.md` (per-repo notifications, fixup, per-file history, branch cleanup, plugin commands, workflow YAML viewer, CI-failure notifications)
+- [ ] Remaining v0.2.0 rows in `suggestions.md` (fixup, per-file history, branch cleanup, plugin commands, workflow YAML viewer, CI-failure notifications)
 - [ ] Share History Load older: free announcement draft in SHARE.md
 - [ ] Share PR suggested changes: free announcement draft in SHARE.md
 - [ ] Share raw unified PR diff toggle: free announcement draft in SHARE.md
@@ -17,9 +17,11 @@ Shippable backlog for GitLurk Desktop. Detailed feature notes live in `suggestio
 - [ ] Share palette file-search: free announcement draft in SHARE.md
 - [ ] Share file-type icons: free announcement draft in SHARE.md
 - [ ] Share GPG signing config toggles: free announcement draft in SHARE.md
+- [ ] Share external diff/merge presets: free announcement draft in SHARE.md
 
 ## Done
 
+- [x] #33 External diff/merge tool presets — Settings → Tools applies git difftool/mergetool via `dev:git-config-set`
 - [x] #29 GPG signing config toggles — Developer panel Commit signing via `dev:git-config-get/set`
 - [x] #16 File-type icons in tree — Overview explorer shows icons by extension/name
 - [x] #13 Palette file-search entries — type in the command palette to jump to repo files
