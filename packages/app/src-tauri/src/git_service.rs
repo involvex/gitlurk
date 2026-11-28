@@ -719,7 +719,7 @@ impl GitService {
         limit: u32,
         range: Option<&str>,
     ) -> Result<Vec<CommitLogEntry>, String> {
-        let limit = limit.max(1).min(500).to_string();
+        let limit = limit.max(1).min(2000).to_string();
         let mut args = vec![
             "log".to_string(),
             "--graph".to_string(),

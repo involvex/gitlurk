@@ -83,6 +83,9 @@ export interface GitOpsSlice {
   stashes: StashEntry[];
   tags: TagEntry[];
   commitLog: CommitLogEntry[];
+  commitLogLimit: number;
+  commitLogHasMore: boolean;
+  commitLogLoading: boolean;
   selectedCommitSha: string | null;
   commitDiff: FileDiff | null;
   commitDiffLoading: boolean;
@@ -118,6 +121,9 @@ export interface GitOpsSlice {
   setStashes: (stashes: StashEntry[]) => void;
   setTags: (tags: TagEntry[]) => void;
   setCommitLog: (commitLog: CommitLogEntry[]) => void;
+  setCommitLogLimit: (commitLogLimit: number) => void;
+  setCommitLogHasMore: (commitLogHasMore: boolean) => void;
+  setCommitLogLoading: (commitLogLoading: boolean) => void;
   setSelectedCommitSha: (sha: string | null) => void;
   setCommitDiff: (diff: FileDiff | null) => void;
   setCommitDiffLoading: (commitDiffLoading: boolean) => void;
@@ -157,6 +163,9 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   stashes: [],
   tags: [],
   commitLog: [],
+  commitLogLimit: 80,
+  commitLogHasMore: false,
+  commitLogLoading: false,
   selectedCommitSha: null,
   commitDiff: null,
   commitDiffLoading: false,
@@ -206,6 +215,9 @@ export const createGitOpsSlice: StateCreator<GitOpsSlice> = (set) => ({
   setStashes: (stashes) => set({ stashes }),
   setTags: (tags) => set({ tags }),
   setCommitLog: (commitLog) => set({ commitLog }),
+  setCommitLogLimit: (commitLogLimit) => set({ commitLogLimit }),
+  setCommitLogHasMore: (commitLogHasMore) => set({ commitLogHasMore }),
+  setCommitLogLoading: (commitLogLoading) => set({ commitLogLoading }),
   setSelectedCommitSha: (selectedCommitSha) => set({ selectedCommitSha }),
   setCommitDiff: (commitDiff) => set({ commitDiff }),
   setCommitDiffLoading: (commitDiffLoading) => set({ commitDiffLoading }),

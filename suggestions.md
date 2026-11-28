@@ -14,7 +14,7 @@ _Each item below was checked against the codebase on 2026-11-28. "Anchor" names 
 
 | #   | Item                                           | Effort | Anchor (proof it's doable)                                                                                                                  | Caveat                                                                      |
 | --- | ---------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| 4   | History pagination ("Load older")              | S      | `git:log` accepts `range`; `dispatcher.refreshCommitLog()` hardcodes `limit: 80`; `HistoryPanel.tsx` + `lib/graph-layout.ts`                | Keep graph layout fed with loaded prefix                                    |
+| 4   | History pagination ("Load older") — ✅ DONE    | S      | `dispatcher.loadOlderCommits()` grows `git log -n` prefix; `HistoryPanel` Load older button; Rust cap 2000                                  | Graph layout receives full loaded prefix                                    |
 | 11  | PR "suggested changes"                         | S      | `LineCommentComposer` in `PrDetailView.tsx` posts via `dispatcher.submitPullRequestReview` -> `github:submit-review` with `comments[].body` | Wrap selected line in a GitHub ```suggestion fenced block; no new API field |
 | —   | Raw unified PR diff toggle _(new)_             | S      | `github:pr-diff` is typed in `packages/shared/src/ipc/channels.ts` and implemented in `commands/github.rs`, but never invoked from UI       | Pure frontend wiring in `PrDetailView.tsx` / `DiffPanel.tsx`                |
 | —   | gh config read-back in Developer panel _(new)_ | S      | `dev:gh-config-get` typed + implemented in `commands/developer.rs`, not called from UI                                                      | DeveloperPanel already has list/set                                         |
@@ -113,7 +113,7 @@ Provide a visual rebase/merge workflow:
 - Show conflict resolution UI with 3-way merge view
 - Abort rebase/merge on conflict
 
-### 4. Git Log / History View — 🟡 PARTIAL
+### 4. Git Log / History View — ✅ DONE
 
 **Priority: High** | **Complexity: Medium**
 
@@ -124,8 +124,8 @@ Add a commit history viewer:
 - Click a commit to view its diff
 - Filter by author, date range, or message
 
-> **Have:** linear log + click-to-diff (`HistoryPanel.tsx`, `git:log`/`git:show`) and real SVG topology rendering (`CommitGraphRow.tsx` + `lib/graph-layout`). Filter by message/author/date/SHA added.
-> **Missing:** pagination beyond fixed limit of 80.
+> **Have:** linear log + click-to-diff (`HistoryPanel.tsx`, `git:log`/`git:show`) and real SVG topology rendering (`CommitGraphRow.tsx` + `lib/graph-layout`). Filter by message/author/date/SHA added. Pagination via **Load older** (grows `git log -n` prefix in steps of 80, cap 2000).
+> **Missing:** nothing for the basic history viewer.
 
 ### 5. Discard Changes (git checkout / git restore) — ✅ DONE
 
@@ -744,7 +744,7 @@ _No known bugs currently tracked._
 
 | Category                    | Total  | Done   | Partial | Not started |
 | --------------------------- | ------ | ------ | ------- | ----------- |
-| Git Operations              | 7      | 4      | 2       | 1           |
+| Git Operations              | 7      | 5      | 1       | 1           |
 | GitHub Integration          | 5      | 1      | 3       | 1           |
 | UI/UX Improvements          | 6      | 1      | 3       | 2           |
 | AI Features                 | 3      | 0      | 1       | 2           |
@@ -754,7 +754,7 @@ _No known bugs currently tracked._
 | Integration & Extensibility | 4      | 0      | 0       | 4           |
 | Polish & Quality of Life    | 6      | 4      | 1       | 1           |
 | Recently Added              | 17     | 7      | 4       | 6           |
-| **Total**                   | **57** | **19** | **15**  | **23**      |
+| **Total**                   | **57** | **20** | **14**  | **23**      |
 
 ---
 

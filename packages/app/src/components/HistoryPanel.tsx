@@ -10,6 +10,8 @@ import { layoutCommitGraph, maxGraphColumns } from '../lib/graph-layout';
 export function HistoryPanel() {
   const activeRepoPath = useAppStore((s) => s.activeRepoPath);
   const commitLog = useAppStore((s) => s.commitLog);
+  const commitLogHasMore = useAppStore((s) => s.commitLogHasMore);
+  const commitLogLoading = useAppStore((s) => s.commitLogLoading);
   const selectedCommitSha = useAppStore((s) => s.selectedCommitSha);
   const commitDiff = useAppStore((s) => s.commitDiff);
   const commitDiffLoading = useAppStore((s) => s.commitDiffLoading);
@@ -28,6 +30,8 @@ export function HistoryPanel() {
 
   useEffect(() => {
     if (activeRepoPath) {
+      useAppStore.getState().setCommitLogLimit(80);
+      useAppStore.getState().setCommitLogHasMore(false);
       void dispatcher.refreshCommitLog();
     }
   }, [activeRepoPath]);
@@ -118,6 +122,16 @@ export function HistoryPanel() {
               ))}
             </ul>
           )}
+          {commitLogHasMore ? (
+            <button
+              type="button"
+              onClick={() => void dispatcher.loadOlderCommits()}
+              disabled={commitLogLoading}
+              className="mt-2 w-full rounded-md border border-border px-2 py-1.5 text-xs text-muted hover:bg-surface-elevated disabled:opacity-50"
+            >
+              {commitLogLoading ? 'Loading…' : 'Load older'}
+            </button>
+          ) : null}
         </div>
         <div className="min-h-0 flex-1 overflow-auto p-2">
           {!selectedCommitSha ? (
